@@ -51,14 +51,19 @@ async function draw(round: number, scores = { player: 0, opponent: 0 }): Promise
   finally { busy = false; render(); }
 }
 function bindEvents(): void {
-  document.querySelectorAll<HTMLButtonElement>("[data-start]").forEach((button) => button.addEventListener("click", () => { target = Number(button.dataset.start); persist(); void draw(1); }));
-  document.querySelectorAll<HTMLButtonElement>("[data-stat]").forEach((button) => button.addEventListener("click", () => { if (!match) return; result = selectStat(match, button.dataset.stat as StatKey); match = result.match; render(); }));
-  document.querySelector<HTMLButtonElement>("#next")?.addEventListener("click", () => { if (match) void draw(match.round + 1, match.scores); });
-  document.querySelector<HTMLButtonElement>("#replay")?.addEventListener("click", () => void draw(1));
-  document.querySelector<HTMLButtonElement>("#quit")?.addEventListener("click", () => { match = null; result = null; render(); });
-  document.querySelector<HTMLSelectElement>("#target")?.addEventListener("change", (event) => { target = Number((event.target as HTMLSelectElement).value); persist(); render(); });
-  document.querySelector<HTMLInputElement>("#seed")?.addEventListener("change", (event) => { seed = (event.target as HTMLInputElement).value.trim() || crypto.randomUUID(); persist(); });
-  document.querySelector<HTMLInputElement>("#verbose")?.addEventListener("change", (event) => { verbose = (event.target as HTMLInputElement).checked; persist(); render(); });
+  // Clear existing listeners by cloning elements
+  const oldRoot = root;
+  const newRoot = oldRoot.cloneNode(true) as HTMLDivElement;
+  oldRoot.replaceWith(newRoot);
+  
+  newRoot.querySelectorAll<HTMLButtonElement>("[data-start]").forEach((button) => button.addEventListener("click", () => { target = Number(button.dataset.start); persist(); void draw(1); }));
+  newRoot.querySelectorAll<HTMLButtonElement>("[data-stat]").forEach((button) => button.addEventListener("click", () => { if (!match) return; result = selectStat(match, button.dataset.stat as StatKey); match = result.match; render(); }));
+  newRoot.querySelector<HTMLButtonElement>("#next")?.addEventListener("click", () => { if (match) void draw(match.round + 1, match.scores); });
+  newRoot.querySelector<HTMLButtonElement>("#replay")?.addEventListener("click", () => void draw(1));
+  newRoot.querySelector<HTMLButtonElement>("#quit")?.addEventListener("click", () => { match = null; result = null; render(); });
+  newRoot.querySelector<HTMLSelectElement>("#target")?.addEventListener("change", (event) => { target = Number((event.target as HTMLSelectElement).value); persist(); render(); });
+  newRoot.querySelector<HTMLInputElement>("#seed")?.addEventListener("change", (event) => { seed = (event.target as HTMLInputElement).value.trim() || crypto.randomUUID(); persist(); });
+  newRoot.querySelector<HTMLInputElement>("#verbose")?.addEventListener("change", (event) => { verbose = (event.target as HTMLInputElement).checked; persist(); render(); });
 }
 function persist(): void { localStorage.setItem("judokon.seed", seed); localStorage.setItem("judokon.target", String(target)); localStorage.setItem("judokon.verbose", String(verbose)); }
 document.addEventListener("keydown", (event) => {
