@@ -44,6 +44,6 @@ export function selectStat(match: Match, stat: StatKey): RoundResult {
     stat,
     playerValue,
     opponentValue,
-    match: { ...match, scores, phase: winner === null ? "awaitingNext" : "matchOver", winner }
+    match: { ...match, round: match.round + 1, scores, phase: winner === null ? "awaitingNext" : "matchOver", winner }
   };
 }
