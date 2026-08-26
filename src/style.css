@@ -31,3 +31,34 @@ details { margin-top: 1rem; padding: .8rem; } summary { cursor: pointer; font-we
 .skip-link { position: absolute; left: -999px; }.skip-link:focus { left: 1rem; top: 1rem; background: #fff; color: #000; padding: .5rem; } footer { border-top: 1px solid #4e894e; color: #a4caa4; font-size: .85rem; }
 @media (max-width: 700px) { .battle-layout { grid-template-columns: 1fr; }.opponent { margin-top: 0; }.mode-picker { grid-template-columns: 1fr; } }
 @media (max-width: 560px) { header, main, footer { padding: .8rem; }.launcher { margin: 1rem 0; }.scoreboard { grid-template-columns: 1fr 1fr; gap: .6rem; }.scoreboard > p { grid-column: 1 / -1; grid-row: 1; }.score-side { grid-template-columns: auto auto 1fr; }.score-side.opponent { grid-template-columns: 1fr auto auto; }.stats { grid-template-columns: 1fr; }.actions > button { width: 100%; }.weight-picker { align-items: stretch; flex-direction: column; }.round-log { grid-template-columns: 1fr; } }
+
+/* Active terminal controls share one selected/focused language. */
+button { transition: background-color .12s ease, border-color .12s ease, color .12s ease; }
+.menu-actions { margin-bottom: .65rem; }
+.primary-action { width: 100%; background: #214a21; border-color: #8ee58e; font-weight: 700; }
+.primary-action:hover, .primary-action:focus-visible { background: #326a32; }
+.advanced summary { display: flex; justify-content: space-between; gap: 1rem; padding: .65rem .8rem; border: 1px solid #417841; list-style: none; }
+.advanced summary::-webkit-details-marker { display: none; }
+.advanced summary:hover, .advanced summary:focus-visible, .advanced[open] summary { background: #214a21; border-color: #8ee58e; }
+.advanced[open] .disclosure-state { font-size: 0; }
+.advanced[open] .disclosure-state::after { content: "Hide"; font-size: .85rem; }
+.sound-toggle { display: flex; align-items: center; gap: .55rem; color: #d8ffd8; }
+.sound-toggle input { margin: 0; accent-color: #8ee58e; }
+.sound-toggle span { color: #a4caa4; font-size: .8rem; }
+.commitment { display: flex; align-items: center; gap: .8rem; margin: 1rem 0; padding: 1rem; border: 1px dashed #8ee58e; background: #091208; }
+.commitment p { margin-top: .25rem; color: #b3cdb3; }
+.stat.is-committing { opacity: 1; background: #214a21; border-color: #8ee58e; color: #d8ffd8; }
+.round-result .callout { color: #d8ffd8; font-weight: 700; }
+.round-history { margin: 1rem 0; }
+.round-history ol { display: flex; flex-wrap: wrap; gap: .45rem; margin: .5rem 0 0; padding: 0; list-style: none; }
+.round-history li { display: grid; gap: .12rem; min-width: 5.2rem; padding: .45rem .55rem; border: 1px solid #417841; color: #b3cdb3; font-size: .76rem; }
+.round-history li strong { color: #d8ffd8; font-size: .9rem; }
+.round-history li.player { border-color: #8ee58e; }.round-history li.player span:last-child { color: #8ee58e; }
+.round-history li.opponent { border-color: #ef8f86; }.round-history li.opponent span:last-child { color: #ef8f86; }
+.round-history li.draw { border-color: #ffe49a; }.round-history li.draw span:last-child { color: #ffe49a; }
+.score-pip.just-earned { animation: score-pop .46s ease-out; }
+.block-cursor { display: inline-block; color: #8ee58e; animation: terminal-blink 1.3s steps(1, end) infinite; }
+.active-command .block-cursor { margin-left: .2rem; }
+@keyframes terminal-blink { 0%, 45% { opacity: 1; } 46%, 100% { opacity: 0; } }
+@keyframes score-pop { 0% { transform: scale(.55); filter: brightness(1.8); } 65% { transform: scale(1.45); } 100% { transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; } }
