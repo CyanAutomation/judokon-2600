@@ -44,22 +44,20 @@ describe("Classic Battle game engine", () => {
     const first = selectStat(createMatch(player, opponent, 3), "power");
     expect(() => selectStat(first.match, "technique")).toThrow("not ready for a stat selection");
   });
-  it("replaces both judoka between Classic rounds and resets stat fatigue", () => {
+  it("replaces both judoka between Classic rounds", () => {
     const resolved = selectStat(createMatch(player, opponent, 3), "power").match;
     const next = nextRound(resolved, nextPlayer, nextOpponent);
     expect(next.player.id).toBe(nextPlayer.id);
     expect(next.opponent.id).toBe(nextOpponent.id);
-    expect(next.uses.power).toBe(0);
     expect(next.round).toBe(2);
     expect(next.phase).toBe("selecting");
   });
-  it("keeps the player's judoka and fatigue but replaces the opponent in Champion mode", () => {
-    const first = selectStat(createMatch(player, opponent, 3, 1, { player: 0, opponent: 0 }, undefined, "champion"), "power");
+  it("keeps the player's judoka and replaces the opponent in Champion mode", () => {
+    const first = selectStat(createMatch(player, opponent, 3, 1, { player: 0, opponent: 0 }, "champion"), "power");
     const second = selectStat(nextRound(first.match, nextPlayer, nextOpponent), "power");
     expect(second.match.player.id).toBe(player.id);
     expect(second.match.opponent.id).toBe(nextOpponent.id);
     expect(first.playerValue).toBe(9);
-    expect(second.playerValue).toBe(7);
-    expect(second.match.uses.power).toBe(2);
+    expect(second.playerValue).toBe(9);
   });
 });
