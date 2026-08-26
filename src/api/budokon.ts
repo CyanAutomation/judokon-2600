@@ -20,7 +20,16 @@ function isJudoka(value: unknown): value is Judoka {
 export class BudokonClient {
   constructor(private readonly fetcher: Fetcher = globalThis.fetch.bind(globalThis), private readonly timeoutMs = 10_000) {}
 
-  async drawPair(seed: string): Promise<[Judoka, Judoka]> {
+  async drawPair(seed: string, weightClass?: string): Promise<[Judoka, Judoka]> {
+    const drawn = await this.draw(seed, 2, weightClass);
+    return [drawn[0]!, drawn[1]!];
+  }
+
+  async drawOpponent(seed: string, exclude: string[], weightClass?: string): Promise<Judoka> {
+    return (await this.draw(seed, 1, weightClass, exclude))[0]!;
+  }
+
+  private async draw(seed: string, count: 1 | 2, weightClass?: string, exclude?: string[]): Promise<Judoka[]> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
     let response: Response;
@@ -28,7 +37,7 @@ export class BudokonClient {
       response = await this.fetcher(DRAW_URL, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ count: 2, seed }),
+        body: JSON.stringify({ count, seed, ...(weightClass ? { filters: { weightClass } } : {}), ...(exclude?.length ? { exclude } : {}) }),
         signal: controller.signal
       });
     } catch (error) {
@@ -37,10 +46,13 @@ export class BudokonClient {
     } finally {
       clearTimeout(timeout);
     }
-    if (!response.ok) throw new Error(`Budokon draw failed (${response.status})`);
+    if (!response.ok) {
+      if (response.status === 409 && weightClass) throw new Error(`No compatible ${weightClass} kg pair is available in the current Budokon dataset`);
+      throw new Error(`Budokon draw failed (${response.status})`);
+    }
     const body: unknown = await response.json();
     const drawn = typeof body === "object" && body !== null ? (body as { judoka?: unknown }).judoka : undefined;
-    if (!Array.isArray(drawn) || drawn.length !== 2 || !drawn.every(isJudoka)) throw new Error("Budokon returned an invalid judoka draw");
-    return [drawn[0], drawn[1]];
+    if (!Array.isArray(drawn) || drawn.length !== count || !drawn.every(isJudoka)) throw new Error("Budokon returned an invalid judoka draw");
+    return drawn;
   }
 }
