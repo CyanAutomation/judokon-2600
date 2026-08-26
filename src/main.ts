@@ -18,10 +18,10 @@ let seed = localStorage.getItem("judokon.seed") ?? "";
 let activeSeed = "";
 let target = 3;
 let matchLengthIndex = 0;
-let verbose = localStorage.getItem("judokon.verbose") === "true";
 let divisionMode: DivisionMode = localStorage.getItem("judokon.divisionMode") === "weight" ? "weight" : "absolute";
 let gameMode: GameMode = localStorage.getItem("judokon.gameMode") === "champion" ? "champion" : "classic";
-let weightClass = localStorage.getItem("judokon.weightClass") ?? "-81";
+let weightClass = localStorage.getItem("judokon.weightClass") ?? "random";
+let activeWeightClass: string | undefined;
 let busy = false;
 let errorMessage = "";
 
@@ -33,9 +33,11 @@ function escapeHtml(value: string): string {
 function nameOf(judoka: Judoka): string { return `${judoka.firstname} ${judoka.surname}`; }
 function detailOf(judoka: Judoka): string { return `${judoka.country} · ${judoka.weightClass} kg`; }
 function rarityOf(judoka: Judoka): string { return judoka.rarity || "Unclassified"; }
-function fighterCard(judoka: Judoka, side: "player" | "opponent"): string {
+function fighterCard(judoka: Judoka, side: "player" | "opponent", comparison?: RoundResult | null): string {
   const label = side === "player" ? "Your judoka" : "Opponent";
-  return `<section class="fighter-card ${side}" aria-label="${label}: ${escapeHtml(nameOf(judoka))}"><p class="eyebrow">${label}</p><h2>${escapeHtml(nameOf(judoka))}</h2><p>${escapeHtml(detailOf(judoka))}</p><span class="rarity rarity-${escapeHtml(rarityOf(judoka).toLowerCase())}">${escapeHtml(rarityOf(judoka))}</span></section>`;
+  const value = comparison ? side === "player" ? comparison.playerValue : comparison.opponentValue : null;
+  const selectedStat = comparison ? `<p class="selected-stat outcome-${comparison.outcome}"><span>${labels[comparison.stat]}</span><strong>${value}</strong></p>` : "";
+  return `<section class="fighter-card ${side}" aria-label="${label}: ${escapeHtml(nameOf(judoka))}"><p class="eyebrow">${label}</p><h2>${escapeHtml(nameOf(judoka))}</h2><p>${escapeHtml(detailOf(judoka))}</p>${selectedStat}<span class="rarity rarity-${escapeHtml(rarityOf(judoka).toLowerCase())}">${escapeHtml(rarityOf(judoka))}</span></section>`;
 }
 function concealedOpponentCard(): string {
   return `<section class="fighter-card opponent concealed" aria-label="Opponent concealed"><p class="eyebrow">Opponent</p><h2>Hidden judoka</h2><p>Revealed when the round ends.</p></section>`;
@@ -43,7 +45,6 @@ function concealedOpponentCard(): string {
 function persist(): void {
   if (seed) localStorage.setItem("judokon.seed", seed);
   else localStorage.removeItem("judokon.seed");
-  localStorage.setItem("judokon.verbose", String(verbose));
   localStorage.setItem("judokon.divisionMode", divisionMode);
   localStorage.setItem("judokon.gameMode", gameMode);
   localStorage.setItem("judokon.weightClass", weightClass);
@@ -61,34 +62,42 @@ function statusText(): string {
 function advancedSettings(): string {
   return `<details class="advanced"><summary>Advanced</summary><p>Use a seed only to replay a specific matchup. Leave it blank for a fresh match.</p><label for="seed">Replay seed <input id="seed" aria-label="Replay seed" autocomplete="off" value="${escapeHtml(seed)}" /></label></details>`;
 }
-function divisionLabel(): string { return divisionMode === "absolute" ? "Absolute" : `${weightClass} kg`; }
+function divisionLabel(): string { return divisionMode === "absolute" ? "Absolute" : weightClass === "random" ? "Random weight" : `${weightClass} kg`; }
 function gameModeLabel(): string { return gameMode === "champion" ? "Champion" : "Top Trumps"; }
+function randomWeightClass(seedValue: string): string {
+  let hash = 0;
+  for (const character of seedValue) hash = (hash * 31 + character.charCodeAt(0)) >>> 0;
+  return weightClasses[hash % weightClasses.length]!;
+}
 function launchScreen(): string {
   const buttons = matchLengths.map((length, index) => `<button data-start="${length}" aria-pressed="${matchLengthIndex === index}" ${busy ? "disabled" : ""}>${["Quick", "Medium", "Long"][index]} (${length})</button>`).join("");
   const retry = errorMessage ? `<button class="retry" data-retry>Retry ${target}-point match</button>` : "";
-  const weights = weightClasses.map((value) => `<option value="${value}" ${weightClass === value ? "selected" : ""}>${value} kg</option>`).join("");
+  const weights = [`<option value="random" ${weightClass === "random" ? "selected" : ""}>Random weight class</option>`, ...weightClasses.map((value) => `<option value="${value}" ${weightClass === value ? "selected" : ""}>${value} kg</option>`)].join("");
   return `<section class="launcher" aria-label="Match setup"><p class="eyebrow">Classic Battle</p><h2>Start a bout</h2><p>Choose a division, a game mode, and a first-to score.</p><fieldset class="mode-picker"><legend>Division</legend><label><input type="radio" name="division-mode" value="absolute" ${divisionMode === "absolute" ? "checked" : ""}/> Absolute <span>Open weight</span></label><label><input type="radio" name="division-mode" value="weight" ${divisionMode === "weight" ? "checked" : ""}/> Weight class <span>Comparable division</span></label></fieldset>${divisionMode === "weight" ? `<label class="weight-picker" for="weight-class">Weight class <select id="weight-class">${weights}</select></label>` : ""}<fieldset class="mode-picker"><legend>Game mode</legend><label><input type="radio" name="game-mode" value="classic" ${gameMode === "classic" ? "checked" : ""}/> Top Trumps <span>Both players draw a new judoka every round.</span></label><label><input type="radio" name="game-mode" value="champion" ${gameMode === "champion" ? "checked" : ""}/> Champion <span>Keep your judoka and face a new opponent each round.</span></label></fieldset><h2 class="match-length-heading">Match length</h2><p>First to the selected number of points wins.</p><p class="keyboard-hint">Use <kbd>1</kbd>–<kbd>3</kbd>, arrow keys, or choose an option.</p><div class="actions">${buttons}</div>${retry}${advancedSettings()}</section>`;
 }
-function matchSettings(activeMatch: Match): string {
-  return `<details class="settings"><summary>Match settings</summary><p>${gameModeLabel()} · ${divisionLabel()} · First to ${activeMatch.target} points. Current match settings cannot change mid-match.</p><label><input id="verbose" type="checkbox" ${verbose ? "checked" : ""}/> Show round log</label><details class="advanced"><summary>Advanced</summary><p>Replay seed: <code>${escapeHtml(activeSeed)}</code></p></details></details>`;
+function scorePips(score: number, targetScore: number, side: "player" | "opponent"): string {
+  return Array.from({ length: targetScore }, (_, index) => `<span class="score-pip ${side} ${index < score ? "earned" : ""}" aria-hidden="true"></span>`).join("");
+}
+function scoreBoard(activeMatch: Match): string {
+  return `<section class="scoreboard" aria-label="Match score: You ${activeMatch.scores.player}, opponent ${activeMatch.scores.opponent}. First to ${activeMatch.target} points."><div class="score-side player"><span>You</span><strong>${activeMatch.scores.player}</strong><div class="score-pips">${scorePips(activeMatch.scores.player, activeMatch.target, "player")}</div></div><p>First to ${activeMatch.target}</p><div class="score-side opponent"><span>Opponent</span><strong>${activeMatch.scores.opponent}</strong><div class="score-pips">${scorePips(activeMatch.scores.opponent, activeMatch.target, "opponent")}</div></div></section>`;
 }
 function gameScreen(activeMatch: Match): string {
-  const stats = STAT_KEYS.map((stat, index) => `<button class="stat" data-stat="${stat}" ${activeMatch.phase !== "selecting" || busy ? "disabled" : ""}><span>[${index + 1}] ${labels[stat]}</span><strong>${activeMatch.player.stats[stat]}</strong></button>`).join("");
+  const stats = STAT_KEYS.map((stat, index) => `<button class="stat ${result?.stat === stat ? `selected-stat outcome-${result.outcome}` : ""}" data-stat="${stat}" ${activeMatch.phase !== "selecting" || busy ? "disabled" : ""}><span>[${index + 1}] ${labels[stat]}</span><strong>${activeMatch.player.stats[stat]}</strong></button>`).join("");
   const reveal = result ? `<section class="round-result ${result.outcome}" aria-label="Round result"><strong>${result.outcome === "draw" ? "Draw" : result.outcome === "player" ? "Round won" : "Round lost"}</strong><p>You used <strong>${result.playerValue}</strong> in ${labels[result.stat]}. ${escapeHtml(nameOf(activeMatch.opponent))} had <strong>${result.opponentValue}</strong>.</p></section>` : "";
   const action = activeMatch.phase === "awaitingNext" ? '<button id="next">[Enter] Next round</button>' : activeMatch.phase === "matchOver" ? '<button id="replay">Play again</button>' : "";
-  const log = verbose && result ? `<dl class="round-log" aria-label="Round log"><div><dt>Round</dt><dd>${activeMatch.round}</dd></div><div><dt>Stat</dt><dd>${labels[result.stat]}</dd></div><div><dt>Result</dt><dd>${result.outcome}</dd></div></dl>` : "";
-  const opponent = result ? fighterCard(activeMatch.opponent, "opponent") : concealedOpponentCard();
-  return `<section class="battle-layout"><div class="player-column">${fighterCard(activeMatch.player, "player")}<section aria-label="Stat selection" class="stats">${stats}</section>${reveal}<div class="actions game-actions">${action}<button class="quiet" id="quit">[Q] Quit match</button></div>${log}</div>${opponent}</section>${matchSettings(activeMatch)}`;
+  const log = result ? `<dl class="round-log" aria-label="Round log"><div><dt>Round</dt><dd>${activeMatch.round}</dd></div><div><dt>Stat</dt><dd>${labels[result.stat]}</dd></div><div><dt>Result</dt><dd>${result.outcome}</dd></div></dl>` : "";
+  const opponent = result ? fighterCard(activeMatch.opponent, "opponent", result) : concealedOpponentCard();
+  return `${scoreBoard(activeMatch)}<section class="battle-layout"><div class="player-column">${fighterCard(activeMatch.player, "player", result)}<section aria-label="Stat selection" class="stats">${stats}</section>${reveal}<div class="actions game-actions">${action}<button class="quiet" id="quit">[Q] Quit match</button></div>${log}</div>${opponent}</section>`;
 }
 function render(): void {
   const activeMatch = match;
-  const keyHint = !activeMatch ? "Keys: [1–3] Match length · [←/→] Choose · [Enter] Start" : activeMatch.phase === "selecting" ? "Keys: [1–5] Select stat · [H] Match settings · [Q] Quit" : "Keys: [Enter] Next round · [H] Match settings · [Q] Quit";
+  const keyHint = !activeMatch ? "Keys: [1–3] Match length · [←/→] Choose · [Enter] Start" : activeMatch.phase === "selecting" ? "Keys: [1–5] Select stat · [Q] Quit" : "Keys: [Enter] Next round · [Q] Quit";
   root.innerHTML = `<header><div>bash - JU-DO-KON</div><p>${activeMatch ? `Round ${activeMatch.round} · ${gameModeLabel()} · ${divisionLabel()} · Target: ${activeMatch.target} · You: ${activeMatch.scores.player} · Opponent: ${activeMatch.scores.opponent}` : `${gameModeLabel()} · ${divisionLabel()} division · Target: ${target}`}</p></header><main id="game" tabindex="-1"><p id="status" role="status" aria-live="polite">${statusText()}</p>${activeMatch ? gameScreen(activeMatch) : launchScreen()}</main><footer>${keyHint}</footer>`;
 }
 async function draw(): Promise<void> {
   busy = true; result = null; errorMessage = ""; render();
   try {
-    const [player, opponent] = await client.drawPair(activeSeed, divisionMode === "weight" ? weightClass : undefined);
+    const [player, opponent] = await client.drawPair(activeSeed, activeWeightClass);
     match = createMatch(player, opponent, target, 1, { player: 0, opponent: 0 }, gameMode);
   } catch (error) {
     match = null;
@@ -104,10 +113,10 @@ async function drawNextRound(activeMatch: Match): Promise<void> {
   try {
     const roundSeed = `${activeSeed}:${activeMatch.round + 1}`;
     if (activeMatch.mode === "champion") {
-      const opponent = await client.drawOpponent(roundSeed, [activeMatch.player.id, activeMatch.opponent.id], divisionMode === "weight" ? weightClass : undefined);
+      const opponent = await client.drawOpponent(roundSeed, [activeMatch.player.id, activeMatch.opponent.id], activeWeightClass);
       match = nextRound(activeMatch, activeMatch.player, opponent);
     } else {
-      const [player, opponent] = await client.drawPair(roundSeed, divisionMode === "weight" ? weightClass : undefined);
+      const [player, opponent] = await client.drawPair(roundSeed, activeWeightClass);
       match = nextRound(activeMatch, player, opponent);
     }
   } catch (error) {
@@ -121,6 +130,7 @@ function startMatch(points: number): void {
   target = points;
   matchLengthIndex = matchLengths.indexOf(points as typeof matchLengths[number]);
   activeSeed = seed || crypto.randomUUID();
+  activeWeightClass = divisionMode === "weight" ? weightClass === "random" ? randomWeightClass(activeSeed) : weightClass : undefined;
   persist();
   void draw();
 }
@@ -142,7 +152,6 @@ root.addEventListener("input", (event) => {
 });
 root.addEventListener("change", (event) => {
   const input = event.target as HTMLInputElement;
-  if (input.id === "verbose") { verbose = input.checked; persist(); render(); }
   if (input.name === "division-mode") { divisionMode = input.value === "weight" ? "weight" : "absolute"; persist(); render(); }
   if (input.name === "game-mode") { gameMode = input.value === "champion" ? "champion" : "classic"; persist(); render(); }
   if (input.id === "weight-class") { weightClass = input.value; persist(); render(); }
@@ -159,6 +168,5 @@ document.addEventListener("keydown", (event) => {
   if (event.key >= "1" && event.key <= "5" && match.phase === "selecting") root.querySelector<HTMLButtonElement>(`[data-stat="${STAT_KEYS[Number(event.key) - 1]}"]`)?.click();
   if ((event.key === "Enter" || event.key === " ") && match.phase === "awaitingNext") { event.preventDefault(); root.querySelector<HTMLButtonElement>("#next")?.click(); }
   if (event.key.toLowerCase() === "q") root.querySelector<HTMLButtonElement>("#quit")?.click();
-  if (event.key.toLowerCase() === "h") root.querySelector<HTMLDetailsElement>(".settings")?.toggleAttribute("open");
 });
 render();
