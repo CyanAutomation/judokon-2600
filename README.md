@@ -8,7 +8,7 @@ Start a 3, 5, or 10-point match, then choose one of five Judo stats. Your select
 
 Keyboard controls: `1`–`5` choose a stat, `Enter`/`Space` advances to the next round, `Q` quits, and `H` toggles match settings.
 
-Judoka are fetched directly from the public [Budokon catalogue API](https://budokon.scheimann.workers.dev/docs). A seed yields repeatable per-round draws through the API.
+Judoka are fetched directly from the public [Budokon catalogue API](https://budokon.scheimann.workers.dev/docs). The collapsed **Advanced** panel accepts an optional replay seed; otherwise each match gets a fresh seed. Draw requests time out after 10 seconds and expose a retry action.
 
 ## Development
 

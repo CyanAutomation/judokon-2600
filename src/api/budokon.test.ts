@@ -20,4 +20,15 @@ describe("BudokonClient", () => {
     const client = new BudokonClient(vi.fn().mockResolvedValue(new Response(JSON.stringify({ judoka: [incomplete, incomplete] }), { status: 200 })));
     await expect(client.drawPair("seed")).rejects.toThrow("invalid judoka draw");
   });
+  it("times out an unresponsive draw request", async () => {
+    vi.useFakeTimers();
+    const fetcher = vi.fn((_url: string, options: RequestInit) => new Promise<Response>((_resolve, reject) => {
+      options.signal?.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")));
+    })) as unknown as typeof fetch;
+    const request = new BudokonClient(fetcher, 1).drawPair("seed");
+    const expectation = expect(request).rejects.toThrow("Judoka draw timed out");
+    await vi.advanceTimersByTimeAsync(1);
+    await expectation;
+    vi.useRealTimers();
+  });
 });
