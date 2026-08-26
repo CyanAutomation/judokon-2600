@@ -59,19 +59,17 @@ function launchScreen(): string {
   const buttons = matchLengths.map((length, index) => `<button data-start="${length}" aria-pressed="${matchLengthIndex === index}" ${busy ? "disabled" : ""}>${["Quick", "Medium", "Long"][index]} (${length})</button>`).join("");
   const retry = errorMessage ? `<button class="retry" data-retry>Retry ${target}-point match</button>` : "";
   const weights = weightClasses.map((value) => `<option value="${value}" ${weightClass === value ? "selected" : ""}>${value} kg</option>`).join("");
-  return `<section class="launcher" aria-label="Match setup"><p class="eyebrow">Classic Battle</p><h2>Set up your bout</h2><p>Absolute allows open-weight matchups, inspired by open divisions. Weight class keeps both judoka in the same category.</p><fieldset class="mode-picker"><legend>Division</legend><label><input type="radio" name="division-mode" value="absolute" ${divisionMode === "absolute" ? "checked" : ""}/> Absolute <span>Open weight</span></label><label><input type="radio" name="division-mode" value="weight" ${divisionMode === "weight" ? "checked" : ""}/> Weight class <span>Comparable division</span></label></fieldset>${divisionMode === "weight" ? `<label class="weight-picker" for="weight-class">Weight class <select id="weight-class">${weights}</select></label>` : ""}<fieldset class="mode-picker"><legend>Battle format</legend><label><input type="radio" name="game-mode" value="classic" ${gameMode === "classic" ? "checked" : ""}/> Top Trumps <span>Both sides draw anew each round</span></label><label><input type="radio" name="game-mode" value="champion" ${gameMode === "champion" ? "checked" : ""}/> Champion <span>Keep your judoka; face a new opponent each round</span></label></fieldset><h2 class="match-length-heading">Select Match Length</h2><p>First to the selected number of points wins.</p><p class="keyboard-hint">Use <kbd>1</kbd>–<kbd>3</kbd>, arrow keys, or choose an option.</p><div class="actions">${buttons}</div>${retry}${advancedSettings()}</section>`;
+  return `<section class="launcher" aria-label="Match setup"><p class="eyebrow">Classic Battle</p><h2>Start a bout</h2><p>Choose a division, a game mode, and a first-to score.</p><fieldset class="mode-picker"><legend>Division</legend><label><input type="radio" name="division-mode" value="absolute" ${divisionMode === "absolute" ? "checked" : ""}/> Absolute <span>Open weight</span></label><label><input type="radio" name="division-mode" value="weight" ${divisionMode === "weight" ? "checked" : ""}/> Weight class <span>Comparable division</span></label></fieldset>${divisionMode === "weight" ? `<label class="weight-picker" for="weight-class">Weight class <select id="weight-class">${weights}</select></label>` : ""}<fieldset class="mode-picker"><legend>Game mode</legend><label><input type="radio" name="game-mode" value="classic" ${gameMode === "classic" ? "checked" : ""}/> Top Trumps <span>Both players draw a new judoka every round.</span></label><label><input type="radio" name="game-mode" value="champion" ${gameMode === "champion" ? "checked" : ""}/> Champion <span>Keep your judoka and face a new opponent each round.</span></label></fieldset><h2 class="match-length-heading">Match length</h2><p>First to the selected number of points wins.</p><p class="keyboard-hint">Use <kbd>1</kbd>–<kbd>3</kbd>, arrow keys, or choose an option.</p><div class="actions">${buttons}</div>${retry}${advancedSettings()}</section>`;
 }
 function matchSettings(activeMatch: Match): string {
   return `<details class="settings"><summary>Match settings</summary><p>${gameModeLabel()} · ${divisionLabel()} · First to ${activeMatch.target} points. Current match settings cannot change mid-match.</p><label><input id="verbose" type="checkbox" ${verbose ? "checked" : ""}/> Show round log</label><details class="advanced"><summary>Advanced</summary><p>Replay seed: <code>${escapeHtml(activeSeed)}</code></p></details></details>`;
 }
 function gameScreen(activeMatch: Match): string {
-  const stats = STAT_KEYS.map((stat, index) => { const value = Math.max(1, activeMatch.player.stats[stat] - activeMatch.uses[stat] * 2); const repeat = activeMatch.uses[stat] ? ` · repeated −${activeMatch.uses[stat] * 2}` : " · fresh"; return `<button class="stat" data-stat="${stat}" ${activeMatch.phase !== "selecting" || busy ? "disabled" : ""}><span>[${index + 1}] ${labels[stat]}<small>${repeat}</small></span><strong>${value}</strong></button>`; }).join("");
-  const strongest = STAT_KEYS.reduce((best, stat) => activeMatch.opponent.stats[stat] > activeMatch.opponent.stats[best] ? stat : best, STAT_KEYS[0]);
+  const stats = STAT_KEYS.map((stat, index) => `<button class="stat" data-stat="${stat}" ${activeMatch.phase !== "selecting" || busy ? "disabled" : ""}><span>[${index + 1}] ${labels[stat]}</span><strong>${activeMatch.player.stats[stat]}</strong></button>`).join("");
   const reveal = result ? `<section class="round-result ${result.outcome}" aria-label="Round result"><strong>${result.outcome === "draw" ? "Draw" : result.outcome === "player" ? "Round won" : "Round lost"}</strong><p>You used <strong>${result.playerValue}</strong> in ${labels[result.stat]}. ${escapeHtml(nameOf(activeMatch.opponent))} had <strong>${result.opponentValue}</strong>.</p></section>` : "";
   const action = activeMatch.phase === "awaitingNext" ? '<button id="next">[Enter] Next round</button>' : activeMatch.phase === "matchOver" ? '<button id="replay">Play again</button>' : "";
   const log = verbose && result ? `<dl class="round-log" aria-label="Round log"><div><dt>Round</dt><dd>${activeMatch.round}</dd></div><div><dt>Stat</dt><dd>${labels[result.stat]}</dd></div><div><dt>Result</dt><dd>${result.outcome}</dd></div></dl>` : "";
-  const fatigueNote = activeMatch.mode === "champion" ? "Repeated attacks lose 2 points each time. Save a strength for a decisive round." : "A new judoka is drawn for you after this round, so every stat starts fresh.";
-  return `<section class="battle-layout"><div><section class="fighter-card"><p class="eyebrow">Your judoka</p><h2>${escapeHtml(nameOf(activeMatch.player))}</h2><p>${escapeHtml(detailOf(activeMatch.player))}</p></section><section aria-label="Stat selection" class="stats">${stats}</section>${reveal}<div class="actions game-actions">${action}<button class="quiet" id="quit">[Q] Quit match</button></div>${log}</div><aside class="opponent-panel" aria-label="Opponent scouting"><p class="eyebrow">Opponent scouting</p><h2>Unknown judoka</h2><p>Intel suggests their strongest area is <strong>${labels[strongest]}</strong>.</p><p class="fatigue-note">${fatigueNote}</p></aside></section>${matchSettings(activeMatch)}`;
+  return `<section class="battle-layout"><section class="fighter-card"><p class="eyebrow">Your judoka</p><h2>${escapeHtml(nameOf(activeMatch.player))}</h2><p>${escapeHtml(detailOf(activeMatch.player))}</p></section><section aria-label="Stat selection" class="stats">${stats}</section>${reveal}<div class="actions game-actions">${action}<button class="quiet" id="quit">[Q] Quit match</button></div>${log}</section>${matchSettings(activeMatch)}`;
 }
 function render(): void {
   const activeMatch = match;
@@ -82,7 +80,7 @@ async function draw(): Promise<void> {
   busy = true; result = null; errorMessage = ""; render();
   try {
     const [player, opponent] = await client.drawPair(activeSeed, divisionMode === "weight" ? weightClass : undefined);
-    match = createMatch(player, opponent, target, 1, { player: 0, opponent: 0 }, undefined, gameMode);
+    match = createMatch(player, opponent, target, 1, { player: 0, opponent: 0 }, gameMode);
   } catch (error) {
     match = null;
     if (error instanceof Error && error.message.startsWith("No compatible")) errorMessage = `${error.message}. Choose Absolute or another division.`;
@@ -118,13 +116,14 @@ function startMatch(points: number): void {
   void draw();
 }
 function updateSeed(input: HTMLInputElement): void { seed = input.value.trim(); persist(); }
+function focusPrimaryAction(): void { root.querySelector<HTMLButtonElement>("#next, #replay")?.focus(); }
 
 root.addEventListener("click", (event) => {
   const button = (event.target as Element).closest<HTMLButtonElement>("button");
   if (!button || button.disabled) return;
   if (button.dataset.start) startMatch(Number(button.dataset.start));
   else if (button.dataset.retry) startMatch(target);
-  else if (button.dataset.stat && match) { result = selectStat(match, button.dataset.stat as StatKey); match = result.match; render(); }
+  else if (button.dataset.stat && match) { result = selectStat(match, button.dataset.stat as StatKey); match = result.match; render(); focusPrimaryAction(); }
   else if (button.id === "next" && match) void drawNextRound(match);
   else if (button.id === "replay") startMatch(target);
   else if (button.id === "quit") { match = null; result = null; errorMessage = ""; render(); }
