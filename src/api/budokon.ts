@@ -18,14 +18,25 @@ function isJudoka(value: unknown): value is Judoka {
 }
 
 export class BudokonClient {
-  constructor(private readonly fetcher: Fetcher = globalThis.fetch.bind(globalThis)) {}
+  constructor(private readonly fetcher: Fetcher = globalThis.fetch.bind(globalThis), private readonly timeoutMs = 10_000) {}
 
   async drawPair(seed: string): Promise<[Judoka, Judoka]> {
-    const response = await this.fetcher(DRAW_URL, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ count: 2, seed })
-    });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
+    let response: Response;
+    try {
+      response = await this.fetcher(DRAW_URL, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ count: 2, seed }),
+        signal: controller.signal
+      });
+    } catch (error) {
+      if (controller.signal.aborted) throw new Error("Judoka draw timed out");
+      throw error;
+    } finally {
+      clearTimeout(timeout);
+    }
     if (!response.ok) throw new Error(`Budokon draw failed (${response.status})`);
     const body: unknown = await response.json();
     const drawn = typeof body === "object" && body !== null ? (body as { judoka?: unknown }).judoka : undefined;

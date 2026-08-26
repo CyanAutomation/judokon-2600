@@ -29,6 +29,15 @@ describe("Classic Battle game engine", () => {
     expect(result.match.phase).toBe("matchOver");
     expect(result.match.winner).toBe("player");
   });
+  it("keeps the current round number until the next pair is drawn", () => {
+    const result = selectStat(createMatch(player, opponent, 10, 7), "power");
+    expect(result.match.round).toBe(7);
+  });
+  it("ends an unresolved match after the twenty-fifth played round", () => {
+    const result = selectStat(createMatch(player, opponent, 10, 25, { player: 3, opponent: 3 }), "speed");
+    expect(result.match.phase).toBe("matchOver");
+    expect(result.match.winner).toBe("draw");
+  });
   it("rejects a second stat choice for a resolved round", () => {
     const first = selectStat(createMatch(player, opponent, 3), "power");
     expect(() => selectStat(first.match, "technique")).toThrow("not ready for a stat selection");
