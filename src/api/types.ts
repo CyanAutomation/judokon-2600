@@ -17,5 +17,6 @@ export interface Judoka {
   country: string;
   countryCode: string;
   weightClass: string;
+  rarity?: string;
   stats: Stats;
 }

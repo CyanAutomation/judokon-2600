@@ -32,6 +32,14 @@ function escapeHtml(value: string): string {
 }
 function nameOf(judoka: Judoka): string { return `${judoka.firstname} ${judoka.surname}`; }
 function detailOf(judoka: Judoka): string { return `${judoka.country} · ${judoka.weightClass} kg`; }
+function rarityOf(judoka: Judoka): string { return judoka.rarity || "Unclassified"; }
+function fighterCard(judoka: Judoka, side: "player" | "opponent"): string {
+  const label = side === "player" ? "Your judoka" : "Opponent";
+  return `<section class="fighter-card ${side}" aria-label="${label}: ${escapeHtml(nameOf(judoka))}"><p class="eyebrow">${label}</p><h2>${escapeHtml(nameOf(judoka))}</h2><p>${escapeHtml(detailOf(judoka))}</p><span class="rarity rarity-${escapeHtml(rarityOf(judoka).toLowerCase())}">${escapeHtml(rarityOf(judoka))}</span></section>`;
+}
+function concealedOpponentCard(): string {
+  return `<section class="fighter-card opponent concealed" aria-label="Opponent concealed"><p class="eyebrow">Opponent</p><h2>Hidden judoka</h2><p>Revealed when the round ends.</p></section>`;
+}
 function persist(): void {
   if (seed) localStorage.setItem("judokon.seed", seed);
   else localStorage.removeItem("judokon.seed");
@@ -69,12 +77,13 @@ function gameScreen(activeMatch: Match): string {
   const reveal = result ? `<section class="round-result ${result.outcome}" aria-label="Round result"><strong>${result.outcome === "draw" ? "Draw" : result.outcome === "player" ? "Round won" : "Round lost"}</strong><p>You used <strong>${result.playerValue}</strong> in ${labels[result.stat]}. ${escapeHtml(nameOf(activeMatch.opponent))} had <strong>${result.opponentValue}</strong>.</p></section>` : "";
   const action = activeMatch.phase === "awaitingNext" ? '<button id="next">[Enter] Next round</button>' : activeMatch.phase === "matchOver" ? '<button id="replay">Play again</button>' : "";
   const log = verbose && result ? `<dl class="round-log" aria-label="Round log"><div><dt>Round</dt><dd>${activeMatch.round}</dd></div><div><dt>Stat</dt><dd>${labels[result.stat]}</dd></div><div><dt>Result</dt><dd>${result.outcome}</dd></div></dl>` : "";
-  return `<section class="battle-layout"><section class="fighter-card"><p class="eyebrow">Your judoka</p><h2>${escapeHtml(nameOf(activeMatch.player))}</h2><p>${escapeHtml(detailOf(activeMatch.player))}</p></section><section aria-label="Stat selection" class="stats">${stats}</section>${reveal}<div class="actions game-actions">${action}<button class="quiet" id="quit">[Q] Quit match</button></div>${log}</section>${matchSettings(activeMatch)}`;
+  const opponent = result ? fighterCard(activeMatch.opponent, "opponent") : concealedOpponentCard();
+  return `<section class="battle-layout"><div class="player-column">${fighterCard(activeMatch.player, "player")}<section aria-label="Stat selection" class="stats">${stats}</section>${reveal}<div class="actions game-actions">${action}<button class="quiet" id="quit">[Q] Quit match</button></div>${log}</div>${opponent}</section>${matchSettings(activeMatch)}`;
 }
 function render(): void {
   const activeMatch = match;
   const keyHint = !activeMatch ? "Keys: [1–3] Match length · [←/→] Choose · [Enter] Start" : activeMatch.phase === "selecting" ? "Keys: [1–5] Select stat · [H] Match settings · [Q] Quit" : "Keys: [Enter] Next round · [H] Match settings · [Q] Quit";
-  root.innerHTML = `<header><div>bash - JU-DO-KON</div><h1>Classic Battle (CLI)</h1><p>${activeMatch ? `Round ${activeMatch.round} · ${gameModeLabel()} · ${divisionLabel()} · Target: ${activeMatch.target} · You: ${activeMatch.scores.player} · Opponent: ${activeMatch.scores.opponent}` : `${gameModeLabel()} · ${divisionLabel()} division · Target: ${target}`}</p></header><main id="game" tabindex="-1"><p id="status" role="status" aria-live="polite">${statusText()}</p>${activeMatch ? gameScreen(activeMatch) : launchScreen()}</main><footer>${keyHint}</footer>`;
+  root.innerHTML = `<header><div>bash - JU-DO-KON</div><p>${activeMatch ? `Round ${activeMatch.round} · ${gameModeLabel()} · ${divisionLabel()} · Target: ${activeMatch.target} · You: ${activeMatch.scores.player} · Opponent: ${activeMatch.scores.opponent}` : `${gameModeLabel()} · ${divisionLabel()} division · Target: ${target}`}</p></header><main id="game" tabindex="-1"><p id="status" role="status" aria-live="polite">${statusText()}</p>${activeMatch ? gameScreen(activeMatch) : launchScreen()}</main><footer>${keyHint}</footer>`;
 }
 async function draw(): Promise<void> {
   busy = true; result = null; errorMessage = ""; render();
