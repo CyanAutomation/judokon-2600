@@ -12,6 +12,7 @@ function isJudoka(value: unknown): value is Judoka {
   if (typeof value !== "object" || value === null) return false;
   const candidate = value as Record<string, unknown>;
   if (!["id", "slug", "firstname", "surname", "country", "countryCode", "weightClass"].every((key) => typeof candidate[key] === "string")) return false;
+  if (candidate.rarity !== undefined && typeof candidate.rarity !== "string") return false;
   if (typeof candidate.stats !== "object" || candidate.stats === null) return false;
   const stats = candidate.stats as Record<string, unknown>;
   return STAT_KEYS.every((key) => typeof stats[key] === "number" && Number.isFinite(stats[key])) && Object.keys(stats).every(isStatKey);
