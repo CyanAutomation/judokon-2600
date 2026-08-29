@@ -14,17 +14,17 @@ Judoka are fetched directly from the public [Budokon catalogue API](https://budo
 
 ## Future release: unlockable scouting
 
-Opponent scouting is intentionally absent from the current game so every round begins with the same information. In a future progression release, it can return as an earned, opt-in reward:
+Opponent scouting is intentionally absent from the current game so every match begins with the same information. In a future progression release, it can return as an earned, opt-in reward that adds strategy without exposing exact opponent values:
 
 1. Add a versioned player-profile store, initially backed by `localStorage`, with earned currency, unlocked buffs, and a migration path for a server-backed profile.
 2. Award currency only after a completed match; use a small, fixed reward for participation plus a win bonus to avoid incentivising early quits.
-3. Offer a **Scout report** as a pre-round, one-use buff. Its first level should reveal only the opponent's strongest stat; later levels could reveal a top-two set or a single stat range.
+3. Offer a **Scout report** as a pre-match, one-use buff. Its first level should reveal only the opponent's strongest stat; later levels could reveal a top-two set or a single stat range.
 4. Keep the report hidden by default and present it as a deliberate action with a clear cost and remaining uses. Never reveal an exact opponent value.
-5. Seed and record buff use in the round log so replayed matches remain explainable; add engine tests for reward earning, buff consumption, and no-information default play.
+5. Seed and record buff use in the match log so replayed matches remain explainable; add engine tests for reward earning, buff consumption, and no-information default play.
 
 ## Potential future feature: career loop
 
-A light career loop could reward wins with distinctive judoka unlocks, counter-pick and rivalry discovery, and short challenges such as winning three rounds using Ne-waza. It should stay optional, preserving the crisp arcade-like bout flow.
+A light career loop could reward wins with distinctive judoka unlocks, counter-pick and rivalry discovery, and short challenges such as winning three matches using Ne-waza. It should stay optional, preserving the crisp arcade-like match flow.
 
 ## Development
 
