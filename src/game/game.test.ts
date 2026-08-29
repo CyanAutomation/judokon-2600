@@ -69,8 +69,34 @@ describe("Classic Battle game engine", () => {
     ])).toEqual({
       score: "1–0",
       decisiveStat: "power",
+      bestStat: "technique",
+      bestStatWins: 1,
+      bestStatSelections: 1,
       playerWins: 2,
       championStreak: 2
+    });
+  });
+  it("prefers the more reliable stat when two selections have the same number of wins", () => {
+    const completed = selectStat(createMatch(player, opponent, 1), "power").match;
+    expect(matchSummary(completed, [
+      { outcome: "player", stat: "power" },
+      { outcome: "opponent", stat: "power" },
+      { outcome: "player", stat: "speed" }
+    ])).toMatchObject({
+      bestStat: "speed",
+      bestStatWins: 1,
+      bestStatSelections: 1
+    });
+  });
+  it("does not recommend a stat when the player did not win a round", () => {
+    const completed = selectStat(createMatch(player, opponent, 1), "technique").match;
+    expect(matchSummary(completed, [
+      { outcome: "opponent", stat: "technique" },
+      { outcome: "draw", stat: "speed" }
+    ])).toMatchObject({
+      bestStat: null,
+      bestStatWins: 0,
+      bestStatSelections: 0
     });
   });
 });
