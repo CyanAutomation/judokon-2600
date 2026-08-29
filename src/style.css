@@ -17,20 +17,18 @@ button:disabled { opacity: .55; cursor: wait; }.quiet { border-color: #417841; c
 .eyebrow { color: #8ee58e; font-size: .82rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
 .keyboard-hint { font-size: .88rem; } kbd, code { padding: .1rem .3rem; border: 1px solid #417841; background: #030703; color: #d8ffd8; }
 .actions { display: flex; flex-wrap: wrap; gap: .65rem; margin: 1.3rem 0; }
-.fighter-card, .round-result, .settings, .advanced { border: 1px solid #417841; background: #091208; }
+.fighter-card, .settings, .advanced { border: 1px solid #417841; background: #091208; }
 .fighter-card { position: relative; padding: 1rem; margin: .5rem 0 1rem; }.fighter-card h2 { margin: .3rem 0; }.fighter-card p:not(.eyebrow) { color: #b3cdb3; }
 .battle-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(220px, .55fr); gap: 1rem; max-width: 900px; align-items: start; }.opponent { margin-top: .5rem; }.concealed { border-style: dashed; }.concealed h2 { color: #a4caa4; }.rarity { position: absolute; top: .85rem; right: .85rem; display: inline-block; padding: .2rem .45rem; border: 1px solid currentColor; font-size: .75rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }.rarity-common { color: #b3cdb3; }.rarity-rare { color: #9bc9ff; }.rarity-epic { color: #e3a8ff; }.rarity-legendary { color: #ffe49a; }
 .scoreboard { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 1rem; max-width: 900px; margin: 0 0 1rem; padding: .65rem .85rem; border: 1px solid #417841; background: #091208; }.scoreboard > p { color: #a4caa4; font-size: .8rem; text-align: center; }.score-side { display: grid; grid-template-columns: auto auto 1fr; align-items: center; gap: .5rem; min-height: 1.5rem; }.score-side.opponent { grid-template-columns: 1fr auto auto; text-align: right; }.score-side span { color: #a4caa4; font-size: .75rem; line-height: 1; text-transform: uppercase; }.score-side strong { font-size: 1.25rem; line-height: 1; }.score-pips { display: flex; align-items: center; gap: .25rem; min-height: 1.5rem; }.score-side.opponent .score-pips { justify-content: flex-end; }.score-pip { display: block; flex: 0 0 .6rem; width: .6rem; height: .6rem; border: 1px solid #417841; background: #071006; }.score-pip.player.earned { background: #8ee58e; border-color: #8ee58e; }.score-pip.opponent.earned { background: #ef8f86; border-color: #ef8f86; }
 .stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .55rem; margin: 1rem 0; }.stat { display: flex; justify-content: space-between; text-align: left; }
 .stat strong { font-size: 1.2rem; align-self: center; }
 .selected-stat { border-color: #ffe49a !important; box-shadow: inset 0 0 0 1px #ffe49a; }.fighter-card .selected-stat { display: flex; justify-content: space-between; align-items: center; margin: .85rem 0 0; padding: .45rem .55rem; border: 1px solid #ffe49a; background: #1f2110; color: #ffe49a; }.fighter-card .selected-stat strong { font-size: 1.25rem; }.selected-stat.outcome-player { border-color: #8ee58e !important; box-shadow: inset 0 0 0 1px #8ee58e; }.fighter-card.player .selected-stat.outcome-player, .fighter-card.opponent .selected-stat.outcome-opponent { background: #173017; color: #d8ffd8; }.fighter-card.player .selected-stat.outcome-opponent, .fighter-card.opponent .selected-stat.outcome-player { background: #321514; border-color: #ef8f86 !important; box-shadow: inset 0 0 0 1px #ef8f86; color: #ffd2ce; }.selected-stat.outcome-draw { border-color: #ffe49a !important; }
-.round-result { margin: 1rem 0; padding: 1rem; border-left-width: 4px; animation: outcome-arrive .28s ease-out; }.round-result > strong { display: inline-block; letter-spacing: .06em; }.round-result p { margin-top: .5rem; }.round-result.player { border-left-color: #8ee58e; }.round-result.opponent { border-left-color: #ef8f86; }.round-result.draw { border-left-color: #ffe49a; }
 details { margin-top: 1rem; padding: .8rem; } summary { cursor: pointer; font-weight: 700; } details > p { margin: .8rem 0; color: #b3cdb3; } label { display: block; margin-top: .8rem; } input { max-width: 100%; margin-left: .5rem; }
 .advanced { margin-top: 1rem; }.advanced > p { font-size: .86rem; } pre { overflow: auto; padding: .8rem; background: #030703; border: 1px solid #417841; }
-.round-log { display: grid; grid-template-columns: repeat(3, 1fr); gap: .5rem; margin: 1rem 0; }.round-log div { padding: .65rem; border: 1px solid #417841; }.round-log dt { color: #a4caa4; font-size: .75rem; }.round-log dd { margin: .25rem 0 0; font-weight: 700; }
 .skip-link { position: absolute; left: -999px; }.skip-link:focus { left: 1rem; top: 1rem; background: #fff; color: #000; padding: .5rem; } footer { border-top: 1px solid #4e894e; color: #a4caa4; font-size: .85rem; }
 @media (max-width: 700px) { .battle-layout { grid-template-columns: 1fr; }.opponent { margin-top: 0; }.mode-picker { grid-template-columns: 1fr; } }
-@media (max-width: 560px) { header, main, footer { padding: .8rem; }.launcher { margin: 1rem 0; }.scoreboard { grid-template-columns: 1fr 1fr; gap: .6rem; }.scoreboard > p { grid-column: 1 / -1; grid-row: 1; }.score-side { grid-template-columns: auto auto 1fr; }.score-side.opponent { grid-template-columns: 1fr auto auto; }.stats { grid-template-columns: 1fr; }.actions > button { width: 100%; }.weight-picker { align-items: stretch; flex-direction: column; }.round-log { grid-template-columns: 1fr; } }
+@media (max-width: 560px) { header, main, footer { padding: .8rem; }.launcher { margin: 1rem 0; }.scoreboard { grid-template-columns: 1fr 1fr; gap: .6rem; }.scoreboard > p { grid-column: 1 / -1; grid-row: 1; }.score-side { grid-template-columns: auto auto 1fr; }.score-side.opponent { grid-template-columns: 1fr auto auto; }.stats { grid-template-columns: 1fr; }.actions > button { width: 100%; }.weight-picker { align-items: stretch; flex-direction: column; } }
 
 /* Active terminal controls share one selected/focused language. */
 button { transition: background-color .12s ease, border-color .12s ease, color .12s ease; }
@@ -48,14 +46,6 @@ button { transition: background-color .12s ease, border-color .12s ease, color .
 .commitment { display: flex; align-items: center; gap: .8rem; margin: 1rem 0; padding: 1rem; border: 1px dashed #8ee58e; background: #091208; }
 .commitment p { margin-top: .25rem; color: #b3cdb3; }
 .stat.is-committing { opacity: 1; background: #214a21; border-color: #8ee58e; color: #d8ffd8; }
-.round-result .callout { color: #d8ffd8; font-weight: 700; }
-.round-history { margin: 1rem 0; }
-.round-history ol { display: flex; flex-wrap: wrap; gap: .45rem; margin: .5rem 0 0; padding: 0; list-style: none; }
-.round-history li { display: grid; grid-template-rows: repeat(3, 1fr); gap: .12rem; min-width: 5.2rem; min-height: 4.5rem; padding: .45rem .55rem; border: 1px solid #417841; color: #b3cdb3; font-size: .76rem; }
-.round-history li strong { color: #d8ffd8; font-size: .9rem; }
-.round-history li.player { border-color: #8ee58e; }.round-history li.player span:last-child { color: #8ee58e; }
-.round-history li.opponent { border-color: #ef8f86; }.round-history li.opponent span:last-child { color: #ef8f86; }
-.round-history li.draw { border-color: #ffe49a; }.round-history li.draw span:last-child { color: #ffe49a; }
 .score-pip.just-earned { animation: score-pop .46s ease-out; }
 .block-cursor { display: inline-block; color: #8ee58e; animation: terminal-blink 1.3s steps(1, end) infinite; }
 .active-command .block-cursor { margin-left: .2rem; }
@@ -63,3 +53,20 @@ button { transition: background-color .12s ease, border-color .12s ease, color .
 @keyframes score-pop { 0% { transform: scale(.55); filter: brightness(1.8); } 65% { transform: scale(1.45); } 100% { transform: scale(1); } }
 @keyframes outcome-arrive { from { opacity: 0; transform: translateY(.35rem); } to { opacity: 1; transform: translateY(0); } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; } }
+
+/* Match UI consistency refinements. */
+.fighter-card { min-height: 9rem; padding: 1rem 4.8rem 2.65rem 1rem; }
+.shido-slots { position: absolute; right: 1rem; bottom: 1rem; display: flex; align-items: end; gap: .22rem; height: 1.45rem; }
+.shido-slots span { display: block; width: .38rem; height: 1.25rem; border: 1px solid #417841; background: #071006; }
+.scoreboard > p { align-self: center; line-height: 1; }
+.score-side { display: flex; align-items: center; gap: .5rem; min-height: 2rem; }
+.score-side.opponent { justify-content: flex-end; }
+.score-pips { height: 2rem; min-height: 0; }
+.match-result, .match-summary { margin: 1rem 0; padding: 1rem; border: 1px solid #417841; background: #091208; }
+.match-result { border-left-width: 4px; animation: outcome-arrive .28s ease-out; }
+.match-result > strong, .match-summary > strong { display: inline-block; letter-spacing: .06em; }
+.match-result p { margin-top: .5rem; }.match-result.player { border-left-color: #8ee58e; }.match-result.opponent { border-left-color: #ef8f86; }.match-result.draw { border-left-color: #ffe49a; }.match-result .callout { color: #d8ffd8; font-weight: 700; }
+.match-summary dl { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .65rem; margin: .75rem 0 0; }.match-summary dt { color: #a4caa4; font-size: .75rem; }.match-summary dd { margin: .25rem 0 0; font-weight: 700; }
+.match-history { margin: 1rem 0; }.match-history ol { display: flex; flex-wrap: wrap; gap: .45rem; margin: .5rem 0 0; padding: 0; list-style: none; }.match-history li { display: grid; grid-template-rows: repeat(3, 1fr); gap: .12rem; min-width: 5.2rem; min-height: 4.5rem; padding: .45rem .55rem; border: 1px solid #417841; color: #b3cdb3; font-size: .76rem; }.match-history li strong { color: #d8ffd8; font-size: .9rem; }.match-history li.player { border-color: #8ee58e; }.match-history li.player span:last-child { color: #8ee58e; }.match-history li.opponent { border-color: #ef8f86; }.match-history li.opponent span:last-child { color: #ef8f86; }.match-history li.draw { border-color: #ffe49a; }.match-history li.draw span:last-child { color: #ffe49a; }
+footer { display: flex; align-items: center; justify-content: space-between; gap: .8rem; }.footer-sound { flex: 0 0 auto; padding: .35rem .55rem; border-color: #417841; color: #b3cdb3; font-size: .8rem; }.footer-sound[aria-pressed="true"] { background: #173017; border-color: #8ee58e; color: #d8ffd8; }
+@media (max-width: 560px) { .match-summary dl { grid-template-columns: 1fr; }.fighter-card { min-height: 9.4rem; } footer { align-items: flex-start; } }
