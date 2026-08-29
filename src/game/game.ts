@@ -32,6 +32,9 @@ export interface MatchHistoryItem {
 export interface MatchSummary {
   score: string;
   decisiveStat: StatKey | null;
+  bestStat: StatKey | null;
+  bestStatWins: number;
+  bestStatSelections: number;
   playerWins: number;
   championStreak: number | null;
 }
@@ -72,11 +75,24 @@ export function nextMatch(match: Match, nextPlayer: Judoka, nextOpponent: Judoka
 export function matchSummary(match: Match, history: MatchHistoryItem[]): MatchSummary {
   const playerWins = history.filter(({ outcome }) => outcome === "player").length;
   const counts = new Map<StatKey, number>();
-  for (const { stat } of history) counts.set(stat, (counts.get(stat) ?? 0) + 1);
+  const performance = new Map<StatKey, { wins: number; selections: number }>();
+  for (const { stat, outcome } of history) {
+    counts.set(stat, (counts.get(stat) ?? 0) + 1);
+    const current = performance.get(stat) ?? { wins: 0, selections: 0 };
+    current.selections += 1;
+    current.wins += Number(outcome === "player");
+    performance.set(stat, current);
+  }
   const decisiveStat = [...counts].sort(([, a], [, b]) => b - a)[0]?.[0] ?? null;
+  const best = [...performance.entries()]
+    .filter(([, record]) => record.wins > 0)
+    .sort(([, a], [, b]) => b.wins - a.wins || b.wins / b.selections - a.wins / a.selections || b.selections - a.selections)[0];
   return {
     score: `${match.scores.player}–${match.scores.opponent}`,
     decisiveStat,
+    bestStat: best?.[0] ?? null,
+    bestStatWins: best?.[1].wins ?? 0,
+    bestStatSelections: best?.[1].selections ?? 0,
     playerWins,
     championStreak: match.mode === "champion" ? playerWins : null
   };
