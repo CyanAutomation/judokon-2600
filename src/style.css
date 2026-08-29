@@ -62,11 +62,8 @@ button { transition: background-color .12s ease, border-color .12s ease, color .
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; } }
 
 /* Match UI consistency refinements. */
-.fighter-card { min-height: 9rem; padding: 1rem 1rem 2.65rem; }
-/* Keep the stat comparison full-width; shidos occupy their own footer space. */
-.fighter-card.concealed { height: 9rem; }
-.shido-slots { position: absolute; right: 1rem; bottom: 1rem; display: flex; align-items: center; gap: .22rem; height: 1.45rem; }
-.shido-slots span { display: block; width: .38rem; height: 1.25rem; border: 1px solid #417841; background: #071006; }
+.fighter-card { min-height: 9rem; }
+.fighter-card.concealed { min-height: 9rem; }
 .scoreboard > p { align-self: center; line-height: 1; }
 .score-side { display: flex; align-items: center; gap: .5rem; min-height: 2rem; }
 .score-side.opponent { justify-content: flex-end; }
