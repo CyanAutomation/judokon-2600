@@ -11,7 +11,8 @@ describe("BudokonClient", () => {
   it("requests a pair with the count and replay seed required by the API contract", async () => {
     let requestBody: unknown;
     const fetcher = vi.fn((_url: string, init?: RequestInit) => {
-      requestBody = init?.body ? JSON.parse(init.body as string) : undefined;
+      const body = init?.body;
+      requestBody = typeof body === "string" ? JSON.parse(body) : undefined;
       return Promise.resolve(new Response(JSON.stringify({ judoka }), { status: 200 }));
     }) as unknown as typeof fetch;
 
