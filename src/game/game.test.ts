@@ -97,7 +97,7 @@ describe("Classic Battle game engine", () => {
     });
   });
   it("calculates the Champion streak from the player's wins", () => {
-    const completed = selectStat(createMatch(player, opponent, 2, 3, { player: 1, opponent: 1 }, "champion"), "power").match;
+    const completed = selectStat(createMatch(player, opponent, 2, 3, { player: 0, opponent: 0 }, "champion"), "power").match;
     const summary = matchSummary(completed, [
       { outcome: "player", stat: "technique" },
       { outcome: "opponent", stat: "technique" },
