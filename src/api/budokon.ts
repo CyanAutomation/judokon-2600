@@ -26,6 +26,11 @@ export class BudokonClient {
     return [drawn[0]!, drawn[1]!];
   }
 
+  /**
+   * Draws one opponent. `exclude` contains Budokon judoka IDs (not slugs) that
+   * are forwarded to the remote API. The API guarantees those exclusions;
+   * this client validates the response shape but does not re-check its ID.
+   */
   async drawOpponent(seed: string, exclude: string[], weightClass?: string): Promise<Judoka> {
     return (await this.draw(seed, 1, weightClass, exclude))[0]!;
   }

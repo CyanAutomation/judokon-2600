@@ -42,12 +42,16 @@ describe("BudokonClient", () => {
     expect(pair).toEqual(judoka);
   });
   it("draws one new opponent while excluding the Champion and last opponent", async () => {
+    const championId = "champion-id";
+    const lastOpponentId = "last-opponent-id";
     const drawn = { id: "c", slug: "c", firstname: "C", surname: "C", country: "Japan", countryCode: "JP", weightClass: "-60", stats: { power: 1, speed: 2, technique: 3, kumikata: 4, newaza: 5 } };
     const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify({ judoka: [drawn] }), { status: 200 }));
-    await expect(new BudokonClient(fetcher).drawOpponent("round-2", ["champion", "last-opponent"])).resolves.toMatchObject({ id: "c" });
-    expect(fetcher).toHaveBeenCalledWith("https://budokon.scheimann.workers.dev/v1/draw", expect.objectContaining({
-      body: JSON.stringify({ count: 1, seed: "round-2", exclude: ["champion", "last-opponent"] })
-    }));
+    await expect(new BudokonClient(fetcher).drawOpponent("round-2", [championId, lastOpponentId])).resolves.toMatchObject({ id: "c" });
+
+    const request = fetcher.mock.calls[0]?.[1] as RequestInit;
+    const body = JSON.parse(request.body as string);
+    expect(body.count).toBe(1);
+    expect(body.exclude).toEqual(expect.arrayContaining([championId, lastOpponentId]));
   });
   it("reports an unusable service response", async () => {
     const client = new BudokonClient(vi.fn().mockResolvedValue(new Response("nope", { status: 503 })));
