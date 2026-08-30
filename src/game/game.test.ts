@@ -41,15 +41,19 @@ describe("Classic Battle game engine", () => {
     expect(() => selectStat(first.match, "technique")).toThrow("not ready for a stat selection");
   });
   it("replaces both judoka between Classic matches", () => {
-    const matchNumber = 7;
-    const resolved = selectStat(createMatch(player, opponent, 3, matchNumber), "power").match;
-    expect(resolved.matchNumber).toBe(matchNumber);
+    const resolved = selectStat(createMatch(player, opponent, 3, 7, { player: 1, opponent: 1 }), "power").match;
 
     const next = nextMatch(resolved, nextPlayer, nextOpponent);
-    expect(next.player.id).toBe(nextPlayer.id);
-    expect(next.opponent.id).toBe(nextOpponent.id);
-    expect(next.matchNumber).toBe(matchNumber + 1);
-    expect(next.phase).toBe("selecting");
+    expect(next).toMatchObject({
+      player: nextPlayer,
+      opponent: nextOpponent,
+      target: 3,
+      matchNumber: 8,
+      scores: { player: 2, opponent: 1 },
+      mode: "classic",
+      phase: "selecting",
+      winner: null
+    });
   });
   it("keeps the player's judoka and replaces the opponent in Champion mode", () => {
     const first = selectStat(createMatch(player, opponent, 3, 1, { player: 0, opponent: 0 }, "champion"), "power");
