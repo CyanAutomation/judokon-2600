@@ -35,6 +35,11 @@ export class BudokonClient {
     return (await this.draw(seed, 1, weightClass, exclude))[0]!;
   }
 
+  /**
+   * Budokon uses 409 when a draw cannot satisfy its constraints. For a
+   * weight-class draw, expose that as the user-facing empty-division message;
+   * an unfiltered conflict remains a generic HTTP failure.
+   */
   private async draw(seed: string, count: 1 | 2, weightClass?: string, exclude?: string[]): Promise<Judoka[]> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
