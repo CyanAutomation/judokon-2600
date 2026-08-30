@@ -50,9 +50,11 @@ describe("Classic Battle game engine", () => {
     expect(result.match.phase).toBe("matchOver");
     expect(result.match.winner).toBe("draw");
   });
-  it("rejects a second stat choice for a resolved match", () => {
-    const first = selectStat(createMatch(player, opponent, 3), "power");
-    expect(() => selectStat(first.match, "technique")).toThrow("not ready for a stat selection");
+  it.each([
+    ["awaitingNext phase", selectStat(createMatch(player, opponent, 3), "power").match],
+    ["matchOver phase", selectStat(createMatch(player, opponent, 1), "power").match]
+  ])("rejects a stat choice in the %s", (_label, match) => {
+    expect(() => selectStat(match, "technique")).toThrow("match is not ready for a stat selection");
   });
   it("replaces both judoka between Classic matches", () => {
     const resolved = selectStat(createMatch(player, opponent, 3, 7, { player: 1, opponent: 1 }), "power").match;
