@@ -19,15 +19,29 @@ function completedMatch(history: MatchHistoryItem[], mode: GameMode = "classic")
     player: total.player + Number(outcome === "player"),
     opponent: total.opponent + Number(outcome === "opponent")
   }), { player: 0, opponent: 0 });
+  const winner = scores.player > scores.opponent
+    ? "player" as const
+    : scores.player < scores.opponent
+      ? "opponent" as const
+      : null;
 
   return {
     ...createMatch(player, opponent, 2, history.length, scores, mode),
     phase: "matchOver" as const,
-    winner: scores.player > scores.opponent ? "player" as const : scores.player < scores.opponent ? "opponent" as const : null
+    winner
   };
 }
 
 describe("Classic Battle game engine", () => {
+  it("keeps completed-match fixtures unresolved when their histories are tied", () => {
+    const completed = completedMatch([
+      { outcome: "player", stat: "power" },
+      { outcome: "opponent", stat: "technique" }
+    ]);
+
+    expect(completed.scores).toEqual({ player: 1, opponent: 1 });
+    expect(completed.winner).toBeNull();
+  });
   it("awards a point for a higher selected stat and progresses to the next match", () => {
     const result = selectStat(createMatch(player, opponent, 3), "power");
     expect(result.outcome).toBe("player");
