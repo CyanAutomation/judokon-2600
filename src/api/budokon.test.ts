@@ -62,6 +62,7 @@ describe("BudokonClient", () => {
     it("explains when a selected division has no compatible pair", async () => {
       const client = new BudokonClient(vi.fn().mockResolvedValue(new Response("nope", { status: 409 })));
       await expect(client.drawPair("seed", "-81")).rejects.toThrow("No compatible -81 kg pair is available");
+      await expect(client.drawPair("seed")).rejects.toThrow("Budokon draw failed (409)");
     });
   });
   it("rejects a response that omits a battle stat", async () => {
