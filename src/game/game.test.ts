@@ -23,7 +23,7 @@ function completedMatch(history: MatchHistoryItem[], mode: GameMode = "classic")
   return {
     ...createMatch(player, opponent, 2, history.length, scores, mode),
     phase: "matchOver" as const,
-    winner: scores.player > scores.opponent ? "player" as const : "opponent" as const
+    winner: scores.player > scores.opponent ? "player" as const : scores.player < scores.opponent ? "opponent" as const : null
   };
 }
 
