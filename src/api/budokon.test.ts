@@ -53,13 +53,16 @@ describe("BudokonClient", () => {
     expect(body.count).toBe(1);
     expect(body.exclude).toEqual(expect.arrayContaining([championId, lastOpponentId]));
   });
-  it("reports an unusable service response", async () => {
-    const client = new BudokonClient(vi.fn().mockResolvedValue(new Response("nope", { status: 503 })));
-    await expect(client.drawPair("seed")).rejects.toThrow("Budokon draw failed (503)");
-  });
-  it("explains when a selected division has no compatible pair", async () => {
-    const client = new BudokonClient(vi.fn().mockResolvedValue(new Response("nope", { status: 409 })));
-    await expect(client.drawPair("seed", "-81")).rejects.toThrow("No compatible -81 kg pair is available");
+  describe("HTTP status handling", () => {
+    it("reports the Budokon status code for a non-success HTTP status", async () => {
+      const client = new BudokonClient(vi.fn().mockResolvedValue(new Response("nope", { status: 503 })));
+      await expect(client.drawPair("seed")).rejects.toThrow("Budokon draw failed (503)");
+    });
+
+    it("explains when a selected division has no compatible pair", async () => {
+      const client = new BudokonClient(vi.fn().mockResolvedValue(new Response("nope", { status: 409 })));
+      await expect(client.drawPair("seed", "-81")).rejects.toThrow("No compatible -81 kg pair is available");
+    });
   });
   it("rejects a response that omits a battle stat", async () => {
     const incomplete = { id: "a", slug: "a", firstname: "A", surname: "A", country: "Japan", countryCode: "JP", weightClass: "-60", stats: { power: 1 } };
