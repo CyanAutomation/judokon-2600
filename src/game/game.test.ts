@@ -83,7 +83,7 @@ describe("Classic Battle game engine", () => {
     });
   });
   it("reports the win and selection counts for the best stat", () => {
-    const completed = selectStat(createMatch(player, opponent, 2, 3, { player: 1, opponent: 1 }), "power").match;
+    const completed = selectStat(createMatch(player, opponent, 2, 3, { player: 0, opponent: 0 }), "power").match;
     const summary = matchSummary(completed, [
       { outcome: "player", stat: "power" },
       { outcome: "opponent", stat: "power" },
