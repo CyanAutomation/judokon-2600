@@ -69,18 +69,42 @@ describe("Classic Battle game engine", () => {
       phase: "selecting"
     });
   });
-  it("summarises a completed match with its decisive stat and champion streak", () => {
-    const completed = selectStat(createMatch(player, opponent, 1, 3, { player: 0, opponent: 0 }, "champion"), "power").match;
-    expect(matchSummary(completed, [
+  it("formats the score and identifies the most-selected decisive stat", () => {
+    const completed = selectStat(createMatch(player, opponent, 2, 3, { player: 0, opponent: 0 }), "power").match;
+    const summary = matchSummary(completed, [
       { outcome: "player", stat: "technique" },
       { outcome: "player", stat: "power" },
       { outcome: "draw", stat: "power" }
-    ])).toEqual({
-      score: "1–0",
+    ]);
+
+    expect(summary).toMatchObject({
+      score: "2–0",
       decisiveStat: "power",
-      bestStat: "technique",
-      bestStatWins: 1,
-      bestStatSelections: 1,
+    });
+  });
+  it("reports the win and selection counts for the best stat", () => {
+    const completed = selectStat(createMatch(player, opponent, 2, 3, { player: 0, opponent: 0 }), "power").match;
+    const summary = matchSummary(completed, [
+      { outcome: "player", stat: "power" },
+      { outcome: "opponent", stat: "power" },
+      { outcome: "player", stat: "power" }
+    ]);
+
+    expect(summary).toMatchObject({
+      bestStat: "power",
+      bestStatWins: 2,
+      bestStatSelections: 3
+    });
+  });
+  it("calculates the Champion streak from the player's wins", () => {
+    const completed = selectStat(createMatch(player, opponent, 2, 3, { player: 0, opponent: 0 }, "champion"), "power").match;
+    const summary = matchSummary(completed, [
+      { outcome: "player", stat: "technique" },
+      { outcome: "opponent", stat: "technique" },
+      { outcome: "player", stat: "power" }
+    ]);
+
+    expect(summary).toMatchObject({
       playerWins: 2,
       championStreak: 2
     });
