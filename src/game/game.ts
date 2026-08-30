@@ -31,6 +31,7 @@ export interface MatchHistoryItem {
 
 export interface MatchSummary {
   score: string;
+  /** The uniquely most-selected stat, or null when no stat was selected or selections are tied. */
   decisiveStat: StatKey | null;
   bestStat: StatKey | null;
   bestStatWins: number;
@@ -83,7 +84,11 @@ export function matchSummary(match: Match, history: MatchHistoryItem[]): MatchSu
     current.wins += Number(outcome === "player");
     performance.set(stat, current);
   }
-  const decisiveStat = [...counts].sort(([, a], [, b]) => b - a)[0]?.[0] ?? null;
+  const highestSelectionCount = Math.max(0, ...counts.values());
+  const mostSelectedStats = [...counts]
+    .filter(([, selections]) => selections === highestSelectionCount)
+    .map(([stat]) => stat);
+  const decisiveStat = mostSelectedStats.length === 1 ? mostSelectedStats[0] : null;
   const best = [...performance.entries()]
     .filter(([, record]) => record.wins > 0)
     .sort(([, a], [, b]) => b.wins - a.wins || b.wins / b.selections - a.wins / a.selections || b.selections - a.selections)[0];
