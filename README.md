@@ -10,6 +10,8 @@ Keyboard controls: choose match length with `1`–`3` or arrow keys and confirm 
 
 Optional keyboard ticks and outcome beeps are available in **Advanced**. They are muted by default and the preference is stored locally in the browser.
 
+After each match, the match summary recommends your best stat based on rounds won, using success rate to break equal-win ties. The recommendation reports both the number of wins and the total number of times that stat was selected; if no stat won a round, no recommendation is shown.
+
 Judoka are fetched directly from the public [Budokon catalogue API](https://budokon.scheimann.workers.dev/docs). The collapsed **Advanced** panel accepts an optional replay seed; otherwise each match gets a fresh seed. Draw requests time out after 10 seconds and expose a retry action.
 
 ## Future release: unlockable scouting
