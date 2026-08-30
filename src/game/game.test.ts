@@ -111,19 +111,45 @@ describe("Classic Battle game engine", () => {
 
     expect(matchSummary(completedMatch(history), history).decisiveStat).toBeNull();
   });
-  it("reports the win and selection counts for the best stat", () => {
-    const history: MatchHistoryItem[] = [
-      { outcome: "player", stat: "power" },
-      { outcome: "opponent", stat: "power" },
-      { outcome: "player", stat: "power" }
-    ];
-    const summary = matchSummary(completedMatch(history), history);
-
-    expect(summary).toMatchObject({
+  it.each([
+    {
+      scenario: "a clear winner",
+      history: [
+        { outcome: "player", stat: "power" },
+        { outcome: "opponent", stat: "power" },
+        { outcome: "player", stat: "power" }
+      ] satisfies MatchHistoryItem[],
       bestStat: "power",
       bestStatWins: 2,
       bestStatSelections: 3
-    });
+    },
+    {
+      scenario: "equal wins with different success rates",
+      history: [
+        { outcome: "player", stat: "power" },
+        { outcome: "opponent", stat: "power" },
+        { outcome: "player", stat: "speed" }
+      ] satisfies MatchHistoryItem[],
+      bestStat: "speed",
+      bestStatWins: 1,
+      bestStatSelections: 1
+    },
+    {
+      scenario: "no wins",
+      history: [
+        { outcome: "opponent", stat: "technique" },
+        { outcome: "draw", stat: "speed" }
+      ] satisfies MatchHistoryItem[],
+      bestStat: null,
+      bestStatWins: 0,
+      bestStatSelections: 0
+    }
+  ])("recommends the best stat for $scenario", ({ history, bestStat, bestStatWins, bestStatSelections }) => {
+    const summary = matchSummary(completedMatch(history), history);
+
+    expect(summary.bestStat).toBe(bestStat);
+    expect(summary.bestStatWins).toBe(bestStatWins);
+    expect(summary.bestStatSelections).toBe(bestStatSelections);
   });
   it("calculates the Champion streak from the player's wins", () => {
     const history: MatchHistoryItem[] = [
@@ -136,29 +162,6 @@ describe("Classic Battle game engine", () => {
     expect(summary).toMatchObject({
       playerWins: 2,
       championStreak: 2
-    });
-  });
-  it("prefers the more reliable stat when two selections have the same number of wins", () => {
-    const completed = selectStat(createMatch(player, opponent, 1), "power").match;
-    expect(matchSummary(completed, [
-      { outcome: "player", stat: "power" },
-      { outcome: "opponent", stat: "power" },
-      { outcome: "player", stat: "speed" }
-    ])).toMatchObject({
-      bestStat: "speed",
-      bestStatWins: 1,
-      bestStatSelections: 1
-    });
-  });
-  it("does not recommend a stat when the player did not win a round", () => {
-    const completed = selectStat(createMatch(player, opponent, 1), "technique").match;
-    expect(matchSummary(completed, [
-      { outcome: "opponent", stat: "technique" },
-      { outcome: "draw", stat: "speed" }
-    ])).toMatchObject({
-      bestStat: null,
-      bestStatWins: 0,
-      bestStatSelections: 0
     });
   });
 });
