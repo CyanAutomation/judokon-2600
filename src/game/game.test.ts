@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createMatch, matchSummary, nextMatch, selectStat } from "./game";
+import type { GameMode, MatchHistoryItem } from "./game";
 import type { Judoka } from "../api/types";
 
 const player: Judoka = {
@@ -12,6 +13,19 @@ const opponent: Judoka = {
 };
 const nextPlayer: Judoka = { ...player, id: "next-player", firstname: "Next" };
 const nextOpponent: Judoka = { ...opponent, id: "next-opponent", firstname: "Next opponent" };
+
+function completedMatch(history: MatchHistoryItem[], mode: GameMode = "classic") {
+  const scores = history.reduce((total, { outcome }) => ({
+    player: total.player + Number(outcome === "player"),
+    opponent: total.opponent + Number(outcome === "opponent")
+  }), { player: 0, opponent: 0 });
+
+  return {
+    ...createMatch(player, opponent, 2, history.length, scores, mode),
+    phase: "matchOver" as const,
+    winner: scores.player > scores.opponent ? "player" as const : "opponent" as const
+  };
+}
 
 describe("Classic Battle game engine", () => {
   it("awards a point for a higher selected stat and progresses to the next match", () => {
@@ -70,12 +84,12 @@ describe("Classic Battle game engine", () => {
     });
   });
   it("formats the score and identifies the most-selected decisive stat", () => {
-    const completed = selectStat(createMatch(player, opponent, 2, 3, { player: 0, opponent: 0 }), "power").match;
-    const summary = matchSummary(completed, [
+    const history: MatchHistoryItem[] = [
       { outcome: "player", stat: "technique" },
       { outcome: "player", stat: "power" },
       { outcome: "draw", stat: "power" }
-    ]);
+    ];
+    const summary = matchSummary(completedMatch(history), history);
 
     expect(summary).toMatchObject({
       score: "2–0",
@@ -83,12 +97,12 @@ describe("Classic Battle game engine", () => {
     });
   });
   it("reports the win and selection counts for the best stat", () => {
-    const completed = selectStat(createMatch(player, opponent, 2, 3, { player: 0, opponent: 0 }), "power").match;
-    const summary = matchSummary(completed, [
+    const history: MatchHistoryItem[] = [
       { outcome: "player", stat: "power" },
       { outcome: "opponent", stat: "power" },
       { outcome: "player", stat: "power" }
-    ]);
+    ];
+    const summary = matchSummary(completedMatch(history), history);
 
     expect(summary).toMatchObject({
       bestStat: "power",
@@ -97,12 +111,12 @@ describe("Classic Battle game engine", () => {
     });
   });
   it("calculates the Champion streak from the player's wins", () => {
-    const completed = selectStat(createMatch(player, opponent, 2, 3, { player: 0, opponent: 0 }, "champion"), "power").match;
-    const summary = matchSummary(completed, [
+    const history: MatchHistoryItem[] = [
       { outcome: "player", stat: "technique" },
       { outcome: "opponent", stat: "technique" },
       { outcome: "player", stat: "power" }
-    ]);
+    ];
+    const summary = matchSummary(completedMatch(history, "champion"), history);
 
     expect(summary).toMatchObject({
       playerWins: 2,
