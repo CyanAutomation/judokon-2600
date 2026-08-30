@@ -3,7 +3,7 @@ import { BudokonClient } from "./budokon";
 
 describe("BudokonClient", () => {
   const judoka = [
-    { id: "a", slug: "a", firstname: "A", surname: "A", country: "Japan", countryCode: "JP", weightClass: "-60", rarity: "Rare", stats: { power: 1, speed: 2, technique: 3, kumikata: 4, newaza: 5 } },
+    { id: "a", slug: "a", firstname: "A", surname: "A", country: "Japan", countryCode: "JP", weightClass: "-60", stats: { power: 1, speed: 2, technique: 3, kumikata: 4, newaza: 5 } },
     { id: "b", slug: "b", firstname: "B", surname: "B", country: "France", countryCode: "FR", weightClass: "-66", stats: { power: 5, speed: 4, technique: 3, kumikata: 2, newaza: 1 } }
   ];
 
@@ -21,13 +21,28 @@ describe("BudokonClient", () => {
     expect(requestBody).toEqual(expect.objectContaining({ count: 2, seed: "known-seed" }));
   });
 
-  it("maps the returned pair including optional rarity", async () => {
-    const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify({ judoka }), { status: 200 }));
+  describe("rarity response validation", () => {
+    it("preserves a valid string rarity", async () => {
+      const responseJudoka = [{ ...judoka[0], rarity: "Rare" }, judoka[1]];
+      const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify({ judoka: responseJudoka }), { status: 200 }));
 
-    const pair = await new BudokonClient(fetcher).drawPair("known-seed");
+      const pair = await new BudokonClient(fetcher).drawPair("known-seed");
 
-    expect(pair.map((judoka) => judoka.id)).toEqual(["a", "b"]);
-    expect(pair[0]?.rarity).toBe("Rare");
+      expect(pair[0]?.rarity).toBe("Rare");
+    });
+
+    it("accepts an omitted rarity", async () => {
+      const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify({ judoka }), { status: 200 }));
+
+      await expect(new BudokonClient(fetcher).drawPair("known-seed")).resolves.toHaveLength(2);
+    });
+
+    it("rejects a non-string rarity", async () => {
+      const responseJudoka = [{ ...judoka[0], rarity: 1 }, judoka[1]];
+      const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify({ judoka: responseJudoka }), { status: 200 }));
+
+      await expect(new BudokonClient(fetcher).drawPair("known-seed")).rejects.toThrow("invalid judoka draw");
+    });
   });
   it("constrains a draw to a requested weight class", async () => {
     const judoka = [
