@@ -103,6 +103,14 @@ describe("Classic Battle game engine", () => {
       decisiveStat: "power",
     });
   });
+  it("does not identify a decisive stat when selections are tied", () => {
+    const history: MatchHistoryItem[] = [
+      { outcome: "player", stat: "power" },
+      { outcome: "opponent", stat: "technique" }
+    ];
+
+    expect(matchSummary(completedMatch(history), history).decisiveStat).toBeNull();
+  });
   it("reports the win and selection counts for the best stat", () => {
     const history: MatchHistoryItem[] = [
       { outcome: "player", stat: "power" },
