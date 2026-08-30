@@ -13,14 +13,16 @@ describe("BudokonClient", () => {
     expect(fetcher).toHaveBeenCalledWith("https://budokon.scheimann.workers.dev/v1/draw", expect.objectContaining({ method: "POST", body: JSON.stringify({ count: 2, seed: "known-seed" }) }));
   });
   it("constrains a draw to a requested weight class", async () => {
-    const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify({ judoka: [
+    const judoka = [
       { id: "a", slug: "a", firstname: "A", surname: "A", country: "Japan", countryCode: "JP", weightClass: "-81", stats: { power: 1, speed: 2, technique: 3, kumikata: 4, newaza: 5 } },
       { id: "b", slug: "b", firstname: "B", surname: "B", country: "France", countryCode: "FR", weightClass: "-81", stats: { power: 5, speed: 4, technique: 3, kumikata: 2, newaza: 1 } }
-    ] }), { status: 200 }));
-    await new BudokonClient(fetcher).drawPair("known-seed", "-81");
-    expect(fetcher).toHaveBeenCalledWith("https://budokon.scheimann.workers.dev/v1/draw", expect.objectContaining({
-      body: JSON.stringify({ count: 2, seed: "known-seed", filters: { weightClass: "-81" } })
-    }));
+    ];
+    const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify({ judoka }), { status: 200 }));
+    const pair = await new BudokonClient(fetcher).drawPair("known-seed", "-81");
+    const request = fetcher.mock.calls[0]?.[1] as RequestInit;
+    const body = JSON.parse(request.body as string);
+    expect(body.filters.weightClass).toBe("-81");
+    expect(pair).toEqual(judoka);
   });
   it("draws one new opponent while excluding the Champion and last opponent", async () => {
     const drawn = { id: "c", slug: "c", firstname: "C", surname: "C", country: "Japan", countryCode: "JP", weightClass: "-60", stats: { power: 1, speed: 2, technique: 3, kumikata: 4, newaza: 5 } };
