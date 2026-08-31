@@ -39,6 +39,7 @@ export interface MatchSummary {
   bestStatSelections: number;
   playerWins: number;
   championStreak: number | null;
+  championRecord: { wins: number; losses: number; draws: number } | null;
 }
 
 export function createMatch(player: Judoka, opponent: Judoka, target: number, matchNumber = 1, scores = { player: 0, opponent: 0 }, mode: GameMode = "classic"): Match {
@@ -82,6 +83,16 @@ export function nextMatch(match: Match, nextPlayer: Judoka, nextOpponent: Judoka
 
 export function matchSummary(match: Match, history: MatchHistoryItem[]): MatchSummary {
   const playerWins = history.filter(({ outcome }) => outcome === "player").length;
+  const championRecord = match.mode === "champion"
+    ? {
+        wins: playerWins,
+        losses: history.filter(({ outcome }) => outcome === "opponent").length,
+        draws: history.filter(({ outcome }) => outcome === "draw").length
+      }
+    : null;
+  const championStreak = match.mode === "champion"
+    ? [...history].reverse().findIndex(({ outcome }) => outcome !== "player")
+    : -1;
   const counts = new Map<StatKey, number>();
   const performance = new Map<StatKey, { wins: number; selections: number }>();
   for (const { stat, outcome } of history) {
@@ -106,6 +117,7 @@ export function matchSummary(match: Match, history: MatchHistoryItem[]): MatchSu
     bestStatWins: best?.[1].wins ?? 0,
     bestStatSelections: best?.[1].selections ?? 0,
     playerWins,
-    championStreak: match.mode === "champion" ? playerWins : null
+    championStreak: match.mode === "champion" ? (championStreak === -1 ? history.length : championStreak) : null,
+    championRecord
   };
 }
