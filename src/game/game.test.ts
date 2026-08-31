@@ -155,17 +155,28 @@ describe("Classic Battle game engine", () => {
     expect(summary.bestStatWins).toBe(bestStatWins);
     expect(summary.bestStatSelections).toBe(bestStatSelections);
   });
-  it("calculates the Champion streak from the player's wins", () => {
+  it("reports a Champion run's record and its current consecutive-win streak", () => {
     const history: MatchHistoryItem[] = [
       { outcome: "player", stat: "technique" },
       { outcome: "opponent", stat: "technique" },
+      { outcome: "draw", stat: "speed" },
+      { outcome: "player", stat: "power" },
       { outcome: "player", stat: "power" }
     ];
     const summary = matchSummary(completedMatch(history, "champion"), history);
 
     expect(summary).toMatchObject({
-      playerWins: 2,
-      championStreak: 2
+      playerWins: 3,
+      championStreak: 2,
+      championRecord: { wins: 3, losses: 1, draws: 1 }
     });
+  });
+
+  it("does not expose Champion-only progress for a Classic Battle", () => {
+    const history: MatchHistoryItem[] = [{ outcome: "player", stat: "power" }];
+    const summary = matchSummary(completedMatch(history), history);
+
+    expect(summary.championStreak).toBeNull();
+    expect(summary.championRecord).toBeNull();
   });
 });
