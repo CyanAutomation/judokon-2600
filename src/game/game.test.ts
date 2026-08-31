@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createMatch, matchSummary, nextMatch, selectStat } from "./game";
+import { createMatch, matchSummary, nextMatch, selectStat, strongestStats } from "./game";
 import type { GameMode, MatchHistoryItem } from "./game";
 import type { Judoka } from "../api/types";
 
@@ -33,6 +33,10 @@ function completedMatch(history: MatchHistoryItem[], mode: GameMode = "classic")
 }
 
 describe("Classic Battle game engine", () => {
+  it("identifies every strongest stat for a scout report", () => {
+    expect(strongestStats(player)).toEqual(["power"]);
+    expect(strongestStats({ ...player, stats: { ...player.stats, technique: 9 } })).toEqual(["power", "technique"]);
+  });
   it("awards a point for a higher selected stat and progresses to the next match", () => {
     const result = selectStat(createMatch(player, opponent, 3), "power");
     expect(result.outcome).toBe("player");

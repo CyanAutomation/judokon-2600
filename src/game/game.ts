@@ -4,6 +4,7 @@ export type Outcome = "player" | "opponent" | "draw";
 export type Phase = "selecting" | "awaitingNext" | "matchOver";
 export type Winner = Outcome | null;
 export type GameMode = "classic" | "champion";
+export const MAX_ROUNDS = 25;
 
 export interface Match {
   player: Judoka;
@@ -45,6 +46,12 @@ export function createMatch(player: Judoka, opponent: Judoka, target: number, ma
   return { player, opponent, target, matchNumber, scores, mode, phase: "selecting", winner: null };
 }
 
+/** Returns every stat tied for a judoka's highest rating, in the displayed stat order. */
+export function strongestStats(judoka: Judoka): StatKey[] {
+  const highest = Math.max(...Object.values(judoka.stats));
+  return (Object.keys(judoka.stats) as StatKey[]).filter((stat) => judoka.stats[stat] === highest);
+}
+
 export function selectStat(match: Match, stat: StatKey): MatchResult {
   if (match.phase !== "selecting") throw new Error("match is not ready for a stat selection");
   const playerValue = match.player.stats[stat];
@@ -55,7 +62,7 @@ export function selectStat(match: Match, stat: StatKey): MatchResult {
     opponent: match.scores.opponent + Number(outcome === "opponent")
   };
   const hasWinner = scores.player >= match.target || scores.opponent >= match.target;
-  const capped = match.matchNumber >= 25;
+  const capped = match.matchNumber >= MAX_ROUNDS;
   const winner: Winner = hasWinner ? (scores.player > scores.opponent ? "player" : "opponent") : capped ? (scores.player === scores.opponent ? "draw" : scores.player > scores.opponent ? "player" : "opponent") : null;
   return {
     outcome,
