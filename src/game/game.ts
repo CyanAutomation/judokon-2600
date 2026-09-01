@@ -90,9 +90,12 @@ export function matchSummary(match: Match, history: MatchHistoryItem[]): MatchSu
         draws: history.filter(({ outcome }) => outcome === "draw").length
       }
     : null;
-  const championStreak = match.mode === "champion"
-    ? [...history].reverse().findIndex(({ outcome }) => outcome !== "player")
-    : -1;
+  let championStreak = 0;
+  if (match.mode === "champion") {
+    for (let index = history.length - 1; index >= 0 && history[index]?.outcome === "player"; index -= 1) {
+      championStreak += 1;
+    }
+  }
   const counts = new Map<StatKey, number>();
   const performance = new Map<StatKey, { wins: number; selections: number }>();
   for (const { stat, outcome } of history) {
@@ -117,7 +120,7 @@ export function matchSummary(match: Match, history: MatchHistoryItem[]): MatchSu
     bestStatWins: best?.[1].wins ?? 0,
     bestStatSelections: best?.[1].selections ?? 0,
     playerWins,
-    championStreak: match.mode === "champion" ? (championStreak === -1 ? history.length : championStreak) : null,
+    championStreak: match.mode === "champion" ? championStreak : null,
     championRecord
   };
 }
