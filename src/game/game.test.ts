@@ -155,20 +155,39 @@ describe("Classic Battle game engine", () => {
     expect(summary.bestStatWins).toBe(bestStatWins);
     expect(summary.bestStatSelections).toBe(bestStatSelections);
   });
-  it("reports a Champion run's record and its current consecutive-win streak", () => {
+  it.each([
+    {
+      scenario: "win–win",
+      outcomes: ["player", "player"] as const,
+      championStreak: 2
+    },
+    {
+      scenario: "win–loss–win",
+      outcomes: ["player", "opponent", "player"] as const,
+      championStreak: 1
+    },
+    {
+      scenario: "a streak ending in a loss",
+      outcomes: ["player", "player", "opponent"] as const,
+      championStreak: 0
+    }
+  ])("calculates the Champion streak from the player's wins: $scenario", ({ outcomes, championStreak }) => {
+    const history: MatchHistoryItem[] = outcomes.map((outcome) => ({ outcome, stat: "power" }));
+    const summary = matchSummary(completedMatch(history, "champion"), history);
+
+    expect(summary.championStreak).toBe(championStreak);
+  });
+
+  it("reports a Champion run's win, loss, and draw record", () => {
     const history: MatchHistoryItem[] = [
       { outcome: "player", stat: "technique" },
       { outcome: "opponent", stat: "technique" },
-      { outcome: "draw", stat: "speed" },
-      { outcome: "player", stat: "power" },
-      { outcome: "player", stat: "power" }
+      { outcome: "draw", stat: "speed" }
     ];
-    const summary = matchSummary(completedMatch(history, "champion"), history);
 
-    expect(summary).toMatchObject({
-      playerWins: 3,
-      championStreak: 2,
-      championRecord: { wins: 3, losses: 1, draws: 1 }
+    expect(matchSummary(completedMatch(history, "champion"), history)).toMatchObject({
+      playerWins: 1,
+      championRecord: { wins: 1, losses: 1, draws: 1 }
     });
   });
 

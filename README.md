@@ -12,6 +12,8 @@ Optional keyboard ticks and outcome beeps are available in **Advanced**. They ar
 
 After each match, the match summary recommends your best stat based on rounds won, using success rate to break equal-win ties. The recommendation reports both the number of wins and the total number of times that stat was selected; if no stat won a round, no recommendation is shown.
 
+In **Champion** mode, you keep the same judoka while opponents rotate. The **Current streak** is the number of consecutive rounds won by the player at the end of the run: each win extends it, while either a loss or a draw resets it to zero. Earlier wins remain part of the run record but do not count toward the current streak.
+
 Judoka are fetched directly from the public [Budokon catalogue API](https://budokon.scheimann.workers.dev/docs). The collapsed **Advanced** panel accepts an optional replay seed; otherwise each match gets a fresh seed. Draw requests time out after 10 seconds and expose a retry action.
 
 ## Future release: unlockable scouting
