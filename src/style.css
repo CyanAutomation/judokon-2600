@@ -17,16 +17,14 @@ button:disabled { opacity: .55; cursor: wait; }.quiet { border-color: #417841; c
 .intro-status { margin: 1.35rem 0; color: #8ee58e; font-size: .84rem; }
 .intro .primary-action { width: auto; min-width: 15rem; }
 .intro-footnote { grid-column: 1 / -1; margin-top: .4rem; color: #a4caa4; font-size: .78rem; text-align: center; }
-.terminal-scene { position: relative; min-height: 19rem; overflow: hidden; border: 1px solid #75c775; background: #091208; box-shadow: 0 0 0 4px #0b180a, 0 0 30px #173017; image-rendering: pixelated; }
-.scene-chrome { position: relative; z-index: 5; display: flex; justify-content: space-between; padding: .5rem .65rem; border-bottom: 1px solid #417841; color: #a4caa4; font-size: .66rem; letter-spacing: .05em; }.scene-chrome span:last-child { color: #8ee58e; }
-.scene-sky { position: absolute; inset: 2rem 0 43%; background: linear-gradient(#123429, #235642 55%, #8ea75a); }
-.scene-city { position: absolute; right: 9%; bottom: 38%; display: flex; align-items: end; gap: .25rem; height: 9rem; }.scene-city i { width: 1.3rem; background: repeating-linear-gradient(90deg, #172d28 0 .28rem, #a2bd7d .3rem .42rem); border: 1px solid #08140e; }.scene-city i:nth-child(1) { height: 4.5rem; }.scene-city i:nth-child(2) { height: 7.3rem; }.scene-city i:nth-child(3) { height: 5.5rem; }.scene-city i:nth-child(4) { height: 9rem; }.scene-city i:nth-child(5) { height: 6.4rem; }.scene-city i:nth-child(6) { height: 8rem; }.scene-city i:nth-child(7) { height: 4.8rem; }.scene-city i:nth-child(8) { height: 6rem; }
-.scene-crowd { position: absolute; right: 0; bottom: 30%; left: 0; overflow: hidden; height: 2.1rem; color: #c6dc99; background: #304b33; font-size: 1.4rem; letter-spacing: .16em; line-height: 1.4; white-space: nowrap; }
-.scene-floor { position: absolute; right: 0; bottom: 0; left: 0; height: 31%; border-top: 2px solid #d2c56d; background: repeating-linear-gradient(135deg, #445b3a 0 1rem, #3b5135 1rem 2rem); }
-.fighter-sprite { position: absolute; z-index: 3; bottom: 13%; width: 4.4rem; height: 7.9rem; animation: fighter-bob 1.7s steps(2, end) infinite; }.fighter-left { left: 21%; }.fighter-right { right: 19%; transform: scaleX(-1); animation-delay: -.4s; }
-.sprite-head { position: absolute; top: 0; left: 1.65rem; width: 1.45rem; height: 1.45rem; background: #f0cf9c; box-shadow: .25rem 0 #9d5b3e; }.sprite-body { position: absolute; top: 1.3rem; left: 1.1rem; width: 2.6rem; height: 3.1rem; background: #e8ead1; border: .22rem solid #213b2e; }.sprite-arm { position: absolute; top: 1.65rem; left: -.1rem; width: 4.8rem; height: .65rem; background: #e8ead1; border: .15rem solid #213b2e; transform: rotate(-12deg); }.sprite-leg { position: absolute; bottom: .1rem; left: .9rem; width: 2.9rem; height: 2.9rem; background: linear-gradient(75deg, transparent 0 35%, #e8ead1 36% 64%, transparent 65%); }
-.scene-prompt { position: absolute; z-index: 5; right: .65rem; bottom: .45rem; color: #d8ffd8; font-size: .66rem; letter-spacing: .07em; }
-@keyframes fighter-bob { 0%, 100% { margin-bottom: 0; } 50% { margin-bottom: .25rem; } }
+.intro-mode-panel { min-height: 19rem; padding: clamp(1rem, 3vw, 1.5rem); border-color: #75c775; box-shadow: 0 0 0 4px #0b180a, 0 0 30px #173017; }
+.intro-mode-panel h2 { margin-top: .45rem; }
+.intro-mode-actions { display: grid; grid-template-columns: 1fr; margin: 1.25rem 0 .85rem; }
+.intro-mode-actions .option-card { width: 100%; min-height: 4rem; }
+.intro-mode-actions .option-card strong { color: #a4caa4; font-size: .78rem; font-weight: 400; }
+.intro-mode-actions .option-card[aria-pressed="true"] strong { color: #d8ffd8; }
+.intro-mode-description { min-height: 2.7rem; color: #d8ffd8; line-height: 1.45; }
+.intro-mode-note { margin-top: .8rem; color: #a4caa4; font-size: .78rem; }
 .launcher h2 { margin-top: .4rem; }.launcher > p:not(.eyebrow) { margin-top: .75rem; color: #b3cdb3; }
 .mode-picker { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .65rem; margin: 1.4rem 0 1rem; padding: .8rem; border: 1px solid #417841; }
 .mode-picker legend { padding: 0 .35rem; color: #8ee58e; font-weight: 700; }.mode-picker label { margin: 0; padding: .7rem; border: 1px solid #417841; cursor: pointer; }.mode-picker label:has(input:checked) { background: #173017; border-color: #8ee58e; }.mode-picker input { margin: 0 .4rem 0 0; padding: 0; accent-color: #8ee58e; }.mode-picker span { display: block; margin: .35rem 0 0 1.4rem; color: #b3cdb3; font-size: .8rem; }
