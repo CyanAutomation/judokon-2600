@@ -1,4 +1,4 @@
-import type { Judoka, StatKey } from "../api/types";
+import { STAT_KEYS, type Judoka, type StatKey } from "../api/types";
 
 export type Outcome = "player" | "opponent" | "draw";
 export type Phase = "selecting" | "awaitingNext" | "matchOver";
@@ -112,7 +112,9 @@ export function matchSummary(match: Match, history: MatchHistoryItem[]): MatchSu
   const decisiveStat = mostSelectedStats.length === 1 ? mostSelectedStats[0] : null;
   const best = [...performance.entries()]
     .filter(([, record]) => record.wins > 0)
-    .sort(([, a], [, b]) => b.wins - a.wins || b.wins / b.selections - a.wins / a.selections || b.selections - a.selections)[0];
+    .sort(([aStat, a], [bStat, b]) => b.wins - a.wins
+      || b.wins / b.selections - a.wins / a.selections
+      || STAT_KEYS.indexOf(aStat) - STAT_KEYS.indexOf(bStat))[0];
   return {
     score: `${match.scores.player}–${match.scores.opponent}`,
     decisiveStat,
