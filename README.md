@@ -10,7 +10,7 @@ Keyboard controls: choose match length with `1`–`3` or arrow keys and confirm 
 
 Optional keyboard ticks and outcome beeps are available in **Advanced**. They are muted by default and the preference is stored locally in the browser.
 
-After each match, the match summary recommends your best stat based on rounds won, using success rate to break equal-win ties. The recommendation reports both the number of wins and the total number of times that stat was selected; if no stat won a round, no recommendation is shown.
+After each match, the match summary recommends your best stat using this ranking contract: most rounds won, then highest win rate, then the first stat in the displayed order (Power, Speed, Technique, Kumi-kata, Ne-waza). The displayed order makes a final tie deterministic. The recommendation reports both the number of wins and the total number of times that stat was selected; if no stat won a round, no recommendation is shown.
 
 In **Champion** mode, you keep the same judoka while opponents rotate. The **Current streak** is the number of consecutive rounds won by the player at the end of the run: each win extends it, while either a loss or a draw resets it to zero. Earlier wins remain part of the run record but do not count toward the current streak.
 
