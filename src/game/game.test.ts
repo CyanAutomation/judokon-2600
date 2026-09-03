@@ -115,45 +115,59 @@ describe("Classic Battle game engine", () => {
 
     expect(matchSummary(completedMatch(history), history).decisiveStat).toBeNull();
   });
-  it.each([
-    {
-      scenario: "a clear winner",
-      history: [
-        { outcome: "player", stat: "power" },
-        { outcome: "opponent", stat: "power" },
-        { outcome: "player", stat: "power" }
-      ] satisfies MatchHistoryItem[],
-      bestStat: "power",
-      bestStatWins: 2,
-      bestStatSelections: 3
-    },
-    {
-      scenario: "equal wins with different success rates",
-      history: [
-        { outcome: "player", stat: "power" },
-        { outcome: "opponent", stat: "power" },
-        { outcome: "player", stat: "speed" }
-      ] satisfies MatchHistoryItem[],
-      bestStat: "speed",
-      bestStatWins: 1,
-      bestStatSelections: 1
-    },
-    {
-      scenario: "no wins",
-      history: [
-        { outcome: "opponent", stat: "technique" },
-        { outcome: "draw", stat: "speed" }
-      ] satisfies MatchHistoryItem[],
-      bestStat: null,
-      bestStatWins: 0,
-      bestStatSelections: 0
-    }
-  ])("recommends the best stat for $scenario", ({ history, bestStat, bestStatWins, bestStatSelections }) => {
-    const summary = matchSummary(completedMatch(history), history);
+  describe("matchSummary best-stat ranking (README gameplay contract)", () => {
+    it.each([
+      {
+        scenario: "a clear winner",
+        history: [
+          { outcome: "player", stat: "power" },
+          { outcome: "opponent", stat: "power" },
+          { outcome: "player", stat: "power" }
+        ] satisfies MatchHistoryItem[],
+        bestStat: "power",
+        bestStatWins: 2,
+        bestStatSelections: 3
+      },
+      {
+        scenario: "equal wins with different success rates",
+        history: [
+          { outcome: "player", stat: "power" },
+          { outcome: "opponent", stat: "power" },
+          { outcome: "player", stat: "speed" }
+        ] satisfies MatchHistoryItem[],
+        bestStat: "speed",
+        bestStatWins: 1,
+        bestStatSelections: 1
+      },
+      {
+        scenario: "a final tie resolved by displayed stat order",
+        history: [
+          { outcome: "player", stat: "speed" },
+          { outcome: "opponent", stat: "speed" },
+          { outcome: "player", stat: "power" },
+          { outcome: "opponent", stat: "power" }
+        ] satisfies MatchHistoryItem[],
+        bestStat: "power",
+        bestStatWins: 1,
+        bestStatSelections: 2
+      },
+      {
+        scenario: "no wins",
+        history: [
+          { outcome: "opponent", stat: "technique" },
+          { outcome: "draw", stat: "speed" }
+        ] satisfies MatchHistoryItem[],
+        bestStat: null,
+        bestStatWins: 0,
+        bestStatSelections: 0
+      }
+    ])("ranks the best stat for $scenario", ({ history, bestStat, bestStatWins, bestStatSelections }) => {
+      const summary = matchSummary(completedMatch(history), history);
 
-    expect(summary.bestStat).toBe(bestStat);
-    expect(summary.bestStatWins).toBe(bestStatWins);
-    expect(summary.bestStatSelections).toBe(bestStatSelections);
+      expect(summary.bestStat).toBe(bestStat);
+      expect(summary.bestStatWins).toBe(bestStatWins);
+      expect(summary.bestStatSelections).toBe(bestStatSelections);
+    });
   });
   it.each([
     {
