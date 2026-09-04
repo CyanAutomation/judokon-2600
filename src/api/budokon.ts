@@ -19,6 +19,8 @@ function isJudoka(value: unknown): value is Judoka {
 }
 
 export class BudokonClient {
+  private readonly draws = new Map<string, Promise<Judoka[]>>();
+
   constructor(private readonly fetcher: Fetcher = globalThis.fetch.bind(globalThis), private readonly timeoutMs = 10_000) {}
 
   async drawPair(seed: string, weightClass?: string): Promise<[Judoka, Judoka]> {
@@ -35,12 +37,32 @@ export class BudokonClient {
     return (await this.draw(seed, 1, weightClass, exclude))[0]!;
   }
 
+  /** Draw a deterministic batch so a match can continue without a network round trip per round. */
+  async drawBatch(seed: string, count: number, weightClass?: string, exclude?: string[]): Promise<Judoka[]> {
+    if (!Number.isSafeInteger(count) || count < 1) throw new Error("draw count must be a positive integer");
+    return this.draw(seed, count, weightClass, exclude);
+  }
+
   /**
    * Budokon uses 409 when a draw cannot satisfy its constraints. For a
    * weight-class draw, expose that as the user-facing empty-division message;
    * an unfiltered conflict remains a generic HTTP failure.
    */
-  private async draw(seed: string, count: 1 | 2, weightClass?: string, exclude?: string[]): Promise<Judoka[]> {
+  private async draw(seed: string, count: number, weightClass?: string, exclude?: string[]): Promise<Judoka[]> {
+    const key = JSON.stringify({ seed, count, weightClass, exclude: exclude ? [...exclude].sort() : [] });
+    const cached = this.draws.get(key);
+    if (cached) return cached;
+    const request = this.requestDraw(seed, count, weightClass, exclude);
+    this.draws.set(key, request);
+    try {
+      return await request;
+    } catch (error) {
+      this.draws.delete(key);
+      throw error;
+    }
+  }
+
+  private async requestDraw(seed: string, count: number, weightClass?: string, exclude?: string[]): Promise<Judoka[]> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
     let response: Response;
