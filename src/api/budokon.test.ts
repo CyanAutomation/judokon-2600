@@ -21,6 +21,16 @@ describe("BudokonClient", () => {
     expect(requestBody).toEqual(expect.objectContaining({ count: 2, seed: "known-seed" }));
   });
 
+  it("reuses an in-flight or completed deterministic draw instead of issuing another API call", async () => {
+    const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify({ judoka }), { status: 200 }));
+    const client = new BudokonClient(fetcher);
+
+    await Promise.all([client.drawPair("known-seed"), client.drawPair("known-seed")]);
+    await client.drawPair("known-seed");
+
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+
   describe("rarity response validation", () => {
     it("preserves a valid string rarity", async () => {
       const responseJudoka = [{ ...judoka[0], rarity: "Rare" }, judoka[1]];
