@@ -70,6 +70,9 @@ button { transition: background-color .12s ease, border-color .12s ease, color .
 .toggle-control { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: .65rem; margin: 0; padding: .65rem .8rem; border: 1px solid #417841; color: #d8ffd8; cursor: pointer; }
 .toggle-control strong, .toggle-control small { display: block; }.toggle-control small { margin-top: .18rem; color: #a4caa4; font-size: .78rem; }
 .toggle-control input { width: 1.1rem; height: 1.1rem; margin: 0; accent-color: #8ee58e; }
+.seed-control { margin: 0 0 .8rem; padding: .65rem .8rem; border: 1px solid #417841; }.seed-control strong, .seed-control small { display: block; }.seed-control small { margin: .18rem 0 .55rem; color: #a4caa4; font-size: .78rem; }.seed-control input { width: 100%; margin: 0; }
+.replay-seed { flex-basis: 100%; overflow-wrap: anywhere; color: #a4caa4; font-size: .8rem; }
+.seed-message { flex-basis: 100%; color: #8ee58e; font-size: .85rem; }
 .toggle-state { min-width: 2.3rem; color: #a4caa4; font-size: .8rem; text-align: right; }
 .commitment { display: flex; align-items: center; gap: .8rem; margin: 1rem 0; padding: 1rem; border: 1px dashed #8ee58e; background: #091208; }
 .commitment p { margin-top: .25rem; color: #b3cdb3; }
