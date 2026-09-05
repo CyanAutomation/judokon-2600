@@ -22,19 +22,20 @@ describe("radioChoice", () => {
 });
 
 describe("buttonChoice", () => {
-  it("renders a command button rather than a toggle", () => {
-    const markup = buttonChoice("Power", "1", "8", 'data-stat="power"', false, false);
+  it("renders command button states without exposing toggle semantics", () => {
+    const defaultMarkup = buttonChoice("Power", "1", "8", 'data-stat="power"', false, false);
 
-    expect(markup).toContain("<button");
-    expect(markup).not.toContain("aria-pressed");
-  });
+    expect(defaultMarkup).toMatch(/^<button\b[^>]*>[\s\S]*<\/button>$/);
+    expect(defaultMarkup).not.toMatch(/<button\b[^>]*\bdisabled\b/);
+    expect(defaultMarkup).toMatch(/<button\b[^>]*\bdata-stat="power"/);
+    expect(defaultMarkup).toMatch(/<span>Power<\/span>\s*<strong>8<\/strong>/);
+    expect(defaultMarkup).not.toContain("aria-pressed");
 
-  it("keeps strongest and selected states distinct for the visual state system", () => {
-    const markup = buttonChoice("Technique", "3", "10", 'data-stat="technique"', true, true, true);
+    const selectedMarkup = buttonChoice("Technique", "3", "10", 'data-stat="technique"', true, true, true);
 
-    expect(markup).toContain("is-selected");
-    expect(markup).toContain("is-strongest");
-    expect(markup).toContain("disabled");
+    expect(selectedMarkup).toContain("is-selected");
+    expect(selectedMarkup).toContain("is-strongest");
+    expect(selectedMarkup).toMatch(/<button\b[^>]*\bdisabled\b/);
   });
 });
 
