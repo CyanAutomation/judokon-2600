@@ -42,7 +42,23 @@ describe("shared UI primitives", () => {
   it("renders a labelled surface with caller-provided variants", () => {
     const markup = surface("aside", "panel scout-report", "Scout report", "<p>Read the opponent.</p>");
 
-    expect(markup).toBe('<aside class="surface panel scout-report" aria-label="Scout report"><p>Read the opponent.</p></aside>');
+    expect(markup).toMatch(/^<aside\b/);
+    expect(markup).toMatch(/<\/aside>$/);
+    expect(markup).toContain('class="surface panel scout-report"');
+    expect(markup).toContain('aria-label="Scout report"');
+    expect(markup).toContain("<p>Read the opponent.</p>");
+
+    const hostileMarkup = surface(
+      "aside",
+      'panel scout-report" data-injected="true',
+      'Scout <report> & "analysis"',
+      "<p>Retained child content.</p>"
+    );
+
+    expect(hostileMarkup).toContain('class="surface panel scout-report&quot; data-injected=&quot;true"');
+    expect(hostileMarkup).not.toContain('data-injected="true"');
+    expect(hostileMarkup).toContain('aria-label="Scout &lt;report&gt; &amp; &quot;analysis&quot;"');
+    expect(hostileMarkup).toContain("<p>Retained child content.</p>");
   });
 
   it("renders the advanced control as an accessible disclosure", () => {
