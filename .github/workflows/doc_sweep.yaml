@@ -1,0 +1,64 @@
+name: Kaseki documentation sweep
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: kaseki-docs-sweep
+  cancel-in-progress: false
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check Kaseki availability
+        run: |
+          curl --fail --silent --show-error --max-time 20 \
+            https://kaseki-tunnel.scheimann.xyz/ready
+
+      - name: Submit documentation sweep
+        id: submit
+        env:
+          KASEKI_API_TOKEN: ${{ secrets.KASEKI_API_TOKEN }}
+        run: |
+          : "${KASEKI_API_TOKEN:?KASEKI_API_TOKEN is not configured}"
+
+          response="$(
+            curl --fail-with-body --silent --show-error \
+              --retry 3 --retry-all-errors --max-time 60 \
+              --request POST https://kaseki-tunnel.scheimann.xyz/api/runs \
+              --header "Authorization: Bearer $KASEKI_API_TOKEN" \
+              --header "Content-Type: application/json" \
+              --data @- <<'JSON'
+          {
+            "repoUrl": "https://github.com/CyanAutomation/judokon-2600",
+            "ref": "main",
+            "taskMode": "patch",
+            "timeoutSeconds": 10800,
+            "changedFilesAllowlist": [
+              "README.md",
+              "docs/**/*.md"
+            ],
+            "validationCommands": ["npm run check"],
+            "goalCheck": {
+              "enabled": true,
+              "maxRetries": 1
+            },
+            "taskPrompt": "Perform the documentation sweep for this repository. First read any repository instructions, then inspect the current implementation—including the application, API routes, package scripts, configuration, and user-visible behavior—and compare it against README.md and documentation under docs/. Update documentation only where it is inaccurate, incomplete, or stale. Do not modify application code, tests, configuration, dependencies, lockfiles, CI workflows, or generated files. Do not invent features, commands, APIs, configuration, or behavior that the implementation does not support. Avoid cosmetic rewrites and unrelated wording changes. Keep the documentation concise and consistent with the codebase. Before finishing, review the diff to confirm it contains documentation-only changes and that every claim is supported by the current implementation. If documentation is already accurate, make no changes and do not open a pull request. Otherwise, open a pull request summarizing the documentation drift corrected and the validation result. Completion condition: the permitted documentation accurately reflects the current implementation."
+          }
+          JSON
+          )"
+
+          echo "$response" | jq .
+          run_id="$(echo "$response" | jq -er '.id')"
+          echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+
+      - name: Publish run link
+        run: |
+          echo "Submitted Kaseki run: \`${{ steps.submit.outputs.run_id }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "Monitor it at: https://kaseki-tunnel.scheimann.xyz/ui" >> "$GITHUB_STEP_SUMMARY"
