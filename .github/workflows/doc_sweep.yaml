@@ -14,11 +14,9 @@ on:
         default: Keep README.md and docs/ accurate against the current implementation.
         type: string
       allowlist:
-        description: Permitted changed-file patterns, one per line
+        description: Permitted changed-file patterns, comma-separated
         required: true
-        default: |-
-          README.md
-          docs/**/*.md
+        default: README.md,docs/**/*.md
         type: string
       validation_command:
         description: Validation command to run (leave blank for none)
@@ -80,7 +78,7 @@ jobs:
                 timeoutSeconds: 10800,
                 changedFilesAllowlist: (
                   $allowlist
-                  | split("\n")
+                  | split(",")
                   | map(gsub("^\\s+|\\s+$"; ""))
                   | map(select(length > 0))
                 ),
@@ -137,7 +135,7 @@ jobs:
             echo
             echo "### Allowed paths"
             echo '```text'
-            echo "$ALLOWLIST"
+            echo "$ALLOWLIST" | tr ',' '\n'
             echo '```'
             echo
             echo "### Task description"
