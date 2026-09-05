@@ -32,6 +32,7 @@ describe("BudokonClient", () => {
   });
 
   describe("rarity response validation", () => {
+    // The API's Judoka response schema makes `rarity` optional: https://budokon.scheimann.workers.dev/docs
     it.each([
       { scenario: "valid string rarity", rarity: "Rare", outcome: "accepted" },
       { scenario: "omitted rarity", outcome: "accepted" },
@@ -47,13 +48,7 @@ describe("BudokonClient", () => {
         return;
       }
 
-      const pair = await request;
-      expect(pair[0]).toEqual(firstJudoka);
-      if (rarity === undefined) {
-        expect(pair[0]).not.toHaveProperty("rarity");
-      } else {
-        expect(pair[0]).toHaveProperty("rarity", rarity);
-      }
+      await expect(request).resolves.toEqual(responseJudoka);
     });
   });
   it("constrains a draw to a requested weight class", async () => {
