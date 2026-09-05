@@ -22,20 +22,32 @@ describe("radioChoice", () => {
 });
 
 describe("buttonChoice", () => {
-  it("renders command button states without exposing toggle semantics", () => {
-    const defaultMarkup = buttonChoice("Power", "1", "8", 'data-stat="power"', false, false);
+  const parseButton = (markup: string) => {
+    const match = markup.match(/^<button\b([^>]*)>([\s\S]*)<\/button>$/);
+    expect(match).not.toBeNull();
+    const attributes = new Map(Array.from(match![1].matchAll(/([\w-]+)(?:="([^"]*)")?/g), ([, name, value]) => [name, value ?? ""]));
+    return {
+      // HTML boolean attributes reflect as true on the native property regardless of their value.
+      disabled: attributes.has("disabled"),
+      getAttribute: (name: string) => attributes.get(name) ?? null,
+      content: match![2]
+    };
+  };
 
-    expect(defaultMarkup).toMatch(/^<button\b[^>]*>[\s\S]*<\/button>$/);
-    expect(defaultMarkup).not.toMatch(/<button\b[^>]*\bdisabled\b/);
-    expect(defaultMarkup).toMatch(/<button\b[^>]*\bdata-stat="power"/);
-    expect(defaultMarkup).toMatch(/<span>Power<\/span>\s*<strong>8<\/strong>/);
-    expect(defaultMarkup).not.toContain("aria-pressed");
+  it("exposes selected and strongest as independent states", () => {
+    const selected = parseButton(buttonChoice("Power", "1", "8", 'data-stat="power"', false, true, false));
 
-    const selectedMarkup = buttonChoice("Technique", "3", "10", 'data-stat="technique"', true, true, true);
+    expect(selected.disabled).toBe(false);
+    expect(selected.getAttribute("aria-current")).toBe("true");
+    expect(selected.content).not.toContain("<em>Strongest</em>");
 
-    expect(selectedMarkup).toContain("is-selected");
-    expect(selectedMarkup).toContain("is-strongest");
-    expect(selectedMarkup).toMatch(/<button\b[^>]*\bdisabled\b/);
+    const strongest = parseButton(buttonChoice("Technique", "3", "10", 'data-stat="technique"', true, false, true));
+
+    expect(strongest.disabled).toBe(true);
+    expect(strongest.getAttribute("aria-current")).toBeNull();
+    expect(strongest.content).toContain("<em>Strongest</em>");
+    expect(strongest.content).not.toContain('aria-hidden="true">Strongest');
+    expect(strongest.getAttribute("aria-pressed")).toBeNull();
   });
 });
 
