@@ -5,7 +5,7 @@ import type { Match, MatchResult, Outcome, Phase } from "./game";
 export interface SavedHistoryItem { outcome: Outcome; stat: StatKey; roundNumber: number; }
 export interface SavedMatch {
   version: 1;
-  match: Match;
+  match: Match | null;
   result: MatchResult | null;
   history: SavedHistoryItem[];
   activeSeed: string;
@@ -29,6 +29,10 @@ function isMatch(value: unknown): value is Match {
     && (candidate.winner === null || outcomes.has(candidate.winner as Outcome));
 }
 
+function isMatchOrNull(value: unknown): value is Match | null {
+  return value === null || isMatch(value);
+}
+
 function isHistory(value: unknown): value is SavedHistoryItem[] {
   return Array.isArray(value) && value.every(item => !!item && typeof item === "object"
     && outcomes.has((item as Record<string, unknown>).outcome as Outcome)
@@ -44,7 +48,7 @@ export function parseSavedMatch(value: string | null): SavedMatch | null {
     const parsed: unknown = JSON.parse(value);
     if (!parsed || typeof parsed !== "object") return null;
     const candidate = parsed as Record<string, unknown>;
-    if (candidate.version !== 1 || !isMatch(candidate.match) || !isHistory(candidate.history)
+    if (candidate.version !== 1 || !isMatchOrNull(candidate.match) || !isHistory(candidate.history)
       || typeof candidate.activeSeed !== "string" || (candidate.activeWeight !== undefined && typeof candidate.activeWeight !== "string")
       || !Array.isArray(candidate.drawBuffer) || !candidate.drawBuffer.every(isJudoka)) return null;
     if (candidate.result !== null && (!candidate.result || typeof candidate.result !== "object")) return null;

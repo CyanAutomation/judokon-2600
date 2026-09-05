@@ -34,7 +34,8 @@ function createMockMatch(): Match {
     scores: { player: 0, opponent: 0 },
     target: 3,
     matchNumber: 1,
-    mode: "classic"
+    mode: "classic",
+    winner: null
   };
 }
 
