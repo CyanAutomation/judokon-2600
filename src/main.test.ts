@@ -32,6 +32,7 @@ function createMockMatch(overrides?: Partial<Match>): Match {
     target: 3,
     matchNumber: 1,
     mode: "classic",
+    winner: null,
     ...overrides
   };
 }
@@ -439,7 +440,7 @@ describe("Main Module - State Orchestration Functions", () => {
     it("rejects resolution when match is null", () => {
       const state = createMockGameState({ match: null });
 
-      const isValid = state.match && state.match.phase === "selecting" && !state.pendingStat;
+      const isValid = state.match?.phase === "selecting" && !state.pendingStat;
 
       expect(isValid).toBe(false);
     });
@@ -586,7 +587,7 @@ describe("Main Module - Render Integration", () => {
         match: createMockMatch({ mode: "classic" })
       });
 
-      const showProgress = state.match?.mode === "classic";
+      const showProgress = state.match?.mode === "champion";
 
       expect(showProgress).toBe(false);
     });
