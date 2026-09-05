@@ -66,7 +66,7 @@ jobs:
           set -euo pipefail
           : "${KASEKI_API_TOKEN:?KASEKI_API_TOKEN is not configured}"
 
-                    payload="$(
+          payload="$(
             jq -n \
               --arg repoUrl "$REPO_URL" \
               --arg ref "$REF" \
