@@ -342,13 +342,11 @@ describe("Main Module - State Orchestration Functions", () => {
     });
 
     it("handles non-Error object throws", () => {
-      const error = "string error";
+      const error: unknown = "string error";
       const message =
-        typeof error === "string"
-          ? "Unable to draw judoka. Please try again."
-          : error instanceof Error
-            ? `${error.message}. Check your connection and try again.`
-            : "Unable to draw judoka. Please try again.";
+        error instanceof Error
+          ? `${error.message}. Check your connection and try again.`
+          : "Unable to draw judoka. Please try again.";
 
       expect(message).toContain("Unable to draw");
     });

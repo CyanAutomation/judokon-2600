@@ -34,6 +34,7 @@ function createMockMatch(overrides?: Partial<Match>): Match {
     target: 3,
     matchNumber: 1,
     mode: "classic",
+    winner: null,
     ...overrides
   };
 }
