@@ -66,13 +66,11 @@ jobs:
           set -euo pipefail
           : "${KASEKI_API_TOKEN:?KASEKI_API_TOKEN is not configured}"
 
-          payload="$(
+                    payload="$(
             jq -n \
               --arg repoUrl "$REPO_URL" \
               --arg ref "$REF" \
-              --arg taskPrompt "$TASK_DESCRIPTION
-
-Perform the documentation sweep for this repository. First read repository instructions, then inspect the current implementation and compare it against README.md and documentation under docs/. Update documentation only where inaccurate, incomplete, or stale. Do not modify application code, tests, configuration, dependencies, lockfiles, CI workflows, or generated files. Do not invent behavior. Avoid cosmetic rewrites. Before finishing, review the diff to confirm it contains documentation-only changes. If documentation is already accurate, make no changes and do not open a pull request." \
+              --arg taskDescription "$TASK_DESCRIPTION" \
               --arg validationCommand "$VALIDATION_COMMAND" \
               --arg allowlist "$ALLOWLIST" \
               '{
@@ -95,10 +93,22 @@ Perform the documentation sweep for this repository. First read repository instr
                   enabled: true,
                   maxRetries: 1
                 },
-                taskPrompt: $taskPrompt
+                taskPrompt: (
+                  $taskDescription
+                  + "\n\nPerform the documentation sweep for this repository. "
+                  + "First read repository instructions, then inspect the current "
+                  + "implementation and compare it against README.md and documentation "
+                  + "under docs/. Update documentation only where inaccurate, incomplete, "
+                  + "or stale. Do not modify application code, tests, configuration, "
+                  + "dependencies, lockfiles, CI workflows, or generated files. "
+                  + "Do not invent behavior. Avoid cosmetic rewrites. Before finishing, "
+                  + "review the diff to confirm it contains documentation-only changes. "
+                  + "If documentation is already accurate, make no changes and do not "
+                  + "open a pull request."
+                )
               }'
           )"
-
+          
           response="$(
             curl --fail-with-body --silent --show-error \
               --retry 3 --retry-all-errors --max-time 60 \
