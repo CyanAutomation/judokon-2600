@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach, vi, afterEach } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { GameState } from "./state";
 import type { Match, MatchResult } from "./game/game";
 import type { Judoka, StatKey } from "./api/types";
@@ -189,7 +189,6 @@ describe("Main Module - Render Functions", () => {
   describe("Fighter card generation", () => {
     it("generates fighter card HTML with player label", () => {
       const judoka = createMockJudoka("player1");
-      const result = createMockMatchResult();
 
       const fighterHTML = `${judoka.firstname} ${judoka.surname}`;
 
@@ -248,7 +247,6 @@ describe("Main Module - State Orchestration Functions", () => {
 
     it("computes lengthIndex from target", () => {
       const lengths = [3, 5, 10] as const;
-      const state = createMockGameState({ target: 5 });
 
       const lengthIndex = lengths.indexOf(5 as typeof lengths[number]);
 
@@ -468,11 +466,6 @@ describe("Main Module - State Orchestration Functions", () => {
     });
 
     it("processes async resolution with setTimeout timing", () => {
-      const state = createMockGameState({
-        match: createMockMatch(),
-        pendingStat: "power"
-      });
-
       const delayMs = 650;
 
       expect(delayMs).toBe(650);
@@ -620,7 +613,6 @@ describe("Main Module - Render Integration", () => {
     });
 
     it("formats outcome labels correctly", () => {
-      const outcomes: Array<"player" | "opponent" | "draw"> = ["player", "opponent", "draw"];
       const labels = { player: "WIN", opponent: "LOSS", draw: "DRAW" };
 
       expect(labels.player).toBe("WIN");
@@ -633,7 +625,6 @@ describe("Main Module - Render Integration", () => {
 describe("Main Module - Event Handler Integration", () => {
   it("start handler receives correct parameters from button click", () => {
     const handlers = { start: vi.fn(), next: vi.fn() };
-    const match = createMockMatch();
 
     // Simulate calling start handler
     handlers.start();

@@ -8,7 +8,7 @@ import {
 } from "./eventHandlers";
 import type { GameState } from "../state";
 import type { Match } from "../game/game";
-import type { StatKey, Judoka } from "../api/types";
+import type { Judoka } from "../api/types";
 
 // Helper to create mock judoka
 function createMockJudoka(id: string): Judoka {
