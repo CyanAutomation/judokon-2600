@@ -8,7 +8,7 @@ describe("BudokonClient", () => {
   ];
 
   // Request-shape compatibility follows the public API contract: https://budokon.scheimann.workers.dev/docs
-  it("requests a pair with the count and replay seed required by the API contract", async () => {
+  it("requests a batch with the count and replay seed required by the API contract", async () => {
     let requestBody: unknown;
     const fetcher = vi.fn((_url: string, init?: RequestInit) => {
       const body = init?.body;
@@ -16,7 +16,7 @@ describe("BudokonClient", () => {
       return Promise.resolve(new Response(JSON.stringify({ judoka }), { status: 200 }));
     }) as unknown as typeof fetch;
 
-    await new BudokonClient(fetcher).drawPair("known-seed");
+    await new BudokonClient(fetcher).drawBatch("known-seed", 2);
 
     expect(requestBody).toEqual(expect.objectContaining({ count: 2, seed: "known-seed" }));
   });
@@ -25,8 +25,8 @@ describe("BudokonClient", () => {
     const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify({ judoka }), { status: 200 }));
     const client = new BudokonClient(fetcher);
 
-    await Promise.all([client.drawPair("known-seed"), client.drawPair("known-seed")]);
-    await client.drawPair("known-seed");
+    await Promise.all([client.drawBatch("known-seed", 2), client.drawBatch("known-seed", 2)]);
+    await client.drawBatch("known-seed", 2);
 
     expect(fetcher).toHaveBeenCalledTimes(1);
   });
@@ -41,7 +41,7 @@ describe("BudokonClient", () => {
       const firstJudoka = rarity === undefined ? { ...judoka[0] } : { ...judoka[0], rarity };
       const responseJudoka = [firstJudoka, judoka[1]];
       const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify({ judoka: responseJudoka }), { status: 200 }));
-      const request = new BudokonClient(fetcher).drawPair("known-seed");
+      const request = new BudokonClient(fetcher).drawBatch("known-seed", 2);
 
       if (outcome === "rejected") {
         await expect(request).rejects.toThrow("invalid judoka draw");
@@ -57,7 +57,7 @@ describe("BudokonClient", () => {
       { id: "b", slug: "b", firstname: "B", surname: "B", country: "France", countryCode: "FR", weightClass: "-81", stats: { power: 5, speed: 4, technique: 3, kumikata: 2, newaza: 1 } }
     ];
     const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify({ judoka }), { status: 200 }));
-    const pair = await new BudokonClient(fetcher).drawPair("known-seed", "-81");
+    const pair = await new BudokonClient(fetcher).drawBatch("known-seed", 2, "-81");
     const request = fetcher.mock.calls[0]?.[1] as RequestInit;
     const body = JSON.parse(request.body as string);
     expect(body.filters.weightClass).toBe("-81");
@@ -78,30 +78,30 @@ describe("BudokonClient", () => {
   describe("HTTP status handling", () => {
     it("reports the Budokon status code for a non-success HTTP status", async () => {
       const client = new BudokonClient(vi.fn().mockResolvedValue(new Response("nope", { status: 503 })));
-      await expect(client.drawPair("seed")).rejects.toThrow("Budokon draw failed (503)");
+      await expect(client.drawBatch("seed", 2)).rejects.toThrow("Budokon draw failed (503)");
     });
 
     it("explains when a selected division has no compatible pair", async () => {
       const client = new BudokonClient(vi.fn().mockResolvedValue(new Response("nope", { status: 409 })));
-      await expect(client.drawPair("seed", "-81")).rejects.toThrow("No compatible -81 kg pair is available");
+      await expect(client.drawBatch("seed", 2, "-81")).rejects.toThrow("No compatible -81 kg pair is available");
     });
 
     it("reports a generic conflict for an unfiltered draw", async () => {
       const client = new BudokonClient(vi.fn().mockResolvedValue(new Response("nope", { status: 409 })));
-      await expect(client.drawPair("seed")).rejects.toThrow("Budokon draw failed (409)");
+      await expect(client.drawBatch("seed", 2)).rejects.toThrow("Budokon draw failed (409)");
     });
   });
   it("rejects a response that omits a battle stat", async () => {
     const incomplete = { id: "a", slug: "a", firstname: "A", surname: "A", country: "Japan", countryCode: "JP", weightClass: "-60", stats: { power: 1 } };
     const client = new BudokonClient(vi.fn().mockResolvedValue(new Response(JSON.stringify({ judoka: [incomplete, incomplete] }), { status: 200 })));
-    await expect(client.drawPair("seed")).rejects.toThrow("invalid judoka draw");
+    await expect(client.drawBatch("seed", 2)).rejects.toThrow("invalid judoka draw");
   });
   it("times out an unresponsive draw request", async () => {
     vi.useFakeTimers();
     const fetcher = vi.fn((_url: string, options: RequestInit) => new Promise<Response>((_resolve, reject) => {
       options.signal?.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")));
     })) as unknown as typeof fetch;
-    const request = new BudokonClient(fetcher, 1).drawPair("seed");
+    const request = new BudokonClient(fetcher, 1).drawBatch("seed", 2);
     const expectation = expect(request).rejects.toThrow("Judoka draw timed out");
     await vi.advanceTimersByTimeAsync(1);
     await expectation;

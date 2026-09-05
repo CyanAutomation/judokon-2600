@@ -3,6 +3,7 @@ import { BudokonClient } from "./api/budokon";
 import { STAT_KEYS, type Judoka, type StatKey } from "./api/types";
 import { MAX_ROUNDS, createMatch, matchSummary, nextMatch, selectStat, strongestStats, type Match, type MatchResult } from "./game/game";
 import { buttonChoice, disclosure, escapeHtml as esc, primaryButton, quietButton, radioChoice, shortcutHint, surface, toggleControl } from "./ui/controls";
+import { handleClickEvent, handleChangeEvent, handleToggleEvent, handleIntroKeyboard, handleMatchKeyboard } from "./ui/eventHandlers";
 import { initAudio, keyboardTick, outcomeBeep, setSoundEnabled } from "./audio";
 import { clearSavedMatch, createGameState, loadSavedGameState, persistPreferences, saveGameState, type GameState } from "./state";
 
@@ -16,7 +17,7 @@ const root = app;
 const client = new BudokonClient();
 
 // Initialize game state from localStorage and sessionStorage
-let state: GameState = createGameState();
+const state: GameState = createGameState();
 const savedMatch = loadSavedGameState();
 if (savedMatch) {
   state.match = savedMatch.match ?? null;
@@ -198,93 +199,55 @@ async function copyReplaySeed(): Promise<void> {
   } 
   render(); 
 }
-root.addEventListener("click", (e) => { 
-  const b = (e.target as Element).closest<HTMLButtonElement>("button"); 
-  if (!b || b.disabled) return; 
-  if (b.id === "start") start(); 
-  else if (b.id === "retry") start(); 
-  else if (b.id === "replay") start(state.target, state.activeSeed); 
-  else if (b.id === "copy-seed") void copyReplaySeed(); 
-  else if (b.dataset.stat) resolve(b.dataset.stat as StatKey); 
-  else if (b.id === "next" && state.match) void next(state.match); 
-  else if (b.id === "quit") { 
-    state.match = null; 
-    state.result = null; 
-    state.pendingStat = null; 
-    state.errorMessage = ""; 
-    state.history = []; 
-    state.drawBuffer = []; 
-    clearSavedMatch(); 
-    render(); 
-  } 
+root.addEventListener("click", (e) => {
+  handleClickEvent(e, state, {
+    start,
+    copyReplaySeed,
+    next,
+    resolve,
+    clearAndExit: () => {
+      state.match = null;
+      state.result = null;
+      state.pendingStat = null;
+      state.errorMessage = "";
+      state.history = [];
+      state.drawBuffer = [];
+      clearSavedMatch();
+      render();
+    }
+  });
 });
-root.addEventListener("change", (e) => { 
-  const input = e.target as HTMLInputElement; 
-  if (input.dataset.division && input.checked) { 
-    state.division = input.dataset.division === "weight" ? "weight" : "absolute"; 
-    persistPreferences(state); 
-    render(); 
-    root.querySelector<HTMLInputElement>(`[data-division="${state.division}"]`)?.focus(); 
-    return; 
-  } 
-  if (input.dataset.introMode && input.checked) { 
-    state.mode = input.dataset.introMode === "champion" ? "champion" : "classic"; 
-    persistPreferences(state); 
-    render(); 
-    root.querySelector<HTMLInputElement>(`[data-intro-mode="${state.mode}"]`)?.focus(); 
-    return; 
-  } 
-  if (input.dataset.length && input.checked) { 
-    choose(Number(input.dataset.length)); 
-    return; 
-  } 
-  if (input.id === "replay-seed") { 
-    state.replaySeed = input.value; 
-    return; 
-  } 
-  if (input.id === "weight-class") state.weight = input.value; 
-  if (input.id === "sound-enabled") { 
-    setSoundEnabled(input.checked); 
-    localStorage.setItem("judokon.soundEnabled", String(input.checked)); 
-  } 
-  persistPreferences(state); 
-  render(); 
+
+root.addEventListener("change", (e) => {
+  handleChangeEvent(e, state, root, {
+    render,
+    persistPreferences: () => persistPreferences(state),
+    setSoundEnabled
+  });
+  
+  const input = e.target as HTMLInputElement;
+  if (input.dataset.length && input.checked) {
+    choose(Number(input.dataset.length));
+  }
 });
-root.addEventListener("toggle", (e) => { const details = e.target; if (!(details instanceof HTMLDetailsElement) || !details.matches(".advanced")) return; const summary = details.querySelector("summary"), state = details.querySelector(".disclosure-state"); if (summary) summary.setAttribute("aria-label", `${details.open ? "Hide" : "Show"} advanced options`); if (state) state.textContent = details.open ? "Hide" : "Show"; }, true);
-document.addEventListener("keydown", (e) => { 
-  if ((e.target as HTMLElement).matches("input, select")) return; 
-  if (/^[1-5]$/.test(e.key) || ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Enter", " ", "Escape"].includes(e.key) || ["a", "w", "c", "h", "q"].includes(e.key.toLowerCase())) keyboardTick(); 
-  if (!state.match) { 
-    if (e.key >= "1" && e.key <= "3") { 
-      e.preventDefault(); 
-      choose(lengths[Number(e.key) - 1]!); 
-    } else if (e.key.toLowerCase() === "a" || e.key.toLowerCase() === "w") { 
-      e.preventDefault(); 
-      root.querySelector<HTMLInputElement>(`[data-division="${e.key.toLowerCase() === "w" ? "weight" : "absolute"}"]`)?.click(); 
-    } else if (e.key.toLowerCase() === "c" || e.key.toLowerCase() === "h") { 
-      e.preventDefault(); 
-      root.querySelector<HTMLInputElement>(`[data-intro-mode="${e.key.toLowerCase() === "h" ? "champion" : "classic"}"]`)?.click(); 
-    } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") { 
-      e.preventDefault(); 
-      choose(lengths[(state.lengthIndex + lengths.length - 1) % lengths.length]!); 
-    } else if (e.key === "ArrowRight" || e.key === "ArrowDown") { 
-      e.preventDefault(); 
-      choose(lengths[(state.lengthIndex + 1) % lengths.length]!); 
-    } else if (e.key === "Enter" || e.key === " ") { 
-      e.preventDefault(); 
-      start(); 
-    } 
-    return; 
-  } 
-  if (e.key >= "1" && e.key <= "5" && state.match.phase === "selecting") resolve(STAT_KEYS[Number(e.key) - 1]!); 
-  if ((e.key === "Enter" || e.key === " ") && state.match.phase === "awaitingNext") { 
-    e.preventDefault(); 
-    root.querySelector<HTMLButtonElement>("#next")?.click(); 
-  } 
-  if ((e.key === "Enter" || e.key === " ") && state.match.phase === "matchOver") { 
-    e.preventDefault(); 
-    root.querySelector<HTMLButtonElement>("#replay")?.click(); 
-  } 
-  if (e.key.toLowerCase() === "q" || e.key === "Escape") root.querySelector<HTMLButtonElement>("#quit")?.click(); 
+
+root.addEventListener("toggle", handleToggleEvent, true);
+
+document.addEventListener("keydown", (e) => {
+  if ((e.target as HTMLElement).matches("input, select")) return;
+  if (/^[1-5]$/.test(e.key) || ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Enter", " ", "Escape"].includes(e.key) || ["a", "w", "c", "h", "q"].includes(e.key.toLowerCase())) keyboardTick();
+  
+  if (!state.match) {
+    handleIntroKeyboard(e, state, root, {
+      choose,
+      start,
+      keyboardTick
+    });
+  } else {
+    handleMatchKeyboard(e, state, root, {
+      resolve,
+      keyboardTick
+    });
+  }
 });
 render();

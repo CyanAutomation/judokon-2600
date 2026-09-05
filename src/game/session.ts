@@ -1,4 +1,5 @@
 import { STAT_KEYS, type Judoka, type StatKey } from "../api/types";
+import { isJudoka } from "../api/validation";
 import type { Match, MatchResult, Outcome, Phase } from "./game";
 
 export interface SavedHistoryItem { outcome: Outcome; stat: StatKey; roundNumber: number; }
@@ -14,16 +15,6 @@ export interface SavedMatch {
 
 const outcomes = new Set<Outcome>(["player", "opponent", "draw"]);
 const phases = new Set<Phase>(["selecting", "awaitingNext", "matchOver"]);
-
-function isJudoka(value: unknown): value is Judoka {
-  if (!value || typeof value !== "object") return false;
-  const candidate = value as Record<string, unknown>;
-  if (!["id", "slug", "firstname", "surname", "country", "countryCode", "weightClass"].every(key => typeof candidate[key] === "string")) return false;
-  if (candidate.rarity !== undefined && typeof candidate.rarity !== "string") return false;
-  if (!candidate.stats || typeof candidate.stats !== "object") return false;
-  const stats = candidate.stats as Record<string, unknown>;
-  return STAT_KEYS.every(key => typeof stats[key] === "number" && Number.isFinite(stats[key]));
-}
 
 function isMatch(value: unknown): value is Match {
   if (!value || typeof value !== "object") return false;
