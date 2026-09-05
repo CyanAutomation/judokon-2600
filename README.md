@@ -16,15 +16,17 @@ In **Champion** mode, you keep the same judoka while opponents rotate. The **Cur
 
 Judoka are fetched directly from the public [Budokon catalogue API](https://budokon.scheimann.workers.dev/docs). The collapsed **Advanced** panel accepts an optional replay seed; otherwise each match gets a fresh seed. Draw requests time out after 10 seconds and expose a retry action.
 
-## Future release: unlockable scouting
+While a round is open, a scout report shows the opponent's strongest stat (all tied stats when there is a tie). The opponent's exact values remain hidden until you select a stat.
 
-Opponent scouting is intentionally absent from the current game so every match begins with the same information. In a future progression release, it can return as an earned, opt-in reward that adds strategy without exposing exact opponent values:
+## Future release: progression-enhanced scouting
+
+Today's scout report is free and always visible. A future progression release could turn it into an earned, opt-in reward system that adds strategy without exposing exact opponent values:
 
 1. Add a versioned player-profile store, initially backed by `localStorage`, with earned currency, unlocked buffs, and a migration path for a server-backed profile.
 2. Award currency only after a completed match; use a small, fixed reward for participation plus a win bonus to avoid incentivising early quits.
-3. Offer a **Scout report** as a pre-match, one-use buff. Its first level should reveal only the opponent's strongest stat; later levels could reveal a top-two set or a single stat range.
+3. Replace the free report with a **Scout report** buff consumed before a match. Its first level should reveal only the opponent's strongest stat; later levels could reveal a top-two set or a single stat range.
 4. Keep the report hidden by default and present it as a deliberate action with a clear cost and remaining uses. Never reveal an exact opponent value.
-5. Seed and record buff use in the match log so replayed matches remain explainable; add engine tests for reward earning, buff consumption, and no-information default play.
+5. Seed and record buff use in the match log so replayed matches remain explainable; add engine tests for reward earning, buff consumption, and the default no-scout experience.
 
 ## Potential future feature: career loop
 
