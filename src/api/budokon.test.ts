@@ -32,26 +32,28 @@ describe("BudokonClient", () => {
   });
 
   describe("rarity response validation", () => {
-    it("preserves a valid string rarity", async () => {
-      const responseJudoka = [{ ...judoka[0], rarity: "Rare" }, judoka[1]];
+    it.each([
+      { scenario: "valid string rarity", rarity: "Rare", outcome: "accepted" },
+      { scenario: "omitted rarity", outcome: "accepted" },
+      { scenario: "invalid non-string rarity", rarity: 1, outcome: "rejected" }
+    ] as const)("$scenario", async ({ rarity, outcome }) => {
+      const firstJudoka = rarity === undefined ? { ...judoka[0] } : { ...judoka[0], rarity };
+      const responseJudoka = [firstJudoka, judoka[1]];
       const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify({ judoka: responseJudoka }), { status: 200 }));
+      const request = new BudokonClient(fetcher).drawPair("known-seed");
 
-      const pair = await new BudokonClient(fetcher).drawPair("known-seed");
+      if (outcome === "rejected") {
+        await expect(request).rejects.toThrow("invalid judoka draw");
+        return;
+      }
 
-      expect(pair[0]?.rarity).toBe("Rare");
-    });
-
-    it("accepts an omitted rarity", async () => {
-      const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify({ judoka }), { status: 200 }));
-
-      await expect(new BudokonClient(fetcher).drawPair("known-seed")).resolves.toHaveLength(2);
-    });
-
-    it("rejects a non-string rarity", async () => {
-      const responseJudoka = [{ ...judoka[0], rarity: 1 }, judoka[1]];
-      const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify({ judoka: responseJudoka }), { status: 200 }));
-
-      await expect(new BudokonClient(fetcher).drawPair("known-seed")).rejects.toThrow("invalid judoka draw");
+      const pair = await request;
+      expect(pair[0]).toEqual(firstJudoka);
+      if (rarity === undefined) {
+        expect(pair[0]).not.toHaveProperty("rarity");
+      } else {
+        expect(pair[0]).toHaveProperty("rarity", rarity);
+      }
     });
   });
   it("constrains a draw to a requested weight class", async () => {
