@@ -1,11 +1,10 @@
-import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
+import { describe, expect, it, beforeEach, afterEach } from "vitest";
 import {
   createGameState,
   persistPreferences,
   clearSavedMatch,
   saveGameState,
-  loadSavedGameState,
-  type GameState
+  loadSavedGameState
 } from "./state";
 import type { Match, MatchResult } from "./game/game";
 import type { Judoka } from "./api/types";
