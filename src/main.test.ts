@@ -763,7 +763,9 @@ describe("Main Module - Complex Integration Scenarios", () => {
       opponent
     });
 
-    root.querySelector<HTMLButtonElement>('[data-stat="power"]')!.click();
+    const powerButton = root.querySelector<HTMLButtonElement>('[data-stat="power"]');
+    expect(powerButton).not.toBeNull();
+    powerButton!.click();
     expect(state.pendingStat).toBe("power");
 
     vi.advanceTimersByTime(MATCH_RESOLUTION_DELAY_MS);
