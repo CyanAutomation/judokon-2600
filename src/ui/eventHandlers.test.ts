@@ -8,7 +8,7 @@ import {
 } from "./eventHandlers";
 import type { GameState } from "../state";
 import type { Match } from "../game/game";
-import type { Judoka } from "../api/types";
+import type { Judoka, StatKey } from "../api/types";
 
 // Helper to create mock judoka
 function createMockJudoka(id: string): Judoka {
@@ -127,7 +127,7 @@ describe("Event Handlers", () => {
     });
 
     it("invokes resolve handler when button with data-stat attribute is clicked", () => {
-      const resolve = vi.fn();
+      const resolve = vi.fn<(stat: StatKey) => void>();
       const handlers = {
         start: vi.fn(),
         copyReplaySeed: vi.fn(),
@@ -136,13 +136,15 @@ describe("Event Handlers", () => {
         clearAndExit: vi.fn()
       };
       const state = createMockGameState();
+      const root = document.createElement("div");
       const button = createMockButton("stat-power");
       button.setAttribute("data-stat", "power");
-      const event = createClickEvent(button);
+      root.appendChild(button);
+      root.addEventListener("click", (event) => handleClickEvent(event, state, handlers));
 
-      handleClickEvent(event, state, handlers);
+      button.click();
 
-      expect(handlers.resolve).toHaveBeenCalledWith("power");
+      expect(resolve).toHaveBeenCalledWith("power" satisfies StatKey);
     });
 
     it("invokes next handler when #next button is clicked and match exists", () => {
@@ -474,8 +476,14 @@ describe("Event Handlers", () => {
       expect(handlers.resolve).not.toHaveBeenCalled();
     });
 
-    it("handles number keys 1-5 during selecting phase", () => {
-      const resolve = vi.fn();
+    it.each<[string, StatKey]>([
+      ["1", "power"],
+      ["2", "speed"],
+      ["3", "technique"],
+      ["4", "kumikata"],
+      ["5", "newaza"]
+    ])("maps number key %s to %s during selecting phase", (key, stat) => {
+      const resolve = vi.fn<(selectedStat: StatKey) => void>();
       const handlers = {
         resolve,
         keyboardTick: vi.fn()
@@ -484,14 +492,11 @@ describe("Event Handlers", () => {
         match: createMockMatch({ phase: "selecting" })
       });
       const root = document.createElement("div");
+      root.addEventListener("keydown", (event) => handleMatchKeyboard(event, state, root, handlers));
 
-      const keys = ["power", "speed", "technique", "kumikata", "newaza"] as const;
-      for (let i = 0; i < 5; i++) {
-        const key = String(i + 1);
-        const event = createKeyboardEvent(key);
-        handleMatchKeyboard(event, state, root, handlers);
-        expect(handlers.resolve).toHaveBeenCalledWith(keys[i]);
-      }
+      root.dispatchEvent(createKeyboardEvent(key, { bubbles: true }));
+
+      expect(resolve).toHaveBeenCalledWith(stat);
     });
 
     it("ignores number keys during non-selecting phases", () => {
