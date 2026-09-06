@@ -752,7 +752,10 @@ describe("Main Module - Complex Integration Scenarios", () => {
     });
 
     render();
-    root.querySelector<HTMLButtonElement>("#start")!.click();
+    render();
+    const startButton = root.querySelector<HTMLButtonElement>("#start");
+    expect(startButton).not.toBeNull();
+    startButton!.click();
     expect(startOperation).toBeDefined();
     await startOperation;
 
