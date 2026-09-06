@@ -678,15 +678,6 @@ describe("Main Module - Render Integration", () => {
 });
 
 describe("Main Module - Event Handler Integration", () => {
-  it("start handler receives correct parameters from button click", () => {
-    const handlers = { start: vi.fn(), next: vi.fn() };
-
-    // Simulate calling start handler
-    handlers.start();
-
-    expect(handlers.start).toHaveBeenCalledTimes(1);
-  });
-
   it("next handler receives match parameter from click", () => {
     const handlers = { start: vi.fn(), next: vi.fn() };
     const match = createMockMatch();
