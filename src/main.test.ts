@@ -741,7 +741,10 @@ describe("Main Module - Complex Integration Scenarios", () => {
         start: () => {
           startOperation = start(state, deps, 3, "test-seed");
         },
-        resolve: stat => resolve(state, state.match!, stat, deps),
+        resolve: stat => {
+          if (!state.match) throw new Error("Match must exist before resolving");
+          resolve(state, state.match, stat, deps);
+        },
         copyReplaySeed: async () => undefined,
         next: async () => undefined,
         clearAndExit: () => undefined
