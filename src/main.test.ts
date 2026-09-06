@@ -752,10 +752,9 @@ describe("Main Module - Complex Integration Scenarios", () => {
     });
 
     render();
-    render();
     const startButton = root.querySelector<HTMLButtonElement>("#start");
-    expect(startButton).not.toBeNull();
-    startButton!.click();
+    if (!startButton) throw new Error("Start button must render before it can be clicked");
+    startButton.click();
     expect(startOperation).toBeDefined();
     await startOperation;
 
@@ -767,8 +766,8 @@ describe("Main Module - Complex Integration Scenarios", () => {
     });
 
     const powerButton = root.querySelector<HTMLButtonElement>('[data-stat="power"]');
-    expect(powerButton).not.toBeNull();
-    powerButton!.click();
+    if (!powerButton) throw new Error("Power stat button must render before it can be clicked");
+    powerButton.click();
     expect(state.pendingStat).toBe("power");
 
     vi.advanceTimersByTime(MATCH_RESOLUTION_DELAY_MS);
