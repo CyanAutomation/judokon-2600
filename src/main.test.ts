@@ -753,15 +753,49 @@ describe("Main Module - Complex Integration Scenarios", () => {
     expect(state.activeWeight).toBe("-73");
   });
 
-  it("handles multiple replays with different seeds", () => {
-    const state = createMockGameState();
+  it("handles multiple replays with different seeds", async () => {
+    vi.useFakeTimers();
 
-    // First seed
-    state.activeSeed = "seed-1";
+    let finishSecondDraw: (() => void) | undefined;
+    const drawSeeds: string[] = [];
+    const client = new class extends BudokonClient {
+      override async drawBatch(seed: string, count: number): Promise<Judoka[]> {
+        drawSeeds.push(seed);
+        const drawn = Array.from({ length: count }, (_, index) =>
+          createMockJudoka(`${seed}-judoka-${index}`)
+        );
+
+        if (seed === "seed-2") {
+          await new Promise<void>(resolveDraw => {
+            finishSecondDraw = resolveDraw;
+          });
+        }
+
+        return drawn;
+      }
+    }();
+    const state = createMockGameState();
+    const deps: OrchestratorDeps = { client, render: vi.fn() };
+
+    await start(state, deps, state.target, "seed-1");
+    expect(drawSeeds).toEqual(["seed-1"]);
     expect(state.activeSeed).toBe("seed-1");
 
-    // Second seed
-    state.activeSeed = "seed-2";
+    resolve(state, state.match!, "power", deps);
+    vi.advanceTimersByTime(MATCH_RESOLUTION_DELAY_MS);
+    expect(state.result).not.toBeNull();
+    expect(state.history).toHaveLength(1);
+
+    const secondStart = start(state, deps, state.target, "seed-2");
+
+    expect(drawSeeds).toEqual(["seed-1", "seed-2"]);
     expect(state.activeSeed).toBe("seed-2");
+    expect(state.result).toBeNull();
+    expect(state.history).toEqual([]);
+
+    finishSecondDraw?.();
+    await secondStart;
+    expect(state.match?.player.id).toBe("seed-2-judoka-0");
+    expect(state.match?.opponent.id).toBe("seed-2-judoka-1");
   });
 });
