@@ -17,6 +17,13 @@ export const MATCH_RESOLUTION_DELAY_MS = 650;
 const weights = ["-48", "-52", "-57", "-60", "-63", "-66", "-70", "-73", "-78", "-81", "-90", "-100", "+78", "+100"] as const;
 const lengths = [3, 5, 10] as const;
 
+/** Select a supported weight class deterministically from a replay seed. */
+export function selectWeightForSeed(seed: string): (typeof weights)[number] {
+  let hash = 0;
+  for (const character of seed) hash = (hash * 31 + character.charCodeAt(0)) >>> 0;
+  return weights[hash % weights.length];
+}
+
 /**
  * Dependencies passed to orchestration functions
  * Allows mocking in tests
@@ -62,13 +69,10 @@ export async function start(
   state.lengthIndex = lengths.indexOf(points as (typeof lengths)[number]);
   state.activeSeed = seed;
 
-  // Hash seed to select weight class if in weight mode
-  let hash = 0;
-  for (const c of state.activeSeed) hash = (hash * 31 + c.charCodeAt(0)) >>> 0;
   state.activeWeight =
     state.division === "weight"
       ? state.weight === "random"
-        ? weights[hash % weights.length]
+        ? selectWeightForSeed(state.activeSeed)
         : state.weight
       : undefined;
 

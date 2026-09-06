@@ -3,7 +3,7 @@ import type { GameState } from "./state";
 import type { Match, MatchResult } from "./game/game";
 import type { Judoka } from "./api/types";
 import { BudokonClient } from "./api/budokon";
-import { MATCH_RESOLUTION_DELAY_MS, resolve, type OrchestratorDeps } from "./game/orchestrator";
+import { MATCH_RESOLUTION_DELAY_MS, resolve, selectWeightForSeed, type OrchestratorDeps } from "./game/orchestrator";
 import { renderApp } from "./ui/render";
 
 // Note: These tests are designed to test the logic that WILL be extracted from main.ts
@@ -304,26 +304,25 @@ describe("Main Module - State Orchestration Functions", () => {
         weight: "-73"
       });
 
-      const weights = ["-48", "-52", "-57", "-60", "-63", "-66", "-70", "-73", "-78", "-81", "-90", "-100", "+78", "+100"] as const;
-      const seed = "test-seed";
-      let hash = 0;
-      for (const c of seed) hash = (hash * 31 + c.charCodeAt(0)) >>> 0;
-
-      const selectedWeight = state.weight === "random" ? weights[hash % weights.length] : state.weight;
+      const selectedWeight = state.weight === "random" ? selectWeightForSeed("test-seed") : state.weight;
 
       expect(selectedWeight).toBe("-73");
     });
 
-    it("selects random weight when weight is random", () => {
-      const weights = ["-48", "-52", "-57", "-60", "-63", "-66", "-70", "-73", "-78", "-81", "-90", "-100", "+78", "+100"] as const;
+    it("selects an exact, repeatable weight from a replay seed", () => {
       const seed = "deterministic-seed";
-      let hash = 0;
-      for (const c of seed) hash = (hash * 31 + c.charCodeAt(0)) >>> 0;
 
-      const randomIndex = hash % weights.length;
-      const selectedWeight = weights[randomIndex];
+      expect(selectWeightForSeed(seed)).toBe("-70");
+      expect(Array.from({ length: 3 }, () => selectWeightForSeed(seed))).toEqual(["-70", "-70", "-70"]);
+    });
 
-      expect(weights).toContain(selectedWeight);
+    it.each([
+      ["", "-48"], // zero hash selects the first supported weight
+      ["boundary-2", "+100"], // final modulo bucket
+      ["boundary-3", "-48"], // modulo rollover to the first bucket
+      ["boundary-4", "-52"] // bucket immediately after rollover
+    ])("maps boundary seed %j to %s", (seed, expectedWeight) => {
+      expect(selectWeightForSeed(seed)).toBe(expectedWeight);
     });
   });
 
