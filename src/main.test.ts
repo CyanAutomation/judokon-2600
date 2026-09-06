@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { GameState } from "./state";
 import type { Match, MatchResult } from "./game/game";
-import type { Judoka, StatKey } from "./api/types";
+import type { Judoka } from "./api/types";
 import { BudokonClient } from "./api/budokon";
 import { MATCH_RESOLUTION_DELAY_MS, resolve, type OrchestratorDeps } from "./game/orchestrator";
 import { renderApp } from "./ui/render";
@@ -678,15 +678,6 @@ describe("Main Module - Render Integration", () => {
 });
 
 describe("Main Module - Event Handler Integration", () => {
-  it("resolve handler receives stat key from keyboard or button", () => {
-    const handlers = { resolve: vi.fn() };
-    const stat: StatKey = "power";
-
-    handlers.resolve(stat);
-
-    expect(handlers.resolve).toHaveBeenCalledWith("power");
-  });
-
   it("clearAndExit resets match state", () => {
     const state = createMockGameState({
       match: createMockMatch(),
