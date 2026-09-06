@@ -4,6 +4,7 @@ import type { Match, MatchResult } from "./game/game";
 import type { Judoka, StatKey } from "./api/types";
 import { BudokonClient } from "./api/budokon";
 import { MATCH_RESOLUTION_DELAY_MS, resolve, type OrchestratorDeps } from "./game/orchestrator";
+import { renderApp } from "./ui/render";
 
 // Note: These tests are designed to test the logic that WILL be extracted from main.ts
 // during Phase 2-3. For now, we test the core functions that would be extracted.
@@ -558,11 +559,30 @@ describe("Main Module - Render Integration", () => {
       expect(hints).toContain("stat");
     });
 
-    it("includes footer with keyboard shortcuts", () => {
-      const state = createMockGameState({ match: null });
-      const footerContent = state.match ? "shortcuts for match" : "shortcuts for intro";
+    it.each([
+      {
+        phase: "intro",
+        state: createMockGameState({ match: null }),
+        actions: ["Division", "Length", "Start"]
+      },
+      {
+        phase: "selecting",
+        state: createMockGameState({ match: createMockMatch({ phase: "selecting" }) }),
+        actions: ["Choose a stat", "Quit match"]
+      },
+      {
+        phase: "post-round",
+        state: createMockGameState({ match: createMockMatch({ phase: "awaitingNext" }) }),
+        actions: ["Next round", "Quit match"]
+      }
+    ])("renders the $phase keyboard actions in the footer", ({ state, actions }) => {
+      const root = document.createElement("div");
 
-      expect(footerContent).toBeDefined();
+      renderApp(root, state);
+
+      const footer = root.querySelector("footer");
+      expect(footer).not.toBeNull();
+      for (const action of actions) expect(footer?.textContent).toContain(action);
     });
 
     it("renders intro screen when no match", () => {
