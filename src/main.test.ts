@@ -1,7 +1,9 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { GameState } from "./state";
 import type { Match, MatchResult } from "./game/game";
 import type { Judoka, StatKey } from "./api/types";
+import { BudokonClient } from "./api/budokon";
+import { MATCH_RESOLUTION_DELAY_MS, resolve, type OrchestratorDeps } from "./game/orchestrator";
 
 // Note: These tests are designed to test the logic that WILL be extracted from main.ts
 // during Phase 2-3. For now, we test the core functions that would be extracted.
@@ -236,6 +238,10 @@ describe("Main Module - Render Functions", () => {
 });
 
 describe("Main Module - State Orchestration Functions", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   describe("Match initialization (start function logic)", () => {
     it("sets target from parameter", () => {
       const state = createMockGameState({ target: 3 });
@@ -464,10 +470,38 @@ describe("Main Module - State Orchestration Functions", () => {
       expect(isValid).toBe(false);
     });
 
-    it("processes async resolution with setTimeout timing", () => {
-      const delayMs = 650;
+    it("resolves a selecting match after the configured delay", () => {
+      vi.useFakeTimers();
+      const match = createMockMatch({ phase: "selecting" });
+      const state = createMockGameState({ match });
+      const render = vi.fn();
+      const deps: OrchestratorDeps = { client: new BudokonClient(), render };
 
-      expect(delayMs).toBe(650);
+      resolve(state, match, "power", deps);
+
+      expect(state.pendingStat).toBe("power");
+      expect(state.result).toBeNull();
+      expect(state.history).toEqual([]);
+      expect(render).toHaveBeenCalledTimes(1);
+
+      vi.advanceTimersByTime(MATCH_RESOLUTION_DELAY_MS - 1);
+
+      expect(state.pendingStat).toBe("power");
+      expect(state.result).toBeNull();
+      expect(state.history).toEqual([]);
+
+      vi.advanceTimersByTime(1);
+
+      expect(state.pendingStat).toBeNull();
+      expect(state.result).toMatchObject({
+        outcome: "draw",
+        stat: "power",
+        playerValue: 8,
+        opponentValue: 8
+      });
+      expect(state.match?.phase).toBe("awaitingNext");
+      expect(state.history).toEqual([{ outcome: "draw", stat: "power", roundNumber: 1 }]);
+      expect(render).toHaveBeenCalledTimes(2);
     });
 
     it("records resolution in history", () => {
