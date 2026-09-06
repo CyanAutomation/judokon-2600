@@ -4,6 +4,7 @@ import type { Match, MatchResult } from "./game/game";
 import type { Judoka } from "./api/types";
 import { BudokonClient } from "./api/budokon";
 import { MATCH_RESOLUTION_DELAY_MS, resolve, selectWeightForSeed, start, type OrchestratorDeps } from "./game/orchestrator";
+import { handleClickEvent } from "./ui/eventHandlers";
 import { renderApp } from "./ui/render";
 
 // Note: These tests are designed to test the logic that WILL be extracted from main.ts
@@ -710,17 +711,74 @@ describe("Main Module - Event Handler Integration", () => {
 });
 
 describe("Main Module - Complex Integration Scenarios", () => {
-  it("handles full match flow from start to resolution", () => {
-    const state = createMockGameState();
+  it("handles full match flow from start to resolution", async () => {
+    vi.useFakeTimers();
 
-    // Start match
-    state.target = 3;
-    state.lengthIndex = 0;
-    state.activeSeed = "test-seed";
-    state.match = createMockMatch();
+    const state = createMockGameState({ target: 3, mode: "classic" });
+    const root = document.createElement("div");
+    const player = createMockJudoka("integration-player", {
+      firstname: "Player",
+      stats: { power: 8, speed: 5, technique: 6, kumikata: 7, newaza: 6 }
+    });
+    const opponent = createMockJudoka("integration-opponent", {
+      firstname: "Opponent",
+      stats: { power: 5, speed: 6, technique: 7, kumikata: 8, newaza: 9 }
+    });
+    const client = new class extends BudokonClient {
+      override async drawBatch(_seed: string, count: number): Promise<Judoka[]> {
+        const buffer = Array.from({ length: Math.max(0, count - 2) }, (_, index) =>
+          createMockJudoka(`integration-buffer-${index}`)
+        );
+        return [player, opponent, ...buffer].slice(0, count);
+      }
+    }();
+    const render = () => renderApp(root, state);
+    const deps: OrchestratorDeps = { client, render };
+    let startOperation: Promise<void> | undefined;
 
-    expect(state.match).not.toBeNull();
-    expect(state.target).toBe(3);
+    root.addEventListener("click", event => {
+      handleClickEvent(event, state, {
+        start: () => {
+          startOperation = start(state, deps, 3, "test-seed");
+        },
+        resolve: stat => {
+          if (!state.match) throw new Error("Match must exist before resolving");
+          resolve(state, state.match, stat, deps);
+        },
+        copyReplaySeed: async () => undefined,
+        next: async () => undefined,
+        clearAndExit: () => undefined
+      });
+    });
+
+    render();
+    render();
+    const startButton = root.querySelector<HTMLButtonElement>("#start");
+    expect(startButton).not.toBeNull();
+    startButton!.click();
+    expect(startOperation).toBeDefined();
+    await startOperation;
+
+    expect(state.match).toMatchObject({
+      target: 3,
+      phase: "selecting",
+      player,
+      opponent
+    });
+
+    const powerButton = root.querySelector<HTMLButtonElement>('[data-stat="power"]');
+    expect(powerButton).not.toBeNull();
+    powerButton!.click();
+    expect(state.pendingStat).toBe("power");
+
+    vi.advanceTimersByTime(MATCH_RESOLUTION_DELAY_MS);
+
+    expect(state.result?.outcome).toBe("player");
+    expect(state.match?.scores).toEqual({ player: 1, opponent: 0 });
+    expect(state.history).toEqual([{ outcome: "player", stat: "power", roundNumber: 1 }]);
+    expect(state.match?.phase).toBe("awaitingNext");
+    expect(root.querySelector(".result-panel")).not.toBeNull();
+    expect(root.querySelector<HTMLButtonElement>("#next")).not.toBeNull();
   });
 
   it("handles champion mode streak tracking", () => {
