@@ -1,4 +1,5 @@
 import "./style.css";
+import { injectSpeedInsights } from "@vercel/speed-insights";
 import { BudokonClient } from "./api/budokon";
 import { handleClickEvent, handleChangeEvent, handleToggleEvent, handleIntroKeyboard, handleMatchKeyboard } from "./ui/eventHandlers";
 import { initAudio, keyboardTick, setSoundEnabled } from "./audio";
@@ -25,6 +26,13 @@ if (savedMatch) {
 
 // Initialize audio system
 initAudio(localStorage.getItem("judokon.soundEnabled") === "true");
+
+// Initialize Vercel Speed Insights
+injectSpeedInsights();
+
+function render(): void {
+  renderApp(root, state);
+}
 
 const deps: OrchestratorDeps = { client, render };
 
