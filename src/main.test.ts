@@ -652,25 +652,27 @@ describe("Main Module - Render Integration", () => {
       expect(state.history).toHaveLength(0);
     });
 
-    it("displays all history entries", () => {
+    it("displays all history entries with their outcome labels", () => {
       const state = createMockGameState({
+        match: createMockMatch(),
         history: [
           { outcome: "player", stat: "power", roundNumber: 1 },
           { outcome: "opponent", stat: "technique", roundNumber: 2 },
           { outcome: "draw", stat: "speed", roundNumber: 3 }
         ]
       });
+      const root = document.createElement("div");
 
-      expect(state.history).toHaveLength(3);
-      expect(state.history.map(h => h.stat)).toEqual(["power", "technique", "speed"]);
-    });
+      renderApp(root, state);
 
-    it("formats outcome labels correctly", () => {
-      const labels = { player: "WIN", opponent: "LOSS", draw: "DRAW" };
+      const history = root.querySelector('[aria-label="Round history"]');
+      const entries = history?.querySelectorAll("li");
 
-      expect(labels.player).toBe("WIN");
-      expect(labels.opponent).toBe("LOSS");
-      expect(labels.draw).toBe("DRAW");
+      expect(history).not.toBeNull();
+      expect(entries).toHaveLength(3);
+      expect(entries?.[0]?.textContent).toBe("R1PowerWIN");
+      expect(entries?.[1]?.textContent).toBe("R2TechniqueLOSS");
+      expect(entries?.[2]?.textContent).toBe("R3SpeedDRAW");
     });
   });
 });
