@@ -154,13 +154,32 @@ describe("Event Handlers", () => {
         resolve: vi.fn(),
         clearAndExit: vi.fn()
       };
-      const state = createMockGameState({ match: createMockMatch() });
+      const activeMatch = createMockMatch();
+      const state = createMockGameState({ match: activeMatch });
       const button = createMockButton("next");
       const event = createClickEvent(button);
 
       handleClickEvent(event, state, handlers);
 
-      expect(handlers.next).toHaveBeenCalledWith(state.match);
+      expect(handlers.next).toHaveBeenCalledWith(activeMatch);
+    });
+
+    it("does not invoke next handler when #next button is clicked without a match", () => {
+      const next = vi.fn();
+      const handlers = {
+        start: vi.fn(),
+        copyReplaySeed: vi.fn(),
+        next,
+        resolve: vi.fn(),
+        clearAndExit: vi.fn()
+      };
+      const state = createMockGameState({ match: null });
+      const button = createMockButton("next");
+      const event = createClickEvent(button);
+
+      handleClickEvent(event, state, handlers);
+
+      expect(handlers.next).not.toHaveBeenCalled();
     });
 
     it("invokes clearAndExit handler when #quit button is clicked", () => {
