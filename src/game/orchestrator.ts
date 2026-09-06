@@ -13,6 +13,7 @@ import { outcomeBeep } from "../audio";
 import { clearSavedMatch, persistPreferences, saveGameState, type GameState } from "../state";
 
 const DRAW_BUFFER_SIZE = 6;
+export const MATCH_RESOLUTION_DELAY_MS = 650;
 const weights = ["-48", "-52", "-57", "-60", "-63", "-66", "-70", "-73", "-78", "-81", "-90", "-100", "+78", "+100"] as const;
 const lengths = [3, 5, 10] as const;
 
@@ -183,7 +184,7 @@ export function resolve(state: GameState, _match: Match, stat: StatKey, deps: Or
     // Focus next/replay button for keyboard navigation
     const root = document.querySelector<HTMLDivElement>("#app");
     root?.querySelector<HTMLButtonElement>("#next, #replay")?.focus();
-  }, 650);
+  }, MATCH_RESOLUTION_DELAY_MS);
 }
 
 /**
