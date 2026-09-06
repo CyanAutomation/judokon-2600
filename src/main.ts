@@ -30,6 +30,10 @@ initAudio(localStorage.getItem("judokon.soundEnabled") === "true");
 // Initialize Vercel Speed Insights
 injectSpeedInsights();
 
+function render(): void {
+  renderApp(root, state);
+}
+
 const deps: OrchestratorDeps = { client, render };
 
 function render(): void {
