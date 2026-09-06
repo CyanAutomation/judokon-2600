@@ -1,10 +1,9 @@
 import "./style.css";
 import { BudokonClient } from "./api/budokon";
-import { shortcutHint } from "./ui/controls";
 import { handleClickEvent, handleChangeEvent, handleToggleEvent, handleIntroKeyboard, handleMatchKeyboard } from "./ui/eventHandlers";
 import { initAudio, keyboardTick, setSoundEnabled } from "./audio";
 import { createGameState, loadSavedGameState, persistPreferences, type GameState } from "./state";
-import { createHelpers, status, intro, game, headerContext } from "./ui/templates";
+import { renderApp } from "./ui/render";
 import { start, next, resolve, copyReplaySeed, clearAndExit, chooseLength, type OrchestratorDeps } from "./game/orchestrator";
 
 const app = document.querySelector<HTMLDivElement>("#app");
@@ -30,20 +29,7 @@ initAudio(localStorage.getItem("judokon.soundEnabled") === "true");
 const deps: OrchestratorDeps = { client, render };
 
 function render(): void {
-  const helpers = createHelpers(state);
-  const hint = !state.match
-    ? `${shortcutHint("A / W")} Division ${shortcutHint("1–3")} Length ${shortcutHint("Enter")} Start`
-    : state.pendingStat
-      ? "Resolving opponent…"
-      : state.match.phase === "selecting"
-        ? `${shortcutHint("1–5")} Choose a stat ${shortcutHint("Esc / Q")} Quit match`
-        : state.match.phase === "awaitingNext"
-          ? `${shortcutHint("Enter")} Next round ${shortcutHint("Esc / Q")} Quit match`
-          : `${shortcutHint("Enter")} Play again ${shortcutHint("Esc / Q")} Change settings`;
-  const content = !state.match
-    ? intro(state, helpers)
-    : `<p id="status" class="active-command" role="status" aria-live="polite">${status(state)} <span class="block-cursor" aria-hidden="true">█</span></p>${game(state.match, state, helpers)}`;
-  root.innerHTML = `<header><div>bash - JU-DO-KON</div><p>${headerContext(state, helpers)}</p></header><main id="game" tabindex="-1" class="${!state.match ? "intro-main" : ""}">${content}</main><footer><span class="footer-hint">${hint}</span></footer>`;
+  renderApp(root, state);
 }
 root.addEventListener("click", (e) => {
   handleClickEvent(e, state, {
