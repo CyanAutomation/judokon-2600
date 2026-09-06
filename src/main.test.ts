@@ -3,7 +3,7 @@ import type { GameState } from "./state";
 import type { Match, MatchResult } from "./game/game";
 import type { Judoka } from "./api/types";
 import { BudokonClient } from "./api/budokon";
-import { MATCH_RESOLUTION_DELAY_MS, resolve, selectWeightForSeed, type OrchestratorDeps } from "./game/orchestrator";
+import { MATCH_RESOLUTION_DELAY_MS, resolve, selectWeightForSeed, start, type OrchestratorDeps } from "./game/orchestrator";
 import { renderApp } from "./ui/render";
 
 // Note: These tests are designed to test the logic that WILL be extracted from main.ts
@@ -103,10 +103,6 @@ describe("Main Module - Render Functions", () => {
       expect(hash1).toBe(hash2);
     });
 
-    it("generates valid UUID (replacement for crypto.randomUUID)", () => {
-      const uuid = crypto.randomUUID();
-      expect(uuid).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
-    });
   });
 
   describe("Status message generation", () => {
@@ -241,6 +237,7 @@ describe("Main Module - Render Functions", () => {
 describe("Main Module - State Orchestration Functions", () => {
   afterEach(() => {
     vi.useRealTimers();
+    vi.restoreAllMocks();
   });
 
   describe("Match initialization (start function logic)", () => {
@@ -261,20 +258,36 @@ describe("Main Module - State Orchestration Functions", () => {
       expect(lengthIndex).toBe(1);
     });
 
-    it("uses provided seed or generates new UUID", () => {
-      const state = createMockGameState();
-      const providedSeed = "custom-seed-123";
+    it("generates an active seed for an empty replay seed and uses it for the initial draw", async () => {
+      const generatedSeed = "123e4567-e89b-42d3-a456-426614174000";
+      const state = createMockGameState({ replaySeed: "" });
+      const client = new BudokonClient();
+      const drawBatch = vi.spyOn(client, "drawBatch").mockResolvedValue(
+        Array.from({ length: 6 }, (_, index) => createMockJudoka(`judoka-${index}`))
+      );
+      const randomUUID = vi.spyOn(crypto, "randomUUID").mockReturnValue(generatedSeed);
 
-      state.activeSeed = providedSeed;
+      await start(state, { client, render: vi.fn() });
 
-      expect(state.activeSeed).toBe("custom-seed-123");
+      expect(randomUUID).toHaveBeenCalledOnce();
+      expect(state.activeSeed).toBe(generatedSeed);
+      expect(drawBatch).toHaveBeenCalledWith(generatedSeed, 6, undefined, undefined);
     });
 
-    it("generates UUID when seed is empty", () => {
-      const state = createMockGameState({ replaySeed: "" });
-      const seed = state.replaySeed.trim() || crypto.randomUUID();
+    it("uses a non-empty replay seed without generating a UUID", async () => {
+      const providedSeed = "custom-seed-123";
+      const state = createMockGameState({ replaySeed: providedSeed });
+      const client = new BudokonClient();
+      const drawBatch = vi.spyOn(client, "drawBatch").mockResolvedValue(
+        Array.from({ length: 6 }, (_, index) => createMockJudoka(`judoka-${index}`))
+      );
+      const randomUUID = vi.spyOn(crypto, "randomUUID");
 
-      expect(seed).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-/i);
+      await start(state, { client, render: vi.fn() });
+
+      expect(randomUUID).not.toHaveBeenCalled();
+      expect(state.activeSeed).toBe(providedSeed);
+      expect(drawBatch).toHaveBeenCalledWith(providedSeed, 6, undefined, undefined);
     });
 
     it("clears game state on start", () => {
