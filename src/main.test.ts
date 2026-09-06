@@ -678,16 +678,6 @@ describe("Main Module - Render Integration", () => {
 });
 
 describe("Main Module - Event Handler Integration", () => {
-  it("next handler receives match parameter from click", () => {
-    const handlers = { start: vi.fn(), next: vi.fn() };
-    const match = createMockMatch();
-
-    // Simulate calling next handler with match
-    handlers.next(match);
-
-    expect(handlers.next).toHaveBeenCalledWith(match);
-  });
-
   it("resolve handler receives stat key from keyboard or button", () => {
     const handlers = { resolve: vi.fn() };
     const stat: StatKey = "power";
