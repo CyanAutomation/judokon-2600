@@ -35,10 +35,6 @@ function render(): void {
 }
 
 const deps: OrchestratorDeps = { client, render };
-
-function render(): void {
-  renderApp(root, state);
-}
 root.addEventListener("click", (e) => {
   handleClickEvent(e, state, {
     start: () => { start(state, deps); },
