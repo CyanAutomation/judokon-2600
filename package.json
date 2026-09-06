@@ -23,6 +23,7 @@
     "vitest": "^4.0.8"
   },
   "dependencies": {
+    "@vercel/speed-insights": "^2.0.0",
     "fallow": "^3.22.0"
   }
 }
