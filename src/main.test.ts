@@ -3,7 +3,7 @@ import type { GameState } from "./state";
 import type { Match, MatchResult } from "./game/game";
 import type { Judoka } from "./api/types";
 import { BudokonClient } from "./api/budokon";
-import { MATCH_RESOLUTION_DELAY_MS, resolve, selectWeightForSeed, start, type OrchestratorDeps } from "./game/orchestrator";
+import { chooseLength, MATCH_RESOLUTION_DELAY_MS, resolve, selectWeightForSeed, start, type OrchestratorDeps } from "./game/orchestrator";
 import { handleClickEvent } from "./ui/eventHandlers";
 import { renderApp } from "./ui/render";
 
@@ -242,13 +242,21 @@ describe("Main Module - State Orchestration Functions", () => {
   });
 
   describe("Match initialization (start function logic)", () => {
-    it("sets target from parameter", () => {
-      const state = createMockGameState({ target: 3 });
-      const newTarget = 5;
+    it("chooses a match length through the orchestrator and renders the selection", () => {
+      const state = createMockGameState({ target: 3, lengthIndex: 0 });
+      const root = document.createElement("div");
+      document.body.append(root);
+      const render = vi.fn(() => renderApp(root, state));
 
-      state.target = newTarget;
+      chooseLength(state, 5, { client: new BudokonClient(), render });
 
       expect(state.target).toBe(5);
+      expect(state.lengthIndex).toBe(1);
+      expect(render).toHaveBeenCalledOnce();
+      expect(root.querySelector<HTMLInputElement>('[data-length="5"]')?.checked).toBe(true);
+      expect(document.activeElement).toBe(root.querySelector('[data-length="5"]'));
+
+      root.remove();
     });
 
     it("computes lengthIndex from target", () => {
@@ -421,15 +429,6 @@ describe("Main Module - State Orchestration Functions", () => {
   });
 
   describe("Stat selection (choose function logic)", () => {
-    it("updates target match length", () => {
-      const state = createMockGameState({ target: 3 });
-
-      const newLength = 5;
-      state.target = newLength;
-
-      expect(state.target).toBe(5);
-    });
-
     it("updates lengthIndex to match new length", () => {
       const lengths = [3, 5, 10] as const;
       const state = createMockGameState({ lengthIndex: 0 });
