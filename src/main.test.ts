@@ -256,8 +256,7 @@ describe("Main Module - State Orchestration Functions", () => {
 
       const selectedLength = root.querySelector<HTMLInputElement>(`[data-length="${target}"]`);
 
-      expect(state.target).toBe(target);
-      expect(state.lengthIndex).toBe(expectedIndex);
+      expect(state).toMatchObject({ target, lengthIndex: expectedIndex });
       expect(render).toHaveBeenCalledOnce();
       expect(selectedLength?.checked).toBe(true);
       expect(document.activeElement).toBe(selectedLength);
