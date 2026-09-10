@@ -242,29 +242,27 @@ describe("Main Module - State Orchestration Functions", () => {
   });
 
   describe("Match initialization (start function logic)", () => {
-    it("chooses a match length through the orchestrator and renders the selection", () => {
-      const state = createMockGameState({ target: 3, lengthIndex: 0 });
+    it.each([
+      [3, 0],
+      [5, 1],
+      [10, 2]
+    ])("chooses match length %i at index %i through the orchestrator", (target, expectedIndex) => {
+      const state = createMockGameState({ target: 0, lengthIndex: -1 });
       const root = document.createElement("div");
       document.body.append(root);
       const render = vi.fn(() => renderApp(root, state));
 
-      chooseLength(state, 5, { client: new BudokonClient(), render });
+      chooseLength(state, target, { client: new BudokonClient(), render });
 
-      expect(state.target).toBe(5);
-      expect(state.lengthIndex).toBe(1);
+      const selectedLength = root.querySelector<HTMLInputElement>(`[data-length="${target}"]`);
+
+      expect(state.target).toBe(target);
+      expect(state.lengthIndex).toBe(expectedIndex);
       expect(render).toHaveBeenCalledOnce();
-      expect(root.querySelector<HTMLInputElement>('[data-length="5"]')?.checked).toBe(true);
-      expect(document.activeElement).toBe(root.querySelector('[data-length="5"]'));
+      expect(selectedLength?.checked).toBe(true);
+      expect(document.activeElement).toBe(selectedLength);
 
       root.remove();
-    });
-
-    it("computes lengthIndex from target", () => {
-      const lengths = [3, 5, 10] as const;
-
-      const lengthIndex = lengths.indexOf(5 as typeof lengths[number]);
-
-      expect(lengthIndex).toBe(1);
     });
 
     it("generates an active seed for an empty replay seed and uses it for the initial draw", async () => {
@@ -425,20 +423,6 @@ describe("Main Module - State Orchestration Functions", () => {
       const needsRefill = state.drawBuffer.length < 2;
 
       expect(needsRefill).toBe(true);
-    });
-  });
-
-  describe("Stat selection (choose function logic)", () => {
-    it("updates lengthIndex to match new length", () => {
-      const lengths = [3, 5, 10] as const;
-      const state = createMockGameState({ lengthIndex: 0 });
-
-      const newLength = 10;
-      const newIndex = lengths.indexOf(newLength as typeof lengths[number]);
-
-      state.lengthIndex = newIndex;
-
-      expect(state.lengthIndex).toBe(2);
     });
   });
 
