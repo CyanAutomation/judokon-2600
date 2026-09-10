@@ -395,52 +395,42 @@ describe("Event Handlers", () => {
       expect(handlers.choose).toHaveBeenCalledWith(10);
     });
 
-    it("handles ArrowLeft to cycle to previous match length", () => {
+    it.each([
+      ["ArrowLeft", 1, 3],
+      ["ArrowRight", 0, 5]
+    ])("handles %s navigation from length index %i", (key, lengthIndex, expectedLength) => {
       const choose = vi.fn();
       const handlers = {
         choose,
         start: vi.fn(),
         keyboardTick: vi.fn()
       };
-      const state = createMockGameState({ lengthIndex: 1 });
+      const state = createMockGameState({ lengthIndex });
       const root = document.createElement("div");
-      const event = createKeyboardEvent("ArrowLeft");
+      const event = createKeyboardEvent(key);
 
       handleIntroKeyboard(event, state, root, handlers);
 
-      expect(handlers.choose).toHaveBeenCalledWith(3);
+      expect(handlers.choose).toHaveBeenCalledWith(expectedLength);
     });
 
-    it("handles ArrowRight to cycle to next match length", () => {
+    it.each([
+      ["ArrowLeft", 0, 10],
+      ["ArrowRight", 2, 3]
+    ])("wraps %s navigation from length index %i", (key, lengthIndex, expectedLength) => {
       const choose = vi.fn();
       const handlers = {
         choose,
         start: vi.fn(),
         keyboardTick: vi.fn()
       };
-      const state = createMockGameState({ lengthIndex: 0 });
+      const state = createMockGameState({ lengthIndex });
       const root = document.createElement("div");
-      const event = createKeyboardEvent("ArrowRight");
+      const event = createKeyboardEvent(key);
 
       handleIntroKeyboard(event, state, root, handlers);
 
-      expect(handlers.choose).toHaveBeenCalledWith(5);
-    });
-
-    it("cycles arrow keys correctly (10 to 3)", () => {
-      const choose = vi.fn();
-      const handlers = {
-        choose,
-        start: vi.fn(),
-        keyboardTick: vi.fn()
-      };
-      const state = createMockGameState({ lengthIndex: 2 }); // At 10
-      const root = document.createElement("div");
-      const event = createKeyboardEvent("ArrowRight");
-
-      handleIntroKeyboard(event, state, root, handlers);
-
-      expect(handlers.choose).toHaveBeenCalledWith(3); // Cycles to beginning
+      expect(handlers.choose).toHaveBeenCalledWith(expectedLength);
     });
 
     it("handles Enter key to start match", () => {
