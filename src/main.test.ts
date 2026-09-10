@@ -496,23 +496,19 @@ describe("Main Module - State Orchestration Functions", () => {
         opponentValue: 8
       });
       expect(state.match?.phase).toBe("awaitingNext");
-      expect(state.history).toEqual([{ outcome: "draw", stat: "power", roundNumber: 1 }]);
-      expect(render).toHaveBeenCalledTimes(2);
-    });
-
-    it("records resolution in history", () => {
-      const state = createMockGameState({
-        history: []
-      });
-
-      state.history.push({
-        outcome: "player",
-        stat: "power",
-        roundNumber: 1
-      });
-
       expect(state.history).toHaveLength(1);
-      expect(state.history[0]?.stat).toBe("power");
+      expect(state.history[0]).toEqual({ outcome: "draw", stat: "power", roundNumber: 1 });
+      expect(render).toHaveBeenCalledTimes(2);
+
+      const secondMatch = createMockMatch({ matchNumber: 2 });
+      state.match = secondMatch;
+
+      resolve(state, secondMatch, "speed", deps);
+      vi.advanceTimersByTime(MATCH_RESOLUTION_DELAY_MS);
+
+      expect(state.history).toHaveLength(2);
+      expect(state.history[1]).toEqual({ outcome: "draw", stat: "speed", roundNumber: 2 });
+      expect(render).toHaveBeenCalledTimes(4);
     });
   });
 
