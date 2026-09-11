@@ -3,7 +3,7 @@ import type { GameState } from "./state";
 import type { Match, MatchResult } from "./game/game";
 import type { Judoka } from "./api/types";
 import { BudokonClient } from "./api/budokon";
-import { chooseLength, MATCH_RESOLUTION_DELAY_MS, resolve, selectWeightForSeed, start, type OrchestratorDeps } from "./game/orchestrator";
+import { chooseLength, copyReplaySeed, MATCH_RESOLUTION_DELAY_MS, resolve, selectWeightForSeed, start, type OrchestratorDeps } from "./game/orchestrator";
 import { handleClickEvent } from "./ui/eventHandlers";
 import { renderApp } from "./ui/render";
 
@@ -513,14 +513,33 @@ describe("Main Module - State Orchestration Functions", () => {
   });
 
   describe("Replay seed copying", () => {
-    it("formats seed for clipboard", () => {
+    it("copies the active replay seed and shows confirmation", async () => {
       const state = createMockGameState({
         activeSeed: "abc-123-def-456"
       });
+      const writeText = vi.fn().mockResolvedValue(undefined);
+      const originalClipboard = Object.getOwnPropertyDescriptor(navigator, "clipboard");
+      Object.defineProperty(navigator, "clipboard", {
+        configurable: true,
+        value: { writeText }
+      });
 
-      const clipboardText = state.activeSeed;
+      try {
+        await copyReplaySeed(state, {
+          client: new BudokonClient(),
+          render: () => undefined
+        });
 
-      expect(clipboardText).toBe("abc-123-def-456");
+        expect(writeText).toHaveBeenCalledOnce();
+        expect(writeText).toHaveBeenCalledWith("abc-123-def-456");
+        expect(state.seedMessage).toBe("Replay seed copied.");
+      } finally {
+        if (originalClipboard) {
+          Object.defineProperty(navigator, "clipboard", originalClipboard);
+        } else {
+          delete (navigator as unknown as { clipboard?: Clipboard }).clipboard;
+        }
+      }
     });
 
     it("handles clipboard API success", () => {
