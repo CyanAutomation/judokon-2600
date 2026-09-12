@@ -574,7 +574,6 @@ describe("Main Module - State Orchestration Functions", () => {
           });
         });
         copyButton.click();
-        copyButton.click();
         if (!copyOperation) throw new Error("copyOperation must be defined after click");
         await copyOperation;
 
