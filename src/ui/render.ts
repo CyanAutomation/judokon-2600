@@ -1,11 +1,17 @@
 import type { GameState } from "../state";
 import { shortcutHint } from "./controls";
-import { createHelpers, game, headerContext, intro, status } from "./templates";
+import { advanced, createHelpers, game, headerContext, intro, status } from "./templates";
 
 export function renderApp(root: HTMLElement, state: GameState): void {
   const helpers = createHelpers(state);
   const hint = !state.match
-    ? `${shortcutHint("A / W")} Division ${shortcutHint("1–3")} Length ${shortcutHint("Enter")} Start`
+    ? state.setupStep === "mode" || !state.setupStep
+      ? `${shortcutHint("C / H")} Game mode`
+      : state.setupStep === "division"
+        ? `${shortcutHint("A / W")} Division`
+        : state.setupStep === "weight"
+          ? "Choose a weight class"
+          : `${shortcutHint("1–3")} Length ${shortcutHint("Enter")} Start`
     : state.pendingStat
       ? "Resolving opponent…"
       : state.match.phase === "selecting"
@@ -17,5 +23,6 @@ export function renderApp(root: HTMLElement, state: GameState): void {
     ? intro(state, helpers)
     : `<p id="status" class="active-command" role="status" aria-live="polite">${status(state)} <span class="block-cursor" aria-hidden="true">█</span></p>${game(state.match, state, helpers)}`;
 
-  root.innerHTML = `<header><div>bash - JU-DO-KON</div><p>${headerContext(state, helpers)}</p></header><main id="game" tabindex="-1" class="${!state.match ? "intro-main" : ""}">${content}</main><footer><span class="footer-hint">${hint}</span></footer>`;
+  const settings = !state.match ? `<div class="footer-settings">${advanced(state)}</div>` : "";
+  root.innerHTML = `<header><div>bash - JU-DO-KON</div><p>${headerContext(state, helpers)}</p></header><main id="game" tabindex="-1" class="${!state.match ? "intro-main" : ""}">${content}</main><footer><span class="footer-hint">${hint}</span>${settings}</footer>`;
 }

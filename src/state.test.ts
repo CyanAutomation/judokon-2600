@@ -80,7 +80,8 @@ describe("State Management", () => {
         mode: "classic",
         weight: "random",
         replaySeed: "",
-        seedMessage: ""
+        seedMessage: "",
+        setupStep: "mode"
       });
     });
 

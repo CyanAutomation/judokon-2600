@@ -5,6 +5,7 @@ import { parseSavedMatch, stringifySavedMatch } from "./game/session";
 const SAVED_MATCH_KEY = "judokon.activeMatch.v1";
 
 export type Division = "absolute" | "weight";
+export type SetupStep = "mode" | "division" | "weight" | "length";
 export type History = Pick<MatchResult, "outcome" | "stat"> & { roundNumber: number };
 
 /**
@@ -27,6 +28,8 @@ export interface GameState {
   weight: string;
   replaySeed: string;
   seedMessage: string;
+  /** The active stage of the compact pre-match setup flow. */
+  setupStep?: SetupStep;
 }
 
 /**
@@ -54,6 +57,7 @@ export function createGameState(): GameState {
     weight,
     replaySeed: "",
     seedMessage: "",
+    setupStep: "mode",
   };
 }
 

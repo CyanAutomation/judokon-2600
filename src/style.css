@@ -114,3 +114,28 @@ footer { display: flex; align-items: center; justify-content: space-between; gap
   .player-column > .champion-progress { order: 6; }
   .player-column > .match-history { order: 7; }
 }
+
+/* Compact staged setup keeps the primary path legible on both desktop and phone. */
+.intro .primary-action { width: 100%; min-width: 0; }
+.setup-stage { margin-top: .9rem; }
+.setup-summary { display: flex; align-items: center; justify-content: space-between; gap: .75rem; padding: .55rem 0; border-bottom: 1px solid #417841; color: #a4caa4; font-size: .84rem; }
+.setup-summary strong { color: #d8ffd8; }
+.setup-change { min-height: auto; padding: .3rem .5rem; font-size: .76rem; }
+.setup-rule { margin: 1rem 0 .3rem; color: #a4caa4; font-size: .82rem; line-height: 1.4; }
+.setup-rule strong { color: #d8ffd8; }
+.start-context { margin: 0 0 .55rem; color: #8ee58e; font-size: .82rem; }
+.choice-label-compact { display: none; }
+footer { flex-wrap: wrap; }
+.footer-settings { flex-basis: 100%; }
+.footer-settings .advanced { margin: .2rem 0 0; }
+@media (max-width: 560px) {
+  .choice-label-full { display: none; }
+  .choice-label-compact { display: inline; }
+  .choice-label { font-size: .92rem; }
+  .choice-card small { font-size: .73rem; }
+  .intro { gap: 1rem; }
+  .intro-copy { text-align: center; }
+  .intro-copy h1 { font-size: 2.25rem; }
+  .intro-lede { line-height: 1.55; }
+  .intro-status { margin: .7rem 0; }
+}

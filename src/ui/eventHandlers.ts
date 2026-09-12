@@ -1,4 +1,4 @@
-import type { GameState } from "../state";
+import type { GameState, SetupStep } from "../state";
 import type { Match } from "../game/game";
 import type { StatKey } from "../api/types";
 import { STAT_KEYS } from "../api/types";
@@ -10,12 +10,16 @@ import { STAT_KEYS } from "../api/types";
 export function handleClickEvent(
   e: MouseEvent,
   state: GameState,
-  handlers: { start: () => void; copyReplaySeed: () => Promise<void>; next: (m: Match) => Promise<void>; resolve: (s: StatKey) => void; clearAndExit: () => void }
+  handlers: { start: () => void; copyReplaySeed: () => Promise<void>; next: (m: Match) => Promise<void>; resolve: (s: StatKey) => void; clearAndExit: () => void; setSetupStep?: (step: SetupStep) => void }
 ): void {
   const b = (e.target as Element).closest<HTMLButtonElement>("button");
   if (!b || b.disabled) return;
 
-  if (b.id === "start" || b.id === "retry") {
+  if (b.dataset.setupStep) {
+    handlers.setSetupStep?.(b.dataset.setupStep as SetupStep);
+  } else if (b.id === "confirm-weight") {
+    handlers.setSetupStep?.("length");
+  } else if (b.id === "start" || b.id === "retry") {
     handlers.start();
   } else if (b.id === "replay") {
     handlers.start();
@@ -44,17 +48,19 @@ export function handleChangeEvent(
 
   if (input.dataset.division && input.checked) {
     state.division = input.dataset.division === "weight" ? "weight" : "absolute";
+    state.setupStep = state.division === "weight" ? "weight" : "length";
     onUpdate.persistPreferences();
     onUpdate.render();
-    root.querySelector<HTMLInputElement>(`[data-division="${state.division}"]`)?.focus();
+    root.querySelector<HTMLElement>(state.division === "weight" ? "#weight-class" : "#length-3")?.focus();
     return;
   }
 
   if (input.dataset.introMode && input.checked) {
     state.mode = input.dataset.introMode === "champion" ? "champion" : "classic";
+    state.setupStep = "division";
     onUpdate.persistPreferences();
     onUpdate.render();
-    root.querySelector<HTMLInputElement>(`[data-intro-mode="${state.mode}"]`)?.focus();
+    root.querySelector<HTMLInputElement>("#division-absolute")?.focus();
     return;
   }
 
@@ -111,23 +117,27 @@ export function handleIntroKeyboard(
   handlers: { choose: (n: number) => void; start: () => void; keyboardTick: () => void }
 ): void {
   const lengths = [3, 5, 10] as const;
+  const step = state.setupStep ?? "mode";
 
-  if (e.key >= "1" && e.key <= "3") {
+  if (step === "length" && e.key >= "1" && e.key <= "3") {
     e.preventDefault();
     handlers.choose(lengths[Number(e.key) - 1]!);
-  } else if (e.key.toLowerCase() === "a" || e.key.toLowerCase() === "w") {
+  } else if (step === "division" && (e.key.toLowerCase() === "a" || e.key.toLowerCase() === "w")) {
     e.preventDefault();
     root.querySelector<HTMLInputElement>(`[data-division="${e.key.toLowerCase() === "w" ? "weight" : "absolute"}"]`)?.click();
-  } else if (e.key.toLowerCase() === "c" || e.key.toLowerCase() === "h") {
+  } else if (step === "mode" && (e.key.toLowerCase() === "c" || e.key.toLowerCase() === "h")) {
     e.preventDefault();
     root.querySelector<HTMLInputElement>(`[data-intro-mode="${e.key.toLowerCase() === "h" ? "champion" : "classic"}"]`)?.click();
-  } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+  } else if (step === "length" && (e.key === "ArrowLeft" || e.key === "ArrowUp")) {
     e.preventDefault();
     handlers.choose(lengths[(state.lengthIndex + lengths.length - 1) % lengths.length]!);
-  } else if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+  } else if (step === "length" && (e.key === "ArrowRight" || e.key === "ArrowDown")) {
     e.preventDefault();
     handlers.choose(lengths[(state.lengthIndex + 1) % lengths.length]!);
-  } else if (e.key === "Enter" || e.key === " ") {
+  } else if (step === "weight" && (e.key === "Enter" || e.key === " ")) {
+    e.preventDefault();
+    root.querySelector<HTMLButtonElement>("#confirm-weight")?.click();
+  } else if (step === "length" && (e.key === "Enter" || e.key === " ")) {
     e.preventDefault();
     handlers.start();
   }
