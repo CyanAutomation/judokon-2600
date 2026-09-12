@@ -7,7 +7,7 @@
 
 import { STAT_KEYS, type Judoka, type StatKey } from "../api/types";
 import { buttonChoice, disclosure, escapeHtml as esc, primaryButton, quietButton, radioChoice, surface, toggleControl } from "./controls";
-import { matchSummary, type Match, type MatchResult, strongestStats, MAX_ROUNDS } from "../game/game";
+import { matchSummary, type Match, type MatchResult, strongestStats } from "../game/game";
 import { type GameState } from "../state";
 
 // Helper functions for formatting
@@ -62,15 +62,22 @@ export function advanced(state: GameState): string {
  * Generate intro screen HTML
  */
 export function intro(state: GameState, helpers: Helpers): string {
-  const divisionOptions = radioChoice({ id: "division-absolute", name: "division", label: "Absolute", description: "Open weight", shortcut: "A", checked: state.division === "absolute", data: { "data-division": "absolute" } })
-    + radioChoice({ id: "division-weight", name: "division", label: "Weight class", description: "Comparable division", shortcut: "W", checked: state.division === "weight", data: { "data-division": "weight" } });
-  const modeOptions = radioChoice({ id: "mode-classic", name: "game-mode", label: "Classic Battle", description: "Fresh matchups", shortcut: "C", checked: state.mode === "classic", data: { "data-intro-mode": "classic" } })
-    + radioChoice({ id: "mode-champion", name: "game-mode", label: "Champion", description: "Build a streak", shortcut: "H", checked: state.mode === "champion", data: { "data-intro-mode": "champion" } });
+  const step = state.setupStep ?? "mode";
+  const divisionOptions = radioChoice({ id: "division-absolute", name: "division", label: "Absolute", description: "Open weight", shortcut: "A", checked: step !== "division" && state.division === "absolute", data: { "data-division": "absolute" } })
+    + radioChoice({ id: "division-weight", name: "division", label: "Weight class", compactLabel: "Weight", description: "Comparable division", shortcut: "W", checked: step !== "division" && state.division === "weight", data: { "data-division": "weight" } });
+  const modeOptions = radioChoice({ id: "mode-classic", name: "game-mode", label: "Classic Battle", compactLabel: "Classic", description: "Fresh matchups", shortcut: "C", checked: step !== "mode" && state.mode === "classic", data: { "data-intro-mode": "classic" } })
+    + radioChoice({ id: "mode-champion", name: "game-mode", label: "Champion", description: "Build a streak", shortcut: "H", checked: step !== "mode" && state.mode === "champion", data: { "data-intro-mode": "champion" } });
   const select = lengths.map((n, i) => radioChoice({ id: `length-${n}`, name: "match-length", label: ["Quick", "Medium", "Long"][i]!, description: `First to ${n}`, shortcut: String(i + 1), checked: state.lengthIndex === i, disabled: state.busy, data: { "data-length": String(n) } })).join("");
   const options = [`<option value="random" ${state.weight === "random" ? "selected" : ""}>Random weight class</option>`, ...weights.map((n) => `<option value="${n}" ${state.weight === n ? "selected" : ""}>${n} kg</option>`)].join("");
-  const description = state.mode === "champion" ? "Your judoka stays in the fight while a new opponent enters each round. Build a continuous win streak." : "Draw a fresh judoka matchup every round and choose the best exchange.";
-  const scoringRules = disclosure("How scoring works", `<p>Higher stat wins a point; draws score no points. After ${MAX_ROUNDS} rounds, the leading score wins—or the match is drawn.</p>`);
-  return `<section class="intro" aria-labelledby="intro-title"><div class="intro-copy"><p class="eyebrow">Budokon terminal · 2600</p><h1 id="intro-title">Enter the<br/>judoka circuit.</h1><p class="intro-lede">Choose your format, then read the opponent and build a run one point at a time.</p><p class="intro-status" role="status">System ready. Configure your match<span class="block-cursor" aria-hidden="true">█</span></p></div><section class="intro-mode-panel panel" aria-label="Match setup">${helpers.eyebrow("Match setup")}<fieldset class="setup-group"><legend>Division</legend><div class="choice-grid">${divisionOptions}</div>${state.division === "weight" ? `<label class="weight-picker" for="weight-class">Weight class <select id="weight-class">${options}</select></label>` : ""}</fieldset><fieldset class="setup-group"><legend>Game mode</legend><div class="choice-grid">${modeOptions}</div><small>${description}</small></fieldset><fieldset class="setup-group"><legend>Match length</legend><div class="choice-grid length-choices">${select}</div></fieldset>${primaryButton("start", `Start match · First to ${state.target}`, "Enter", state.busy)}${scoringRules}${advanced(state)}</section><p class="intro-footnote"><strong>Keys:</strong> <kbd>A</kbd>/<kbd>W</kbd> division · <kbd>C</kbd>/<kbd>H</kbd> mode · <kbd>1–3</kbd> length · <kbd>Enter</kbd> start</p></section>`;
+  const summary = (label: string, value: string, target: "mode" | "division") => `<div class="setup-summary"><span>${esc(label)}: <strong>${esc(value)}</strong></span><button class="quiet setup-change" data-setup-step="${target}">Change</button></div>`;
+  const panel = step === "mode"
+    ? `<fieldset class="setup-group setup-stage"><legend>Choose game mode</legend><div class="choice-grid">${modeOptions}</div><small>${state.mode === "champion" ? "Keep one judoka in the fight and build a streak." : "Draw fresh opponents for every round."}</small></fieldset>`
+    : step === "division"
+      ? `${summary("Game mode", helpers.modeLabel(), "mode")}<fieldset class="setup-group setup-stage"><legend>Choose division</legend><div class="choice-grid">${divisionOptions}</div></fieldset>`
+      : step === "weight"
+        ? `${summary("Game mode", helpers.modeLabel(), "mode")}${summary("Division", "Weight class", "division")}<fieldset class="setup-group setup-stage"><legend>Choose weight class</legend><label class="weight-picker" for="weight-class"><span>Match competitors by weight</span><select id="weight-class">${options}</select></label>${primaryButton("confirm-weight", "Continue", "Enter")}</fieldset>`
+        : `${summary("Game mode", helpers.modeLabel(), "mode")}${summary("Division", helpers.divisionLabel(), "division")}<fieldset class="setup-group setup-stage"><legend>Choose match length</legend><div class="choice-grid length-choices">${select}</div></fieldset><p class="setup-rule"><strong>Higher stat wins the point.</strong> Draws score no points.</p><p class="start-context">First to ${state.target} points</p>${primaryButton("start", "Start match", "Enter", state.busy)}`;
+  return `<section class="intro" aria-labelledby="intro-title"><div class="intro-copy"><p class="eyebrow">Budokon terminal · 2600</p><h1 id="intro-title">Enter the<br/>judoka circuit.</h1><p class="intro-lede">Choose your format, then read the opponent and build a run one point at a time.</p><p class="intro-status" role="status">System ready. Configure your match<span class="block-cursor" aria-hidden="true">█</span></p></div><section class="intro-mode-panel panel" aria-label="Match setup">${helpers.eyebrow("Match setup")}${panel}</section><p class="intro-footnote">Setup unfolds one choice at a time.</p></section>`;
 }
 
 /**

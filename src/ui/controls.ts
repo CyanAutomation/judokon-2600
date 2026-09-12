@@ -2,6 +2,7 @@ export type RadioChoice = {
   id: string;
   name: string;
   label: string;
+  compactLabel?: string;
   description: string;
   shortcut: string;
   checked: boolean;
@@ -30,6 +31,9 @@ export function disclosure(label: string, content: string): string { return `<de
 export function toggleControl(id: string, label: string, checked: boolean, description: string): string { return `<label class="toggle-control" for="${escapeHtml(id)}"><span><strong>${escapeHtml(label)}</strong><small>${escapeHtml(description)}</small></span><input id="${escapeHtml(id)}" type="checkbox" role="switch" ${checked ? "checked" : ""} /><span class="toggle-state" aria-hidden="true">${checked ? "On" : "Off"}</span></label>`; }
 
 /** A visual card backed by a native radio input for one-of-many setup choices. */
-export function radioChoice({ id, name, label, description, shortcut, checked, disabled = false, data }: RadioChoice): string {
-  return `<label class="choice-card ${checked ? "is-selected" : ""}" for="${escapeHtml(id)}"><input class="choice-input" id="${escapeHtml(id)}" name="${escapeHtml(name)}" type="radio"${attributes(data)} ${checked ? "checked" : ""} ${disabled ? "disabled" : ""}/><span class="choice-label">${escapeHtml(label)}</span><small>${escapeHtml(description)}</small>${shortcutHint(shortcut)}</label>`;
+export function radioChoice({ id, name, label, compactLabel, description, shortcut, checked, disabled = false, data }: RadioChoice): string {
+  const choiceLabel = compactLabel
+    ? `<span class="choice-label-full">${escapeHtml(label)}</span><span class="choice-label-compact" aria-hidden="true">${escapeHtml(compactLabel)}</span>`
+    : escapeHtml(label);
+  return `<label class="choice-card ${checked ? "is-selected" : ""}" for="${escapeHtml(id)}"><input class="choice-input" id="${escapeHtml(id)}" name="${escapeHtml(name)}" type="radio"${attributes(data)} ${checked ? "checked" : ""} ${disabled ? "disabled" : ""}/><span class="choice-label">${choiceLabel}</span><small>${escapeHtml(description)}</small>${shortcutHint(shortcut)}</label>`;
 }

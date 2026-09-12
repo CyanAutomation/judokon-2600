@@ -39,14 +39,34 @@ const judoka: Judoka = {
 };
 
 describe("setup and round guidance", () => {
-  it("keeps the essential setup and start action ahead of optional details", () => {
+  it("starts with game mode as the only prominent setup choice", () => {
     const current = state();
     const markup = intro(current, createHelpers(current));
 
-    expect(markup).not.toContain("Set the terms");
-    expect(markup).toContain("How scoring works");
-    expect(markup.indexOf('id="start"')).toBeLessThan(markup.indexOf("How scoring works"));
-    expect(markup.indexOf("How scoring works")).toBeLessThan(markup.indexOf("Advanced options"));
+    expect(markup).toContain("Choose game mode");
+    expect(markup).toContain("Classic Battle");
+    expect(markup).toContain("Champion");
+    expect(markup).not.toContain("Weight class");
+    expect(markup).not.toContain('id="start"');
+  });
+
+  it("shows a compact mode summary before the division selection", () => {
+    const current = state({ setupStep: "division", mode: "champion" });
+    const markup = intro(current, createHelpers(current));
+
+    expect(markup).toContain("Game mode: <strong>Champion</strong>");
+    expect(markup).toContain('data-setup-step="mode"');
+    expect(markup).toContain("Choose division");
+    expect(markup).not.toContain('id="start"');
+  });
+
+  it("puts the rules beside the final CTA and keeps settings out of the setup panel", () => {
+    const current = state({ setupStep: "length" });
+    const markup = intro(current, createHelpers(current));
+
+    expect(markup).toContain("Higher stat wins the point.");
+    expect(markup).toContain('id="start"');
+    expect(markup).not.toContain("Advanced options");
   });
 
   it("explains how a stat choice is resolved before the stat buttons", () => {

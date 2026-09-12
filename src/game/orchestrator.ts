@@ -31,6 +31,7 @@ export function selectWeightForSeed(seed: string): (typeof weights)[number] {
 export interface OrchestratorDeps {
   client: BudokonClient;
   render: () => void;
+  onMatchReady?: () => void;
 }
 
 /**
@@ -116,6 +117,7 @@ export async function draw(state: GameState, deps: OrchestratorDeps): Promise<vo
   } finally {
     state.busy = false;
     deps.render();
+    if (state.match) deps.onMatchReady?.();
   }
 }
 
@@ -216,6 +218,7 @@ export function clearAndExit(state: GameState, deps: OrchestratorDeps): void {
   state.errorMessage = "";
   state.history = [];
   state.drawBuffer = [];
+  state.setupStep = "mode";
   clearSavedMatch();
   deps.render();
 }

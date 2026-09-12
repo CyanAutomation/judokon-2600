@@ -58,6 +58,7 @@ function createMockGameState(overrides?: Partial<GameState>): GameState {
     weight: "random",
     replaySeed: "",
     seedMessage: "",
+    setupStep: "length",
     ...overrides
   };
 }
@@ -263,6 +264,21 @@ describe("Event Handlers", () => {
       expect(state.mode).toBe("champion");
       expect(handlers.persistPreferences).toHaveBeenCalled();
       expect(handlers.render).toHaveBeenCalled();
+      expect(state.setupStep).toBe("division");
+    });
+
+    it("requires a weight choice after Weight class is selected", () => {
+      const state = createMockGameState({ setupStep: "division" });
+      const input = document.createElement("input");
+      input.type = "radio";
+      input.dataset.division = "weight";
+      input.checked = true;
+      const root = document.createElement("div");
+      const handlers = { render: vi.fn(), persistPreferences: vi.fn(), setSoundEnabled: vi.fn() };
+
+      handleChangeEvent(createChangeEvent(input), state, root, handlers);
+
+      expect(state.setupStep).toBe("weight");
     });
 
     it("updates state.replaySeed when replay-seed input changes", () => {
