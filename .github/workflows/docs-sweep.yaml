@@ -83,7 +83,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          idempotency_key="$(uuidgen | tr '[:upper:]' '[:lower:]')"
+          idempotency_key="$(tr '[:upper:]' '[:lower:]' < /proc/sys/kernel/random/uuid)"
           payload="$(
             jq -n \
               --arg repoUrl "$REPO_URL" \
@@ -153,7 +153,7 @@ jobs:
           response_file="$(mktemp)"
           trap 'rm -f "$response_file"' EXIT
 
-          # Poll for up to 185 minutes; the controller's three-hour run timeout
+          # Poll for up to 175 minutes; the controller's three-hour run timeout
           # should make a terminal result available before this expires.
           for attempt in $(seq 1 175); do
             curl --fail-with-body --silent --show-error --retry 3 --retry-all-errors \
@@ -184,7 +184,7 @@ jobs:
             esac
           done
 
-          echo "::error title=Kaseki run timed out::No terminal status after 185 minutes"
+          echo "::error title=Kaseki run timed out::No terminal status after 175 minutes"
           exit 1
 
       - name: Publish run details
