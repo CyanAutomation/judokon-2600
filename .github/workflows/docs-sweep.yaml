@@ -155,7 +155,7 @@ jobs:
 
           # Poll for up to 185 minutes; the controller's three-hour run timeout
           # should make a terminal result available before this expires.
-          for attempt in $(seq 1 185); do
+          for attempt in $(seq 1 175); do
             curl --fail-with-body --silent --show-error --retry 3 --retry-all-errors \
               --connect-timeout 10 --max-time 60 --output "$response_file" \
               --header "Authorization: Bearer $KASEKI_API_TOKEN" \
