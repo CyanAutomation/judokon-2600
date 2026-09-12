@@ -34,14 +34,34 @@ function render(): void {
   renderApp(root, state);
 }
 
-const deps: OrchestratorDeps = { client, render };
+const deps: OrchestratorDeps = {
+  client,
+  render,
+  onMatchReady: () => {
+    const game = root.querySelector<HTMLElement>("#game");
+    game?.focus();
+    game?.scrollIntoView({ block: "start" });
+  }
+};
 root.addEventListener("click", (e) => {
   handleClickEvent(e, state, {
     start: () => { start(state, deps); },
     copyReplaySeed: () => copyReplaySeed(state, deps),
     next: (m) => next(state, m, deps),
     resolve: (stat) => resolve(state, state.match!, stat, deps),
-    clearAndExit: () => clearAndExit(state, deps)
+    clearAndExit: () => clearAndExit(state, deps),
+    setSetupStep: (setupStep) => {
+      state.setupStep = setupStep;
+      render();
+      const focusTarget = setupStep === "mode"
+        ? "#mode-classic"
+        : setupStep === "division"
+          ? "#division-absolute"
+          : setupStep === "weight"
+            ? "#weight-class"
+            : "#length-3";
+      root.querySelector<HTMLElement>(focusTarget)?.focus();
+    }
   });
 });
 

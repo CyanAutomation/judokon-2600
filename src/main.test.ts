@@ -71,6 +71,7 @@ function createMockGameState(overrides?: Partial<GameState>): GameState {
     weight: "random",
     replaySeed: "",
     seedMessage: "",
+    setupStep: "length",
     ...overrides
   };
 }
@@ -692,7 +693,7 @@ describe("Main Module - Render Integration", () => {
       {
         phase: "intro",
         state: createMockGameState({ match: null }),
-        actions: ["Division", "Length", "Start"]
+        actions: ["Length", "Start"]
       },
       {
         phase: "selecting",
