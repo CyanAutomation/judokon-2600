@@ -205,9 +205,22 @@ describe("Main Module - Render Functions", () => {
       expect(playerValue).toBeGreaterThan(0);
     });
 
-    it("displays rarity classification", () => {
-      const judoka = createMockJudoka("p1", { rarity: "Elite" });
-      expect(judoka.rarity).toBe("Elite");
+    it.each([
+      { rarity: "Elite", expectedLabel: "Elite" },
+      { rarity: undefined, expectedLabel: "Unclassified" }
+    ])("renders $expectedLabel as the player's rarity", ({ rarity, expectedLabel }) => {
+      const player = createMockJudoka("p1", { rarity });
+      const state = createMockGameState({
+        match: createMockMatch({ player })
+      });
+      const root = document.createElement("div");
+
+      renderApp(root, state);
+
+      const playerCard = root.querySelector('[aria-label="Your judoka: Test Fighter"]');
+      const rarityBadge = playerCard?.querySelector(".rarity");
+      expect(playerCard).not.toBeNull();
+      expect(rarityBadge?.textContent).toBe(expectedLabel);
     });
   });
 
