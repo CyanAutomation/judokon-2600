@@ -200,7 +200,7 @@ export async function copyReplaySeed(state: GameState, deps: OrchestratorDeps): 
     await navigator.clipboard.writeText(state.activeSeed);
     state.seedMessage = "Replay seed copied.";
   } catch {
-    state.seedMessage = "Could not copy the replay seed. Copy the value shown below.";
+    state.seedMessage = `Could not copy the replay seed "${state.activeSeed}". Copy manually.`;
   }
   deps.render();
 }
