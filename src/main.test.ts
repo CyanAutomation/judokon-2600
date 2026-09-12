@@ -542,12 +542,51 @@ describe("Main Module - State Orchestration Functions", () => {
       }
     });
 
-    it("handles clipboard API success", () => {
-      const seed = "test-seed";
-      const result = `Replay seed "${seed}" copied.`;
+    it("handles clipboard API success", async () => {
+      const state = createMockGameState({ activeSeed: "test-seed" });
+      const writeText = vi.fn().mockResolvedValue(undefined);
+      const render = vi.fn();
+      const originalClipboard = Object.getOwnPropertyDescriptor(navigator, "clipboard");
+      Object.defineProperty(navigator, "clipboard", {
+        configurable: true,
+        value: { writeText }
+      });
 
-      expect(result).toContain("Replay seed");
-      expect(result).toContain("copied");
+      try {
+        let copyOperation: Promise<void> | undefined;
+        const copyButton = document.createElement("button");
+        copyButton.id = "copy-seed";
+
+        // Dispatch the event from the button so the delegated replay-copy handler runs.
+        copyButton.addEventListener("click", event => {
+          handleClickEvent(event, state, {
+            start: vi.fn(),
+            copyReplaySeed: () => {
+              copyOperation = copyReplaySeed(state, {
+                client: new BudokonClient(),
+                render
+              });
+              return copyOperation;
+            },
+            next: vi.fn(),
+            resolve: vi.fn(),
+            clearAndExit: vi.fn()
+          });
+        });
+        copyButton.click();
+        await copyOperation;
+
+        expect(writeText).toHaveBeenCalledOnce();
+        expect(writeText).toHaveBeenCalledWith(state.activeSeed);
+        expect(state.seedMessage).toBe("Replay seed copied.");
+        expect(render).toHaveBeenCalledOnce();
+      } finally {
+        if (originalClipboard) {
+          Object.defineProperty(navigator, "clipboard", originalClipboard);
+        } else {
+          delete (navigator as unknown as { clipboard?: Clipboard }).clipboard;
+        }
+      }
     });
 
     it("handles clipboard API failure", () => {
