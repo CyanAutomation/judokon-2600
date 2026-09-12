@@ -197,12 +197,37 @@ describe("Main Module - Render Functions", () => {
       expect(fighterHTML).toContain("Test");
     });
 
-    it("includes stat values when result exists", () => {
-      const result = createMockMatchResult();
-      const { stat, playerValue } = result;
+    it("reveals the selected stat and both values only after the round resolves", () => {
+      const player = createMockJudoka("player", {
+        stats: { power: 17, speed: 16, technique: 15, kumikata: 14, newaza: 13 }
+      });
+      const opponent = createMockJudoka("opponent", {
+        firstname: "Rival",
+        stats: { power: 3, speed: 91, technique: 92, kumikata: 93, newaza: 94 }
+      });
+      const match = createMockMatch({ player, opponent });
+      const root = document.createElement("div");
 
-      expect(stat).toBe("power");
-      expect(playerValue).toBeGreaterThan(0);
+      renderApp(root, createMockGameState({ match }));
+
+      const concealedOpponent = root.querySelector(".fighter-card.opponent");
+      expect(concealedOpponent).not.toBeNull();
+      for (const value of Object.values(opponent.stats)) {
+        expect(concealedOpponent?.textContent).not.toContain(String(value));
+      }
+
+      const result: MatchResult = {
+        match: { ...match, phase: "awaitingNext" },
+        outcome: "player",
+        stat: "power",
+        playerValue: player.stats.power,
+        opponentValue: opponent.stats.power
+      };
+      renderApp(root, createMockGameState({ match: result.match, result }));
+
+      const resultPanel = root.querySelector(".result-panel");
+      expect(resultPanel).not.toBeNull();
+      expect(resultPanel?.textContent).toContain("You used 17 in Power. Rival Fighter had 3.");
     });
 
     it.each([
