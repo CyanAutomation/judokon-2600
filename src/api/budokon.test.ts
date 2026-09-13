@@ -31,6 +31,22 @@ describe("BudokonClient", () => {
     expect(fetcher).toHaveBeenCalledTimes(1);
   });
 
+  it("returns a fresh array without exposing the cached deterministic draw", async () => {
+    const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify({ judoka }), { status: 200 }));
+    const client = new BudokonClient(fetcher);
+
+    const first = await client.drawBatch("known-seed", 2);
+    first.shift();
+    first.reverse();
+
+    const second = await client.drawBatch("known-seed", 2);
+
+    expect(second.map(fighter => fighter.id)).toEqual(["a", "b"]);
+    expect(second).toHaveLength(2);
+    expect(second).not.toBe(first);
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+
   describe("rarity response validation", () => {
     // The API's Judoka response schema makes `rarity` optional: https://budokon.scheimann.workers.dev/docs
     it.each([
