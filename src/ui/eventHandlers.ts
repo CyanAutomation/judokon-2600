@@ -139,7 +139,7 @@ export function handleIntroKeyboard(
     root.querySelector<HTMLButtonElement>("#confirm-weight")?.click();
   } else if (step === "length" && (e.key === "Enter" || e.key === " ")) {
     e.preventDefault();
-    handlers.start();
+    if (!state.busy) handlers.start();
   }
 }
 

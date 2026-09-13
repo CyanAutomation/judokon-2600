@@ -363,6 +363,14 @@ describe("Event Handlers", () => {
   });
 
   describe("handleIntroKeyboard", () => {
+    it("does not start another game from the keyboard while busy", () => {
+      const state = createMockGameState({ busy: true, setupStep: "length" });
+      const handlers = { choose: vi.fn(), start: vi.fn(), keyboardTick: vi.fn() };
+
+      handleIntroKeyboard(createKeyboardEvent("Enter"), state, document.createElement("div"), handlers);
+
+      expect(handlers.start).not.toHaveBeenCalled();
+    });
     it("handles number key 1 to select 3-point match", () => {
       const choose = vi.fn();
       const handlers = {
