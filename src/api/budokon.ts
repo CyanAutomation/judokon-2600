@@ -5,7 +5,7 @@ const DRAW_URL = "https://budokon.scheimann.workers.dev/v1/draw";
 type Fetcher = typeof fetch;
 
 export class BudokonClient {
-  private readonly draws = new Map<string, Promise<Judoka[]>>();
+  private readonly draws = new Map<string, Promise<readonly Judoka[]>>();
 
   constructor(private readonly fetcher: Fetcher = globalThis.fetch.bind(globalThis), private readonly timeoutMs = 10_000) {}
 
@@ -32,18 +32,18 @@ export class BudokonClient {
   private async draw(seed: string, count: number, weightClass?: string, exclude?: string[]): Promise<Judoka[]> {
     const key = JSON.stringify({ seed, count, weightClass, exclude: exclude ? [...exclude].sort() : [] });
     const cached = this.draws.get(key);
-    if (cached) return cached;
+    if (cached) return [...await cached];
     const request = this.requestDraw(seed, count, weightClass, exclude);
     this.draws.set(key, request);
     try {
-      return await request;
+      return [...await request];
     } catch (error) {
       this.draws.delete(key);
       throw error;
     }
   }
 
-  private async requestDraw(seed: string, count: number, weightClass?: string, exclude?: string[]): Promise<Judoka[]> {
+  private async requestDraw(seed: string, count: number, weightClass?: string, exclude?: string[]): Promise<readonly Judoka[]> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
     let response: Response;
@@ -67,6 +67,6 @@ export class BudokonClient {
     const body: unknown = await response.json();
     const drawn = typeof body === "object" && body !== null ? (body as { judoka?: unknown }).judoka : undefined;
     if (!Array.isArray(drawn) || drawn.length !== count || !drawn.every(isJudoka)) throw new Error("Budokon returned an invalid judoka draw");
-    return drawn;
+    return Object.freeze([...drawn]);
   }
 }
