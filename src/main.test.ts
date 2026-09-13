@@ -3,7 +3,7 @@ import type { GameState } from "./state";
 import type { Match, MatchResult } from "./game/game";
 import type { Judoka } from "./api/types";
 import { BudokonClient } from "./api/budokon";
-import { chooseLength, copyReplaySeed, MATCH_RESOLUTION_DELAY_MS, resolve, selectWeightForSeed, start, type OrchestratorDeps } from "./game/orchestrator";
+import { chooseLength, copyReplaySeed, MATCH_RESOLUTION_DELAY_MS, next, resolve, selectWeightForSeed, start, type OrchestratorDeps } from "./game/orchestrator";
 import { handleClickEvent } from "./ui/eventHandlers";
 import { renderApp } from "./ui/render";
 
@@ -828,6 +828,32 @@ describe("Main Module - Event Handler Integration", () => {
 });
 
 describe("Main Module - Complex Integration Scenarios", () => {
+  it("replays a deterministic buffer from the beginning after the prior buffer is exhausted", async () => {
+    const fetcher = vi.fn((_url: string, init?: RequestInit) => {
+      const { count, seed } = JSON.parse(init?.body as string) as { count: number; seed: string };
+      const drawn = Array.from({ length: count }, (_, index) => createMockJudoka(`${seed}-judoka-${index}`));
+      return Promise.resolve(new Response(JSON.stringify({ judoka: drawn }), { status: 200 }));
+    }) as unknown as typeof fetch;
+    const state = createMockGameState({ activeSeed: "replay-seed", drawBuffer: [] });
+    const match = createMockMatch({ matchNumber: 3, mode: "classic", phase: "awaitingNext" });
+    const deps: OrchestratorDeps = { client: new BudokonClient(fetcher), render: vi.fn() };
+
+    await next(state, match, deps);
+    expect([state.match?.player.id, state.match?.opponent.id]).toEqual([
+      "replay-seed:buffer:4-judoka-0",
+      "replay-seed:buffer:4-judoka-1"
+    ]);
+
+    state.drawBuffer.splice(0);
+    await next(state, match, deps);
+
+    expect([state.match?.player.id, state.match?.opponent.id]).toEqual([
+      "replay-seed:buffer:4-judoka-0",
+      "replay-seed:buffer:4-judoka-1"
+    ]);
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+
   it("handles full match flow from start to resolution", async () => {
     vi.useFakeTimers();
 
