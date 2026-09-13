@@ -40,8 +40,12 @@ jobs:
           set -euo pipefail
           : "${KASEKI_BASE_URL:?Configure KASEKI_BASE_URL as an environment variable}"
           : "${KASEKI_API_TOKEN:?Configure KASEKI_API_TOKEN as an environment secret}"
-          if [[ ! "$KASEKI_BASE_URL" =~ ^https://[^[:space:]@/?#:]+(:[0-9]{1,5})?(/[^[:space:]]*)?$ ]]; then
-            echo "::error title=Invalid Kaseki URL::KASEKI_BASE_URL must be an HTTPS origin without credentials"
+          if [[ ! "$KASEKI_BASE_URL" =~ ^https:// ]]; then
+            echo "::error title=Invalid Kaseki URL::KASEKI_BASE_URL must use HTTPS"
+            exit 1
+          fi
+          if [[ "$KASEKI_BASE_URL" =~ [@[:space:]] ]]; then
+            echo "::error title=Invalid Kaseki URL::KASEKI_BASE_URL must not contain credentials or whitespace"
             exit 1
           fi
 
