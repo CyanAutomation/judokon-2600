@@ -87,7 +87,7 @@ document.addEventListener("keydown", (e) => {
   if (!state.match) {
     handleIntroKeyboard(e, state, root, {
       choose: (n) => chooseLength(state, n, deps),
-      start: () => { start(state, deps); },
+      start: () => { if (!state.busy) void start(state, deps); },
       keyboardTick
     });
   } else {

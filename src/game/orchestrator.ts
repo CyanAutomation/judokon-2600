@@ -16,6 +16,18 @@ const DRAW_BUFFER_SIZE = 6;
 export const MATCH_RESOLUTION_DELAY_MS = 650;
 const weights = ["-48", "-52", "-57", "-60", "-63", "-66", "-70", "-73", "-78", "-81", "-90", "-100", "+78", "+100"] as const;
 const lengths = [3, 5, 10] as const;
+let nextOperationId = 0;
+const currentOperations = new WeakMap<GameState, number>();
+
+function beginOperation(state: GameState): number {
+  const operationId = ++nextOperationId;
+  currentOperations.set(state, operationId);
+  return operationId;
+}
+
+function isCurrentOperation(state: GameState, operationId: number): boolean {
+  return currentOperations.get(state) === operationId;
+}
 
 /** Select a supported weight class deterministically from a replay seed. */
 export function selectWeightForSeed(seed: string): (typeof weights)[number] {
@@ -64,11 +76,15 @@ export async function start(
   state: GameState,
   deps: OrchestratorDeps,
   points = state.target,
-  seed = state.replaySeed.trim() || crypto.randomUUID()
+  seed?: string
 ): Promise<void> {
+  if (state.busy) return;
+
+  const operationId = beginOperation(state);
+  const activeSeed = (seed ?? state.replaySeed.trim()) || crypto.randomUUID();
   state.target = points;
   state.lengthIndex = lengths.indexOf(points as (typeof lengths)[number]);
-  state.activeSeed = seed;
+  state.activeSeed = activeSeed;
 
   state.activeWeight =
     state.division === "weight"
@@ -86,26 +102,34 @@ export async function start(
   clearSavedMatch();
   persistPreferences(state);
 
-  await draw(state, deps);
+  await draw(state, deps, operationId);
 }
 
 /**
  * Draw initial match fighters
  * Called after match setup, handles loading and error states
  */
-export async function draw(state: GameState, deps: OrchestratorDeps): Promise<void> {
+export async function draw(state: GameState, deps: OrchestratorDeps, operationId = beginOperation(state)): Promise<void> {
   state.busy = true;
   state.result = null;
   state.errorMessage = "";
   deps.render();
 
   try {
-    const drawn = await drawBatch(state.activeSeed, DRAW_BUFFER_SIZE, 2, state, deps.client);
+    // A setup change or a newer draw must not alter the request already in flight.
+    const seed = state.activeSeed;
+    const target = state.target;
+    const mode = state.mode;
+    const activeWeight = state.activeWeight;
+    const operationState = { ...state, activeWeight };
+    const drawn = await drawBatch(seed, DRAW_BUFFER_SIZE, 2, operationState, deps.client);
+    if (!isCurrentOperation(state, operationId)) return;
     const [a, b, ...remaining] = drawn;
-    state.match = createMatch(a!, b!, state.target, 1, { player: 0, opponent: 0 }, state.mode);
+    state.match = createMatch(a!, b!, target, 1, { player: 0, opponent: 0 }, mode);
     state.drawBuffer = remaining;
     saveGameState(state);
   } catch (e) {
+    if (!isCurrentOperation(state, operationId)) return;
     state.match = null;
     state.drawBuffer = [];
     state.errorMessage =
@@ -115,9 +139,11 @@ export async function draw(state: GameState, deps: OrchestratorDeps): Promise<vo
           ? `${e.message}. Check your connection and try again.`
           : "Unable to draw judoka. Please try again.";
   } finally {
-    state.busy = false;
-    deps.render();
-    if (state.match) deps.onMatchReady?.();
+    if (isCurrentOperation(state, operationId)) {
+      state.busy = false;
+      deps.render();
+      if (state.match) deps.onMatchReady?.();
+    }
   }
 }
 
@@ -212,6 +238,8 @@ export async function copyReplaySeed(state: GameState, deps: OrchestratorDeps): 
  * Used when user quits or changes settings
  */
 export function clearAndExit(state: GameState, deps: OrchestratorDeps): void {
+  beginOperation(state);
+  state.busy = false;
   state.match = null;
   state.result = null;
   state.pendingStat = null;
