@@ -6,9 +6,9 @@ A terminal-style, text-first TypeScript implementation of JU-DO-KON! Classic Bat
 
 ## Gameplay
 
-Start a 3, 5, or 10-point match, then choose one of five Judo stats. Your selected stat is compared with the opponent's hidden value; the higher value earns a point. A match ends when a side reaches its target, or after 25 rounds.
+Setup unfolds in four steps: choose your mode (Classic Battle or Champion), pick your division (Absolute open-weight or Weight class — select a specific weight if desired), set the match length (Quick = first-to-3, Medium = first-to-5, Long = first-to-10), then play. Your selected stat is compared with the opponent's hidden value; the higher value earns a point. A match ends when a side reaches its target, or after 25 rounds.
 
-Keyboard controls: choose match length with `1`–`3` or arrow keys and confirm with `Enter`; choose a stat with `1`–`5`; use `Enter`/`Space` to advance or replay; and use `Esc`/`Q` to leave a match.
+Keyboard controls: choose game mode with `C` (Classic) / `H` (Champion); choose division with `A` (Absolute) / `W` (Weight); cycle match length with arrow keys or `1`–`3`; confirm weight-class choice with `Enter`; start the match by confirming length with `Enter` or `Space`. During a match, pick a stat with `1`–`5`, press `Enter` or `Space` to advance or replay, and quit with `Esc` or `Q`.
 
 Optional keyboard ticks and outcome beeps are available in **Advanced**. They are muted by default and the preference is stored locally in the browser.
 
@@ -50,4 +50,3 @@ npm run check
 ## Vercel deployment
 
 `vercel.json` configures Vercel to run `npm run build` and serve Vite's `dist` output. In Vercel, import `CyanAutomation/judokon-2600` and enable its Git integration. Pushes to `main` create production deployments; pull requests create preview deployments. The separate GitHub Actions workflow runs the same lint, test, and build gate on every pull request and push.
-
