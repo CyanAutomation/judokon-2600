@@ -1,3 +1,5 @@
+[![CI](https://github.com/CyanAutomation/judokon-2600/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/CyanAutomation/judokon-2600/actions/workflows/ci.yml)
+
 # judokon-2600
 
 A terminal-style, text-first TypeScript implementation of JU-DO-KON! Classic Battle.
