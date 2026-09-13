@@ -22,8 +22,8 @@ jobs:
     runs-on: ubuntu-latest
     # Kaseki allows a run to last three hours; leave time for preflight and final status.
     timeout-minutes: 200
-    # Configure this environment with KASEKI_API_TOKEN (secret) and
-    # KASEKI_BASE_URL (variable), and restrict deployments to main.
+    # Configure KASEKI_API_TOKEN as a secret and KASEKI_BASE_URL as an
+    # environment variable. Restrict deployments to main and require a reviewer.
     environment: kaseki-docs-sweep
     env:
       KASEKI_BASE_URL: ${{ vars.KASEKI_BASE_URL }}
@@ -40,6 +40,10 @@ jobs:
           set -euo pipefail
           : "${KASEKI_BASE_URL:?Configure KASEKI_BASE_URL as an environment variable}"
           : "${KASEKI_API_TOKEN:?Configure KASEKI_API_TOKEN as an environment secret}"
+          if [[ ! "$KASEKI_BASE_URL" =~ ^https://[^[:space:]@/?#:]+(:[0-9]{1,5})?(/[^[:space:]]*)?$ ]]; then
+            echo "::error title=Invalid Kaseki URL::KASEKI_BASE_URL must be an HTTPS origin without credentials"
+            exit 1
+          fi
 
       - name: Verify controller health
         shell: bash
@@ -51,7 +55,7 @@ jobs:
             --connect-timeout 10 --max-time 20 --output "$response_file" \
             "$KASEKI_BASE_URL/health"
           jq -e '.status == "healthy"' "$response_file" >/dev/null
-          jq . "$response_file"
+          echo "Kaseki health check succeeded."
 
       - name: Verify controller readiness
         shell: bash
@@ -63,7 +67,7 @@ jobs:
             --connect-timeout 10 --max-time 20 --output "$response_file" \
             "$KASEKI_BASE_URL/ready"
           jq -e '.status == "ready"' "$response_file" >/dev/null
-          jq . "$response_file"
+          echo "Kaseki readiness check succeeded."
 
       - name: Verify gateway connectivity and authentication
         shell: bash
@@ -76,7 +80,7 @@ jobs:
             --header "Authorization: Bearer $KASEKI_API_TOKEN" \
             "$KASEKI_BASE_URL/api/gateway-test?stage=1"
           jq -e '.status == "ok"' "$response_file" >/dev/null
-          jq . "$response_file"
+          echo "Kaseki gateway authentication succeeded."
 
       - name: Submit documentation sweep
         id: submit
@@ -134,14 +138,22 @@ jobs:
 
           if [[ ! "$http_status" =~ ^2 ]]; then
             echo "::error title=Kaseki submission failed::Kaseki returned HTTP $http_status"
-            jq . "$response_file" 2>/dev/null || cat "$response_file"
             exit 1
           fi
 
           run_id="$(jq -er '.id' "$response_file")"
-          echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+          if [[ ! "$run_id" =~ ^[A-Za-z0-9_-]{1,128}$ ]]; then
+            echo "::error title=Invalid Kaseki run ID::Controller returned an invalid run ID"
+            exit 1
+          fi
+          output_delimiter="$(uuidgen)"
+          {
+            echo "run_id<<$output_delimiter"
+            echo "$run_id"
+            echo "$output_delimiter"
+          } >> "$GITHUB_OUTPUT"
           echo "idempotency_key=$idempotency_key" >> "$GITHUB_OUTPUT"
-          jq . "$response_file"
+          echo "Kaseki documentation sweep submitted."
 
       - name: Wait for Kaseki completion
         id: wait
@@ -153,43 +165,45 @@ jobs:
           response_file="$(mktemp)"
           trap 'rm -f "$response_file"' EXIT
 
-          # Poll for up to 175 minutes; the controller's three-hour run timeout
-          # should make a terminal result available before this expires.
-          for attempt in $(seq 1 175); do
+          # Kaseki can run for up to three hours. Poll a little longer so a
+          # terminal result created near that limit is still observed.
+          for attempt in $(seq 1 185); do
             curl --fail-with-body --silent --show-error --retry 3 --retry-all-errors \
               --connect-timeout 10 --max-time 60 --output "$response_file" \
               --header "Authorization: Bearer $KASEKI_API_TOKEN" \
               "$KASEKI_BASE_URL/api/runs/$RUN_ID/status"
             status="$(jq -er '.status' "$response_file")"
-            echo "Kaseki status: $status"
-
             case "$status" in
               completed)
                 echo "status=$status" >> "$GITHUB_OUTPUT"
+                echo "Kaseki status: completed"
                 exit 0
                 ;;
               failed)
                 echo "status=$status" >> "$GITHUB_OUTPUT"
-                jq . "$response_file"
+                echo "Kaseki status: failed"
                 exit 1
                 ;;
               queued|running)
+                echo "Kaseki status: $status"
                 sleep 60
                 ;;
               *)
-                echo "::error title=Unexpected Kaseki status::Received '$status'"
-                jq . "$response_file"
+                echo "::error title=Unexpected Kaseki status::Controller returned an unsupported status"
                 exit 1
                 ;;
             esac
           done
 
-          echo "::error title=Kaseki run timed out::No terminal status after 175 minutes"
+          echo "::error title=Kaseki run timed out::No terminal status after 185 minutes"
           exit 1
 
       - name: Publish run details
         if: always()
         shell: bash
+        env:
+          RUN_ID: ${{ steps.submit.outputs.run_id || 'not submitted' }}
+          FINAL_STATUS: ${{ steps.wait.outputs.status || 'not completed' }}
         run: |
           {
             echo "## Kaseki documentation sweep"
@@ -200,8 +214,6 @@ jobs:
             echo "| Ref | \`$REF\` |"
             echo "| Allowed paths | \`$ALLOWLIST\` |"
             echo "| Validation | \`$VALIDATION_COMMAND\` |"
-            echo "| Kaseki run | \`${{ steps.submit.outputs.run_id || 'not submitted' }}\` |"
-            echo "| Final status | \`${{ steps.wait.outputs.status || 'not completed' }}\` |"
-            echo
-            echo "Monitor the run: $KASEKI_BASE_URL/ui"
+            echo "| Kaseki run | \`$RUN_ID\` |"
+            echo "| Final status | \`$FINAL_STATUS\` |"
           } >> "$GITHUB_STEP_SUMMARY"
