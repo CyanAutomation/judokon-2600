@@ -146,15 +146,16 @@ jobs:
           fi
 
           run_id="$(jq -er '.id' "$response_file")"
-          run_id="$(jq -er '.id' "$response_file")"
           if [[ ${#run_id} -gt 128 || ${#run_id} -lt 1 ]]; then
             echo "::error title=Invalid Kaseki run ID::Controller returned an invalid run ID (invalid length)"
             exit 1
           fi
-          if [[ ! "$run_id" =~ ^[A-Za-z0-9_-]+$ ]]; then
-            echo "::error title=Invalid Kaseki run ID::Controller returned an invalid run ID (invalid characters)"
-            exit 1
-          fi
+          case "$run_id" in
+            *[!A-Za-z0-9_-]*)
+              echo "::error title=Invalid Kaseki run ID::Controller returned an invalid run ID (invalid characters)"
+              exit 1
+              ;;
+          esac
           output_delimiter="$(uuidgen)"
           {
             echo "run_id<<$output_delimiter"
