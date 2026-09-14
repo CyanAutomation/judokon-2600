@@ -160,7 +160,7 @@ export function handleMatchKeyboard(
     handlers.resolve(STAT_KEYS[Number(e.key) - 1]!);
   }
 
-  if ((e.key === "Enter" || e.key === " ") && phase === "awaitingNext") {
+  if ((e.key === "Enter" || e.key === " ") && phase === "awaitingNext" && !state.busy) {
     e.preventDefault();
     root.querySelector<HTMLButtonElement>("#next")?.click();
   }
