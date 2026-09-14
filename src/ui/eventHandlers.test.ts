@@ -551,6 +551,25 @@ describe("Event Handlers", () => {
       expect(clickSpy).toHaveBeenCalled();
     });
 
+    it("does not activate the next button while busy", () => {
+      const state = createMockGameState({
+        busy: true,
+        match: createMockMatch({ phase: "awaitingNext" })
+      });
+      const root = document.createElement("div");
+      const button = document.createElement("button");
+      button.id = "next";
+      root.appendChild(button);
+      const clickSpy = vi.spyOn(button, "click");
+
+      handleMatchKeyboard(createKeyboardEvent("Enter"), state, root, {
+        resolve: vi.fn(),
+        keyboardTick: vi.fn()
+      });
+
+      expect(clickSpy).not.toHaveBeenCalled();
+    });
+
     it("handles Escape key to quit match", () => {
       const state = createMockGameState({
         match: createMockMatch()

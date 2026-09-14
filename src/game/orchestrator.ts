@@ -153,6 +153,8 @@ export async function draw(state: GameState, deps: OrchestratorDeps, operationId
  * For classic mode: draws two new fighters
  */
 export async function next(state: GameState, match: Match, deps: OrchestratorDeps): Promise<void> {
+  if (state.busy || state.match !== match || match.phase !== "awaitingNext") return;
+
   state.busy = true;
   state.result = null;
   state.errorMessage = "";
@@ -161,19 +163,22 @@ export async function next(state: GameState, match: Match, deps: OrchestratorDep
   try {
     const matchSeed = `${state.activeSeed}:buffer:${match.matchNumber + 1}`;
 
+    let drawBuffer = [...state.drawBuffer];
+
     if (match.mode === "champion") {
-      if (!state.drawBuffer.length)
-        state.drawBuffer = await drawBatch(matchSeed, DRAW_BUFFER_SIZE - 1, 1, state, deps.client, [
+      if (!drawBuffer.length)
+        drawBuffer = [...await drawBatch(matchSeed, DRAW_BUFFER_SIZE - 1, 1, state, deps.client, [
           match.player.id,
           match.opponent.id
-        ]);
-      state.match = nextMatch(match, match.player, state.drawBuffer.shift()!);
+        ])];
+      state.match = nextMatch(match, match.player, drawBuffer.shift()!);
     } else {
-      if (state.drawBuffer.length < 2)
-        state.drawBuffer = await drawBatch(matchSeed, DRAW_BUFFER_SIZE, 2, state, deps.client);
-      state.match = nextMatch(match, state.drawBuffer.shift()!, state.drawBuffer.shift()!);
+      if (drawBuffer.length < 2)
+        drawBuffer = [...await drawBatch(matchSeed, DRAW_BUFFER_SIZE, 2, state, deps.client)];
+      state.match = nextMatch(match, drawBuffer.shift()!, drawBuffer.shift()!);
     }
 
+    state.drawBuffer = drawBuffer;
     saveGameState(state);
   } catch (e) {
     state.errorMessage =
