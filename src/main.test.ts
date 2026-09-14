@@ -834,8 +834,8 @@ describe("Main Module - Complex Integration Scenarios", () => {
       const drawn = Array.from({ length: count }, (_, index) => createMockJudoka(`${seed}-judoka-${index}`));
       return Promise.resolve(new Response(JSON.stringify({ judoka: drawn }), { status: 200 }));
     }) as unknown as typeof fetch;
-    const state = createMockGameState({ activeSeed: "replay-seed", drawBuffer: [] });
     const match = createMockMatch({ matchNumber: 3, mode: "classic", phase: "awaitingNext" });
+    const state = createMockGameState({ activeSeed: "replay-seed", drawBuffer: [], match });
     const deps: OrchestratorDeps = { client: new BudokonClient(fetcher), render: vi.fn() };
 
     await next(state, match, deps);
@@ -852,6 +852,32 @@ describe("Main Module - Complex Integration Scenarios", () => {
       "replay-seed:buffer:4-judoka-1"
     ]);
     expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+
+  it("advances, consumes the fetched buffer, and saves once when next is called concurrently", async () => {
+    let resolveDraw!: (fighters: Judoka[]) => void;
+    const drawPromise = new Promise<Judoka[]>((resolve) => {
+      resolveDraw = resolve;
+    });
+    const client = new class extends BudokonClient {
+      override drawBatch(): Promise<Judoka[]> {
+        return drawPromise;
+      }
+    }();
+    const match = createMockMatch({ matchNumber: 2, mode: "classic", phase: "awaitingNext" });
+    const state = createMockGameState({ activeSeed: "concurrent", drawBuffer: [], match });
+    const deps: OrchestratorDeps = { client, render: vi.fn() };
+    const saveSpy = vi.spyOn(Storage.prototype, "setItem");
+
+    const first = next(state, match, deps);
+    const second = next(state, match, deps);
+    resolveDraw(Array.from({ length: 6 }, (_, index) => createMockJudoka(`buffer-${index}`)));
+    await Promise.all([first, second]);
+
+    expect(state.match?.matchNumber).toBe(3);
+    expect([state.match?.player.id, state.match?.opponent.id]).toEqual(["buffer-0", "buffer-1"]);
+    expect(state.drawBuffer.map(({ id }) => id)).toEqual(["buffer-2", "buffer-3", "buffer-4", "buffer-5"]);
+    expect(saveSpy).toHaveBeenCalledTimes(1);
   });
 
   it("handles full match flow from start to resolution", async () => {
