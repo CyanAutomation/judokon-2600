@@ -1,7 +1,7 @@
 import "./style.css";
 import { injectSpeedInsights } from "@vercel/speed-insights";
 import { BudokonClient } from "./api/budokon";
-import { handleClickEvent, handleChangeEvent, handleToggleEvent, handleIntroKeyboard, handleMatchKeyboard } from "./ui/eventHandlers";
+import { handleClickEvent, handleChangeEvent, handleIntroKeyboard, handleMatchKeyboard } from "./ui/eventHandlers";
 import { initAudio, keyboardTick, setSoundEnabled } from "./audio";
 import { createGameState, loadSavedGameState, persistPreferences, type GameState } from "./state";
 import { renderApp } from "./ui/render";
@@ -52,6 +52,7 @@ root.addEventListener("click", (e) => {
     clearAndExit: () => clearAndExit(state, deps),
     setSetupStep: (setupStep) => {
       state.setupStep = setupStep;
+      state.setupCursor = setupStep === "length" ? state.lengthIndex : 0;
       render();
       const focusTarget = setupStep === "mode"
         ? "#mode-classic"
@@ -61,6 +62,31 @@ root.addEventListener("click", (e) => {
             ? "#weight-class"
             : "#length-3";
       root.querySelector<HTMLElement>(focusTarget)?.focus();
+    },
+    openSeedModal: () => {
+      state.seedDraft = state.replaySeed;
+      state.seedModalOpen = true;
+      render();
+      root.querySelector<HTMLInputElement>("#replay-seed")?.focus();
+    },
+    closeSeedModal: () => {
+      state.seedModalOpen = false;
+      render();
+      root.querySelector<HTMLButtonElement>("#seed-button")?.focus();
+    },
+    saveReplaySeed: (seed) => {
+      state.replaySeed = seed.trim();
+      state.seedDraft = state.replaySeed;
+      state.seedModalOpen = false;
+      render();
+      root.querySelector<HTMLButtonElement>("#seed-button")?.focus();
+    },
+    toggleSound: () => {
+      const enabled = localStorage.getItem("judokon.soundEnabled") !== "true";
+      setSoundEnabled(enabled);
+      localStorage.setItem("judokon.soundEnabled", String(enabled));
+      render();
+      root.querySelector<HTMLButtonElement>("#sound-enabled")?.focus();
     }
   });
 });
@@ -78,17 +104,37 @@ root.addEventListener("change", (e) => {
   }
 });
 
-root.addEventListener("toggle", handleToggleEvent, true);
-
 document.addEventListener("keydown", (e) => {
-  if ((e.target as HTMLElement).matches("input, select")) return;
+  if (state.seedModalOpen && e.key === "Escape") {
+    e.preventDefault();
+    state.seedModalOpen = false;
+    render();
+    root.querySelector<HTMLButtonElement>("#seed-button")?.focus();
+    return;
+  }
+  // Setup radios are a terminal menu: their arrows move the caret and Enter commits.
+  // Text inputs and selects keep their native editing/navigation behaviour.
+  if ((e.target as HTMLElement).matches("input:not(.choice-input), select")) return;
   if (/^[1-5]$/.test(e.key) || ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Enter", " ", "Escape"].includes(e.key) || ["a", "w", "c", "h", "q"].includes(e.key.toLowerCase())) keyboardTick();
 
   if (!state.match) {
     handleIntroKeyboard(e, state, root, {
-      choose: (n) => chooseLength(state, n, deps),
+      choose: (n) => {
+        state.setupCursor = [3, 5, 10].indexOf(n);
+        chooseLength(state, n, deps);
+      },
       start: () => { if (!state.busy) void start(state, deps); },
-      keyboardTick
+      keyboardTick,
+      moveCursor: (cursor) => {
+        state.setupCursor = cursor;
+        render();
+        const selector = state.setupStep === "mode"
+          ? "[data-intro-mode]"
+          : state.setupStep === "division"
+            ? "[data-division]"
+            : "[data-length]";
+        root.querySelectorAll<HTMLInputElement>(selector)[cursor]?.focus();
+      }
     });
   } else {
     handleMatchKeyboard(e, state, root, {
