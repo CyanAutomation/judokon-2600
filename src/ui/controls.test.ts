@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buttonChoice, disclosure, radioChoice, surface, toggleControl } from "./controls";
+import { buttonChoice, disclosure, primaryButton, quietButton, radioChoice, surface, toggleControl, utilityButton } from "./controls";
 
 describe("radioChoice", () => {
   it("renders a mutually exclusive choice with a native radio control and shortcut hint", () => {
@@ -49,11 +49,18 @@ describe("buttonChoice", () => {
     expect(strongest.content).not.toContain('aria-hidden="true">Strongest');
     expect(strongest.getAttribute("aria-pressed")).toBeNull();
   });
+
+  it("uses the shared control primitive for every button variant", () => {
+    expect(primaryButton("start", "Start match", "Enter")).toContain('class="control control--primary action-button primary-action"');
+    expect(quietButton("quit", "Quit", "Q")).toContain('class="control control--quiet action-button quiet"');
+    expect(buttonChoice("Power", "1", "8", 'data-stat="power"', false)).toContain('class="control control--choice action-button option-card');
+    expect(utilityButton("sound", "Sound: Off", false)).toContain('class="control control--utility utility-button"');
+  });
 });
 
 describe("shared UI primitives", () => {
-  it("renders a labelled surface with caller-provided variants", () => {
-    const markup = surface("aside", "panel scout-report", "Scout report", "<p>Read the opponent.</p>");
+  it("renders every labelled surface as a panel with caller-provided variants", () => {
+    const markup = surface("aside", "scout-report", "Scout report", "<p>Read the opponent.</p>");
 
     expect(markup).toMatch(/^<aside\b/);
     expect(markup).toMatch(/<\/aside>$/);
@@ -63,7 +70,7 @@ describe("shared UI primitives", () => {
 
     const hostileMarkup = surface(
       "aside",
-      'panel scout-report" data-injected="true',
+      'scout-report" data-injected="true',
       'Scout <report> & "analysis"',
       "<p>Retained child content.</p>"
     );
