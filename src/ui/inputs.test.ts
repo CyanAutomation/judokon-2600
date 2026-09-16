@@ -84,14 +84,14 @@ describe("inputs", () => {
     };
 
     it("exposes selected and strongest as independent states", () => {
-      const selected = parseButton(buttonChoice("Power", "1", "8", 'data-stat="power"', false, true, false));
+      const selected = parseButton(buttonChoice({ label: "Power", shortcut: "1", value: "8", data: 'data-stat="power"', disabled: false, selected: true, strongest: false }));
 
       expect(selected.disabled).toBe(false);
       expect(selected.getAttribute("aria-current")).toBe("true");
       expect(selected.content).not.toContain("<em>Strongest</em>");
 
       const strongest = parseButton(
-        buttonChoice("Technique", "3", "10", 'data-stat="technique"', true, false, true)
+        buttonChoice({ label: "Technique", shortcut: "3", value: "10", data: 'data-stat="technique"', disabled: true, selected: false, strongest: true })
       );
 
       expect(strongest.disabled).toBe(true);
@@ -102,7 +102,7 @@ describe("inputs", () => {
     });
 
     it("uses the shared control primitive for stat choice buttons", () => {
-      expect(buttonChoice("Power", "1", "8", 'data-stat="power"', false)).toContain(
+      expect(buttonChoice({ label: "Power", shortcut: "1", value: "8", data: 'data-stat="power"', disabled: false })).toContain(
         'class="control control--choice action-button option-card'
       );
     });

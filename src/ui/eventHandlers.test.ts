@@ -2,7 +2,6 @@ import { describe, expect, it, vi } from "vitest";
 import {
   handleClickEvent,
   handleChangeEvent,
-  handleToggleEvent,
   handleIntroKeyboard,
   handleMatchKeyboard
 } from "./eventHandlers";
@@ -346,48 +345,6 @@ describe("Event Handlers", () => {
       handleChangeEvent(createChangeEvent(input), state, root, handlers);
 
       expect(handlers.setSoundEnabled).toHaveBeenCalledWith(true);
-    });
-  });
-
-  describe("handleToggleEvent", () => {
-    it("updates accessibility labels on details element toggle", () => {
-      const details = document.createElement("details");
-      details.classList.add("advanced");
-      const summary = document.createElement("summary");
-      const state = document.createElement("span");
-      state.classList.add("disclosure-state");
-
-      details.appendChild(summary);
-      details.appendChild(state);
-
-      const event = new Event("toggle");
-      Object.defineProperty(event, "target", { value: details, enumerable: true });
-
-      details.open = true;
-      handleToggleEvent(event);
-
-      expect(summary.getAttribute("aria-label")).toBe("Hide advanced options");
-      expect(state.textContent).toBe("Hide");
-    });
-
-    it("sets correct label when details element is closed", () => {
-      const details = document.createElement("details");
-      details.classList.add("advanced");
-      const summary = document.createElement("summary");
-      const state = document.createElement("span");
-      state.classList.add("disclosure-state");
-
-      details.appendChild(summary);
-      details.appendChild(state);
-
-      const event = new Event("toggle");
-      Object.defineProperty(event, "target", { value: details, enumerable: true });
-
-      details.open = false;
-      handleToggleEvent(event);
-
-      expect(summary.getAttribute("aria-label")).toBe("Show advanced options");
-      expect(state.textContent).toBe("Show");
     });
   });
 

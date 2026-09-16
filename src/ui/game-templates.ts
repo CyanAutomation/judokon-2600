@@ -5,7 +5,7 @@
  */
 
 import { STAT_KEYS, type Judoka, type StatKey } from "../api/types";
-import { buttonChoice, primaryButton, quietButton, surface } from "./controls";
+import { buttonChoice, type ButtonChoiceConfig, primaryButton, quietButton, surface } from "./controls";
 import { matchSummary, type Match, type MatchResult, strongestStats } from "../game/game";
 import { type GameState } from "../state";
 import { labels, type Helpers } from "./helpers";
@@ -53,6 +53,17 @@ function historyStrip(state: GameState, helpers: Helpers): string {
 }
 
 /**
+ * Generic section panel helper
+ */
+function sectionPanel(
+  section: string,
+  label: string,
+  content: string
+): string {
+  return surface("section", section, label, content);
+}
+
+/**
  * Generate champion progress section
  */
 function championProgress(m: Match, state: GameState, helpers: Helpers): string {
@@ -60,7 +71,8 @@ function championProgress(m: Match, state: GameState, helpers: Helpers): string 
   const details = matchSummary(m, state.history);
   const record = details.championRecord!;
   const streak = details.championStreak ?? 0;
-  return surface("section", "champion-progress", "Champion round progress", `${helpers.eyebrow("Champion run")}<dl><div><dt>Round-win streak</dt><dd>${streak} ${streak === 1 ? "round" : "rounds"}</dd></div><div><dt>Round record</dt><dd>${record.wins}–${record.losses}–${record.draws}</dd></div><div><dt>Opponents faced</dt><dd>${m.matchNumber}</dd></div></dl>`);
+  const content = `${helpers.eyebrow("Champion run")}<dl><div><dt>Round-win streak</dt><dd>${streak} ${streak === 1 ? "round" : "rounds"}</dd></div><div><dt>Round record</dt><dd>${record.wins}–${record.losses}–${record.draws}</dd></div><div><dt>Opponents faced</dt><dd>${m.matchNumber}</dd></div></dl>`;
+  return sectionPanel("champion-progress", "Champion round progress", content);
 }
 
 /**
@@ -71,7 +83,8 @@ function summary(m: Match, state: GameState): string {
   const details = matchSummary(m, state.history);
   const progress = m.mode === "champion" ? `Run record: ${details.championRecord!.wins}–${details.championRecord!.losses}–${details.championRecord!.draws}` : `Points won: ${details.playerWins}`;
   const bestChoice = details.bestStat ? `${labels[details.bestStat]} · ${details.bestStatWins}/${details.bestStatSelections} ${details.bestStatWins === 1 ? "win" : "wins"}` : "No winning choice";
-  return surface("section", "match-summary", "Match summary", `<p class="eyebrow">Match summary</p><dl><div><dt>Final score</dt><dd>${details.score}</dd></div><div><dt>Most used stat</dt><dd>${details.decisiveStat ? labels[details.decisiveStat] : "—"}</dd></div><div><dt>Best choice</dt><dd>${bestChoice}</dd></div><div><dt>${m.mode === "champion" ? "Champion progress" : "Match progress"}</dt><dd>${progress}</dd></div></dl>`);
+  const content = `<p class="eyebrow">Match summary</p><dl><div><dt>Final score</dt><dd>${details.score}</dd></div><div><dt>Most used stat</dt><dd>${details.decisiveStat ? labels[details.decisiveStat] : "—"}</dd></div><div><dt>Best choice</dt><dd>${bestChoice}</dd></div><div><dt>${m.mode === "champion" ? "Champion progress" : "Match progress"}</dt><dd>${progress}</dd></div></dl>`;
+  return sectionPanel("match-summary", "Match summary", content);
 }
 
 /**
@@ -79,7 +92,8 @@ function summary(m: Match, state: GameState): string {
  */
 function resultPanel(m: Match, r: MatchResult, helpers: Helpers): string {
   const title = m.phase === "matchOver" ? r.outcome === "draw" ? "MATCH DRAWN" : r.outcome === "player" ? "MATCH WON" : "MATCH LOST" : r.outcome === "draw" ? "NO POINT AWARDED" : r.outcome === "player" ? "POINT WON" : "POINT LOST";
-  return surface("section", `result-panel outcome-${r.outcome}`, "Round result", `${helpers.eyebrow(title)}<p>You used <strong>${r.playerValue}</strong> in ${labels[r.stat]}. ${esc(helpers.nameOf(m.opponent))} had <strong>${r.opponentValue}</strong>.</p><p class="callout">${esc(callout(m, r, helpers))}</p>`);
+  const content = `${helpers.eyebrow(title)}<p>You used <strong>${r.playerValue}</strong> in ${labels[r.stat]}. ${esc(helpers.nameOf(m.opponent))} had <strong>${r.opponentValue}</strong>.</p><p class="callout">${esc(callout(m, r, helpers))}</p>`;
+  return sectionPanel(`result-panel outcome-${r.outcome}`, "Round result", content);
 }
 
 /**
@@ -87,7 +101,18 @@ function resultPanel(m: Match, r: MatchResult, helpers: Helpers): string {
  */
 export function game(m: Match, state: GameState, helpers: Helpers): string {
   const playerStrengths = strongestStats(m.player);
-  const stats = STAT_KEYS.map((stat, i) => buttonChoice(labels[stat], String(i + 1), String(m.player.stats[stat]), `data-stat="${stat}"`, m.phase !== "selecting" || state.busy || Boolean(state.pendingStat), state.result?.stat === stat || state.pendingStat === stat, playerStrengths.includes(stat))).join("");
+  const stats = STAT_KEYS.map((stat, i) => {
+    const config: ButtonChoiceConfig = {
+      label: labels[stat],
+      shortcut: String(i + 1),
+      value: String(m.player.stats[stat]),
+      data: `data-stat="${stat}"`,
+      disabled: m.phase !== "selecting" || state.busy || Boolean(state.pendingStat),
+      selected: state.result?.stat === stat || state.pendingStat === stat,
+      strongest: playerStrengths.includes(stat)
+    };
+    return buttonChoice(config);
+  }).join("");
   const committing = state.pendingStat ? `<section class="commitment" aria-live="polite"><span class="block-cursor" aria-hidden="true">█</span><div><strong>Opponent commits…</strong><p>Resolving ${labels[state.pendingStat as StatKey]}.</p></div></section>` : "";
   const reveal = state.result ? `${resultPanel(m, state.result, helpers)}${summary(m, state)}` : "";
   const action = m.phase === "awaitingNext" ? primaryButton("next", "Next round", "Enter", state.busy) : m.phase === "matchOver" ? `${primaryButton("replay", "Replay match", "Enter")}${quietButton("copy-seed", "Copy replay seed", "Copy")}<p class="replay-seed">Replay seed: <code>${esc(state.activeSeed)}</code></p>${state.seedMessage ? `<p class="seed-message" role="status">${esc(state.seedMessage)}</p>` : ""}` : "";
