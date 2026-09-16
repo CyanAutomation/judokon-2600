@@ -81,7 +81,10 @@ describe("State Management", () => {
         weight: "random",
         replaySeed: "",
         seedMessage: "",
-        setupStep: "mode"
+        setupStep: "mode",
+        setupCursor: 0,
+        seedModalOpen: false,
+        seedDraft: ""
       });
     });
 

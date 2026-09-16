@@ -6,6 +6,7 @@ export type RadioChoice = {
   description: string;
   shortcut: string;
   checked: boolean;
+  active?: boolean;
   disabled?: boolean;
   data?: Record<string, string>;
 };
@@ -30,10 +31,19 @@ export function surface(tag: "aside" | "section", classes: string, label: string
 export function disclosure(label: string, content: string): string { return `<details class="advanced"><summary aria-label="Show ${escapeHtml(label.toLowerCase())}"><span>${escapeHtml(label)}</span><span class="disclosure-state" aria-hidden="true">Show</span></summary><div class="advanced-content">${content}</div></details>`; }
 export function toggleControl(id: string, label: string, checked: boolean, description: string): string { return `<label class="toggle-control" for="${escapeHtml(id)}"><span><strong>${escapeHtml(label)}</strong><small>${escapeHtml(description)}</small></span><input id="${escapeHtml(id)}" type="checkbox" role="switch" ${checked ? "checked" : ""} /><span class="toggle-state" aria-hidden="true">${checked ? "On" : "Off"}</span></label>`; }
 
+/** Shared one-column menu shell for every staged setup decision. */
+export function terminalMenu(content: string): string {
+  return `<div class="terminal-menu" role="radiogroup">${content}</div><p class="menu-help"><span aria-hidden="true">↑ ↓</span> move <span aria-hidden="true">·</span> Enter select</p>`;
+}
+
+export function utilityButton(id: string, label: string, pressed?: boolean): string {
+  return `<button class="utility-button" id="${escapeHtml(id)}"${pressed === undefined ? "" : ` aria-pressed="${pressed}"`}><span>${escapeHtml(label)}</span></button>`;
+}
+
 /** A visual card backed by a native radio input for one-of-many setup choices. */
-export function radioChoice({ id, name, label, compactLabel, description, shortcut, checked, disabled = false, data }: RadioChoice): string {
+export function radioChoice({ id, name, label, compactLabel, description, shortcut, checked, active = false, disabled = false, data }: RadioChoice): string {
   const choiceLabel = compactLabel
     ? `<span class="choice-label-full">${escapeHtml(label)}</span><span class="choice-label-compact" aria-hidden="true">${escapeHtml(compactLabel)}</span>`
     : escapeHtml(label);
-  return `<label class="choice-card ${checked ? "is-selected" : ""}" for="${escapeHtml(id)}"><input class="choice-input" id="${escapeHtml(id)}" name="${escapeHtml(name)}" type="radio"${attributes(data)} ${checked ? "checked" : ""} ${disabled ? "disabled" : ""}/><span class="choice-label">${choiceLabel}</span><small>${escapeHtml(description)}</small>${shortcutHint(shortcut)}</label>`;
+  return `<label class="choice-card ${checked ? "is-selected" : ""} ${active ? "is-active" : ""}" for="${escapeHtml(id)}"><span class="menu-caret" aria-hidden="true">${active ? ">" : "&nbsp;"}</span><input class="choice-input" id="${escapeHtml(id)}" name="${escapeHtml(name)}" type="radio"${attributes(data)} ${checked ? "checked" : ""} ${disabled ? "disabled" : ""}/><span class="choice-label">${choiceLabel}</span><small>${escapeHtml(description)}</small>${shortcutHint(shortcut)}</label>`;
 }

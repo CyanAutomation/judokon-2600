@@ -91,6 +91,35 @@ function createChangeEvent(target: HTMLElement): Event {
 
 describe("Event Handlers", () => {
   describe("handleClickEvent", () => {
+    it("opens the seed modal from the footer utility", () => {
+      const openSeedModal = vi.fn();
+      const handlers = {
+        start: vi.fn(), copyReplaySeed: vi.fn(), next: vi.fn(), resolve: vi.fn(), clearAndExit: vi.fn(), openSeedModal
+      };
+      const button = createMockButton("seed-button");
+
+      handleClickEvent(createClickEvent(button), createMockGameState(), handlers);
+
+      expect(openSeedModal).toHaveBeenCalledOnce();
+    });
+
+    it("saves a seed from the dialog without relying on an inline footer field", () => {
+      const saveReplaySeed = vi.fn();
+      const handlers = {
+        start: vi.fn(), copyReplaySeed: vi.fn(), next: vi.fn(), resolve: vi.fn(), clearAndExit: vi.fn(), saveReplaySeed
+      };
+      const dialog = document.createElement("div");
+      dialog.className = "seed-dialog";
+      const input = document.createElement("input");
+      input.id = "replay-seed";
+      input.value = "dojo-42";
+      const button = createMockButton("save-seed");
+      dialog.append(input, button);
+
+      handleClickEvent(createClickEvent(button), createMockGameState(), handlers);
+
+      expect(saveReplaySeed).toHaveBeenCalledWith("dojo-42");
+    });
     it("invokes start handler when #start button is clicked", () => {
       const start = vi.fn();
       const handlers = {
@@ -363,6 +392,16 @@ describe("Event Handlers", () => {
   });
 
   describe("handleIntroKeyboard", () => {
+    it("moves the vertical menu caret with ArrowDown before committing a mode", () => {
+      const moveCursor = vi.fn();
+      const handlers = { choose: vi.fn(), start: vi.fn(), keyboardTick: vi.fn(), moveCursor };
+      const state = createMockGameState({ setupStep: "mode", setupCursor: 0 });
+
+      handleIntroKeyboard(createKeyboardEvent("ArrowDown"), state, document.createElement("div"), handlers);
+
+      expect(moveCursor).toHaveBeenCalledWith(1);
+      expect(handlers.choose).not.toHaveBeenCalled();
+    });
     it("does not start another game from the keyboard while busy", () => {
       const state = createMockGameState({ busy: true, setupStep: "length" });
       const handlers = { choose: vi.fn(), start: vi.fn(), keyboardTick: vi.fn() };
