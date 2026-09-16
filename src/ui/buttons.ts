@@ -4,7 +4,7 @@
  * Primary action button, quiet secondary button, and shortcut hint badge components.
  */
 
-import { escapeHtml } from "./controls";
+import { escapeHtml } from "./utils/escapeHtml";
 
 export function shortcutHint(keys: string): string {
   return `<span class="badge shortcut-hint" aria-hidden="true"><kbd>${escapeHtml(keys)}</kbd></span>`;

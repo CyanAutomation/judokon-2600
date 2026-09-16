@@ -9,7 +9,7 @@ import { buttonChoice, primaryButton, quietButton, surface } from "./controls";
 import { matchSummary, type Match, type MatchResult, strongestStats } from "../game/game";
 import { type GameState } from "../state";
 import { labels, type Helpers } from "./helpers";
-import { escapeHtml as esc } from "./controls";
+import { escapeHtml as esc } from "./utils/escapeHtml";
 
 /**
  * Generate fighter card HTML

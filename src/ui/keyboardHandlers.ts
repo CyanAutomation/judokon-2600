@@ -8,6 +8,119 @@
 import type { GameState } from "../state";
 import type { StatKey } from "../api/types";
 import { STAT_KEYS } from "../api/types";
+import type { SetupStep } from "../state";
+
+const LENGTHS = [3, 5, 10] as const;
+
+/**
+ * Handle keyboard input for mode selection step
+ */
+function handleModeSelection(
+  e: KeyboardEvent,
+  root: HTMLElement,
+  currentCursor: number,
+  handlers: { moveCursor?: (cursor: number) => void }
+): boolean {
+  if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+    e.preventDefault();
+    const direction = e.key === "ArrowUp" ? -1 : 1;
+    handlers.moveCursor?.((currentCursor + 2 + direction) % 2);
+    return true;
+  }
+
+  if (e.key.toLowerCase() === "c" || e.key.toLowerCase() === "h") {
+    e.preventDefault();
+    root.querySelector<HTMLInputElement>(`[data-intro-mode="${e.key.toLowerCase() === "h" ? "champion" : "classic"}"]`)?.click();
+    return true;
+  }
+
+  if (e.key === "Enter" || e.key === " ") {
+    e.preventDefault();
+    root.querySelectorAll<HTMLInputElement>("[data-intro-mode]")[currentCursor]?.click();
+    return true;
+  }
+
+  return false;
+}
+
+/**
+ * Handle keyboard input for division selection step
+ */
+function handleDivisionSelection(
+  e: KeyboardEvent,
+  root: HTMLElement,
+  currentCursor: number,
+  handlers: { moveCursor?: (cursor: number) => void }
+): boolean {
+  if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+    e.preventDefault();
+    const direction = e.key === "ArrowUp" ? -1 : 1;
+    handlers.moveCursor?.((currentCursor + 2 + direction) % 2);
+    return true;
+  }
+
+  if (e.key.toLowerCase() === "a" || e.key.toLowerCase() === "w") {
+    e.preventDefault();
+    root.querySelector<HTMLInputElement>(`[data-division="${e.key.toLowerCase() === "w" ? "weight" : "absolute"}"]`)?.click();
+    return true;
+  }
+
+  if (e.key === "Enter" || e.key === " ") {
+    e.preventDefault();
+    root.querySelectorAll<HTMLInputElement>("[data-division]")[currentCursor]?.click();
+    return true;
+  }
+
+  return false;
+}
+
+/**
+ * Handle keyboard input for weight selection step
+ */
+function handleWeightSelection(e: KeyboardEvent, root: HTMLElement): boolean {
+  if (e.key === "Enter" || e.key === " ") {
+    e.preventDefault();
+    root.querySelector<HTMLButtonElement>("#confirm-weight")?.click();
+    return true;
+  }
+
+  return false;
+}
+
+/**
+ * Handle keyboard input for length selection step
+ */
+function handleLengthSelection(
+  e: KeyboardEvent,
+  state: GameState,
+  handlers: { choose: (n: number) => void; start: () => void }
+): boolean {
+  if (e.key >= "1" && e.key <= "3") {
+    e.preventDefault();
+    handlers.choose(LENGTHS[Number(e.key) - 1]!);
+    return true;
+  }
+
+  if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+    e.preventDefault();
+    handlers.choose(LENGTHS[(state.lengthIndex + LENGTHS.length - 1) % LENGTHS.length]!);
+    return true;
+  }
+
+  if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+    e.preventDefault();
+    handlers.choose(LENGTHS[(state.lengthIndex + 1) % LENGTHS.length]!);
+    return true;
+  }
+
+  if (e.key === "Enter" || e.key === " ") {
+    e.preventDefault();
+    if (!state.busy) handlers.start();
+    return true;
+  }
+
+  return false;
+}
 
 /**
  * Handles keyboard events during intro screen.
@@ -19,41 +132,23 @@ export function handleIntroKeyboard(
   root: HTMLElement,
   handlers: { choose: (n: number) => void; start: () => void; keyboardTick: () => void; moveCursor?: (cursor: number) => void }
 ): void {
-  const lengths = [3, 5, 10] as const;
-  const step = state.setupStep ?? "mode";
+  const step = (state.setupStep ?? "mode") as SetupStep;
   const currentCursor = state.setupCursor ?? (step === "length" ? state.lengthIndex : 0);
 
-  if ((step === "mode" || step === "division") && (e.key === "ArrowUp" || e.key === "ArrowDown")) {
-    e.preventDefault();
-    const direction = e.key === "ArrowUp" ? -1 : 1;
-    handlers.moveCursor?.((currentCursor + 2 + direction) % 2);
-    return;
-  }
-
-  if (step === "length" && e.key >= "1" && e.key <= "3") {
-    e.preventDefault();
-    handlers.choose(lengths[Number(e.key) - 1]!);
-  } else if (step === "division" && (e.key.toLowerCase() === "a" || e.key.toLowerCase() === "w")) {
-    e.preventDefault();
-    root.querySelector<HTMLInputElement>(`[data-division="${e.key.toLowerCase() === "w" ? "weight" : "absolute"}"]`)?.click();
-  } else if (step === "mode" && (e.key.toLowerCase() === "c" || e.key.toLowerCase() === "h")) {
-    e.preventDefault();
-    root.querySelector<HTMLInputElement>(`[data-intro-mode="${e.key.toLowerCase() === "h" ? "champion" : "classic"}"]`)?.click();
-  } else if (step === "length" && (e.key === "ArrowLeft" || e.key === "ArrowUp")) {
-    e.preventDefault();
-    handlers.choose(lengths[(state.lengthIndex + lengths.length - 1) % lengths.length]!);
-  } else if (step === "length" && (e.key === "ArrowRight" || e.key === "ArrowDown")) {
-    e.preventDefault();
-    handlers.choose(lengths[(state.lengthIndex + 1) % lengths.length]!);
-  } else if ((step === "mode" || step === "division") && (e.key === "Enter" || e.key === " ")) {
-    e.preventDefault();
-    root.querySelectorAll<HTMLInputElement>(step === "mode" ? "[data-intro-mode]" : "[data-division]")[currentCursor]?.click();
-  } else if (step === "weight" && (e.key === "Enter" || e.key === " ")) {
-    e.preventDefault();
-    root.querySelector<HTMLButtonElement>("#confirm-weight")?.click();
-  } else if (step === "length" && (e.key === "Enter" || e.key === " ")) {
-    e.preventDefault();
-    if (!state.busy) handlers.start();
+  // Dispatch to step-specific handler
+  switch (step) {
+    case "mode":
+      handleModeSelection(e, root, currentCursor, handlers);
+      break;
+    case "division":
+      handleDivisionSelection(e, root, currentCursor, handlers);
+      break;
+    case "weight":
+      handleWeightSelection(e, root);
+      break;
+    case "length":
+      handleLengthSelection(e, state, handlers);
+      break;
   }
 }
 
