@@ -35,13 +35,13 @@ describe("buttonChoice", () => {
   };
 
   it("exposes selected and strongest as independent states", () => {
-    const selected = parseButton(buttonChoice("Power", "1", "8", 'data-stat="power"', false, true, false));
+    const selected = parseButton(buttonChoice({ label: "Power", shortcut: "1", value: "8", data: 'data-stat="power"', disabled: false, selected: true, strongest: false }));
 
     expect(selected.disabled).toBe(false);
     expect(selected.getAttribute("aria-current")).toBe("true");
     expect(selected.content).not.toContain("<em>Strongest</em>");
 
-    const strongest = parseButton(buttonChoice("Technique", "3", "10", 'data-stat="technique"', true, false, true));
+    const strongest = parseButton(buttonChoice({ label: "Technique", shortcut: "3", value: "10", data: 'data-stat="technique"', disabled: true, selected: false, strongest: true }));
 
     expect(strongest.disabled).toBe(true);
     expect(strongest.getAttribute("aria-current")).toBeNull();
@@ -53,7 +53,7 @@ describe("buttonChoice", () => {
   it("uses the shared control primitive for every button variant", () => {
     expect(primaryButton("start", "Start match", "Enter")).toContain('class="control control--primary action-button primary-action"');
     expect(quietButton("quit", "Quit", "Q")).toContain('class="control control--quiet action-button quiet"');
-    expect(buttonChoice("Power", "1", "8", 'data-stat="power"', false)).toContain('class="control control--choice action-button option-card');
+    expect(buttonChoice({ label: "Power", shortcut: "1", value: "8", data: 'data-stat="power"', disabled: false })).toContain('class="control control--choice action-button option-card');
     expect(utilityButton("sound", "Sound: Off", false)).toContain('class="control control--utility utility-button"');
   });
 });

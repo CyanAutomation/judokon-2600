@@ -50,7 +50,7 @@ export interface OrchestratorDeps {
  * Draw a batch of judoka from the API
  * Handles fallback to minimum count if no compatible fighters available
  */
-export async function drawBatch(
+async function drawBatch(
   seed: string,
   count: number,
   minimum: number,
@@ -106,6 +106,19 @@ export async function start(
 }
 
 /**
+ * Build error message from draw operation error
+ */
+function buildDrawErrorMessage(error: unknown): string {
+  if (error instanceof Error && error.message.startsWith("No compatible")) {
+    return `${error.message}. Choose Absolute or another division.`;
+  }
+  if (error instanceof Error) {
+    return `${error.message}. Check your connection and try again.`;
+  }
+  return "Unable to draw judoka. Please try again.";
+}
+
+/**
  * Draw initial match fighters
  * Called after match setup, handles loading and error states
  */
@@ -132,12 +145,7 @@ export async function draw(state: GameState, deps: OrchestratorDeps, operationId
     if (!isCurrentOperation(state, operationId)) return;
     state.match = null;
     state.drawBuffer = [];
-    state.errorMessage =
-      e instanceof Error && e.message.startsWith("No compatible")
-        ? `${e.message}. Choose Absolute or another division.`
-        : e instanceof Error
-          ? `${e.message}. Check your connection and try again.`
-          : "Unable to draw judoka. Please try again.";
+    state.errorMessage = buildDrawErrorMessage(e);
   } finally {
     if (isCurrentOperation(state, operationId)) {
       state.busy = false;
@@ -145,6 +153,29 @@ export async function draw(state: GameState, deps: OrchestratorDeps, operationId
       if (state.match) deps.onMatchReady?.();
     }
   }
+}
+
+/**
+ * Prepare draw buffer for next match based on mode
+ */
+async function prepareNextDrawBuffer(
+  drawBuffer: Judoka[],
+  mode: "champion" | "standard",
+  matchSeed: string,
+  state: GameState,
+  client: BudokonClient,
+  excludeIds?: string[]
+): Promise<Judoka[]> {
+  if (mode === "champion") {
+    if (!drawBuffer.length) {
+      return [...await drawBatch(matchSeed, DRAW_BUFFER_SIZE - 1, 1, state, client, excludeIds)];
+    }
+  } else {
+    if (drawBuffer.length < 2) {
+      return [...await drawBatch(matchSeed, DRAW_BUFFER_SIZE, 2, state, client)];
+    }
+  }
+  return drawBuffer;
 }
 
 /**
@@ -162,19 +193,20 @@ export async function next(state: GameState, match: Match, deps: OrchestratorDep
 
   try {
     const matchSeed = `${state.activeSeed}:buffer:${match.matchNumber + 1}`;
-
     let drawBuffer = [...state.drawBuffer];
 
     if (match.mode === "champion") {
-      if (!drawBuffer.length)
-        drawBuffer = [...await drawBatch(matchSeed, DRAW_BUFFER_SIZE - 1, 1, state, deps.client, [
-          match.player.id,
-          match.opponent.id
-        ])];
+      drawBuffer = await prepareNextDrawBuffer(
+        drawBuffer,
+        "champion",
+        matchSeed,
+        state,
+        deps.client,
+        [match.player.id, match.opponent.id]
+      );
       state.match = nextMatch(match, match.player, drawBuffer.shift()!);
     } else {
-      if (drawBuffer.length < 2)
-        drawBuffer = [...await drawBatch(matchSeed, DRAW_BUFFER_SIZE, 2, state, deps.client)];
+      drawBuffer = await prepareNextDrawBuffer(drawBuffer, "standard", matchSeed, state, deps.client);
       state.match = nextMatch(match, drawBuffer.shift()!, drawBuffer.shift()!);
     }
 

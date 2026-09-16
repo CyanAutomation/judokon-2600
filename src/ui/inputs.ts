@@ -19,25 +19,39 @@ export type RadioChoice = {
   data?: Record<string, string>;
 };
 
+export type ButtonChoiceConfig = {
+  label: string;
+  shortcut: string;
+  value: string;
+  data: string;
+  disabled?: boolean;
+  selected?: boolean;
+  strongest?: boolean;
+};
+
 const attributes = (values: Record<string, string> = {}): string =>
   Object.entries(values)
     .map(([name, value]) => ` ${escapeHtml(name)}="${escapeHtml(value)}"`)
     .join("");
 
-export function buttonChoice(
-  label: string,
-  shortcut: string,
-  value: string,
-  data: string,
-  disabled: boolean,
-  selected = false,
-  strongest = false
-): string {
+export function buttonChoice(config: ButtonChoiceConfig): string {
+  const { label, shortcut, value, data, disabled = false, selected = false, strongest = false } = config;
   return `<button class="control control--choice action-button option-card ${selected ? "is-selected" : ""} ${strongest ? "is-strongest" : ""}" ${data} ${disabled ? "disabled" : ""}${selected ? ' aria-current="true"' : ""}><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong>${strongest ? "<em>Strongest</em>" : ""}<span class="badge shortcut-hint" aria-hidden="true"><kbd>${escapeHtml(shortcut)}</kbd></span></button>`;
 }
 
 export function utilityButton(id: string, label: string, pressed?: boolean): string {
   return `<button class="control control--utility utility-button" id="${escapeHtml(id)}"${pressed === undefined ? "" : ` aria-pressed="${pressed}"`}><span>${escapeHtml(label)}</span></button>`;
+}
+
+/**
+ * Format choice label with optional compact variant
+ */
+function formatChoiceLabel(compactLabel?: string, label?: string): string {
+  return compactLabel && label
+    ? `<span class="choice-label-full">${escapeHtml(label)}</span><span class="choice-label-compact" aria-hidden="true">${escapeHtml(compactLabel)}</span>`
+    : label
+      ? escapeHtml(label)
+      : "";
 }
 
 /** A visual card backed by a native radio input for one-of-many setup choices. */
@@ -53,8 +67,6 @@ export function radioChoice({
   disabled = false,
   data,
 }: RadioChoice): string {
-  const choiceLabel = compactLabel
-    ? `<span class="choice-label-full">${escapeHtml(label)}</span><span class="choice-label-compact" aria-hidden="true">${escapeHtml(compactLabel)}</span>`
-    : escapeHtml(label);
+  const choiceLabel = formatChoiceLabel(compactLabel, label);
   return `<label class="choice-card ${checked ? "is-selected" : ""} ${active ? "is-active" : ""}" for="${escapeHtml(id)}"><span class="menu-caret" aria-hidden="true">${active ? ">" : "&nbsp;"}</span><input class="choice-input" id="${escapeHtml(id)}" name="${escapeHtml(name)}" type="radio"${attributes(data)} ${checked ? "checked" : ""} ${disabled ? "disabled" : ""}/><span class="choice-label">${choiceLabel}</span><small>${escapeHtml(description)}</small><span class="badge shortcut-hint" aria-hidden="true"><kbd>${escapeHtml(shortcut)}</kbd></span></label>`;
 }
