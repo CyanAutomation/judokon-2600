@@ -1,6 +1,8 @@
 import type { GameState } from "../state";
 import { shortcutHint } from "./controls";
-import { advanced, createHelpers, game, headerContext, intro, status } from "./templates";
+import { advanced, intro } from "./setup-templates";
+import { game } from "./game-templates";
+import { createHelpers, headerContext, status } from "./helpers";
 
 export function renderApp(root: HTMLElement, state: GameState): void {
   const helpers = createHelpers(state);
@@ -20,7 +22,7 @@ export function renderApp(root: HTMLElement, state: GameState): void {
           ? `${shortcutHint("Enter")} Next round ${shortcutHint("Esc / Q")} Quit match`
           : `${shortcutHint("Enter")} Play again ${shortcutHint("Esc / Q")} Change settings`;
   const content = !state.match
-    ? intro(state, helpers)
+    ? intro(state)
     : `<p id="status" class="active-command" role="status" aria-live="polite">${status(state)} <span class="block-cursor" aria-hidden="true">█</span></p>${game(state.match, state, helpers)}`;
 
   const settings = !state.match ? `<div class="footer-settings">${advanced(state)}</div>` : "";

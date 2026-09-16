@@ -1,8 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { Judoka } from "../api/types";
-import type { Match } from "../game/game";
 import type { GameState } from "../state";
-import { advanced, createHelpers, game, intro } from "./templates";
+import { advanced, intro } from "./setup-templates";
 
 function state(overrides: Partial<GameState> = {}): GameState {
   return {
@@ -26,22 +24,10 @@ function state(overrides: Partial<GameState> = {}): GameState {
   };
 }
 
-const judoka: Judoka = {
-  id: "player",
-  slug: "player",
-  firstname: "Test",
-  surname: "Judoka",
-  country: "Japan",
-  countryCode: "JP",
-  weightClass: "-73",
-  rarity: "common",
-  stats: { power: 8, speed: 7, technique: 9, kumikata: 6, newaza: 5 },
-};
-
-describe("setup and round guidance", () => {
+describe("setup templates", () => {
   it("starts with game mode as the only prominent setup choice", () => {
     const current = state();
-    const markup = intro(current, createHelpers(current));
+    const markup = intro(current);
 
     expect(markup).toContain("Choose game mode");
     expect(markup).toContain("Classic Battle");
@@ -52,7 +38,7 @@ describe("setup and round guidance", () => {
 
   it("uses one vertical terminal menu with a caret for each staged choice", () => {
     const current = state({ setupStep: "mode" });
-    const markup = intro(current, createHelpers(current));
+    const markup = intro(current);
 
     expect(markup).toContain('class="terminal-menu"');
     expect(markup).toContain('class="menu-caret"');
@@ -62,7 +48,7 @@ describe("setup and round guidance", () => {
 
   it("shows a compact mode summary before the division selection", () => {
     const current = state({ setupStep: "division", mode: "champion" });
-    const markup = intro(current, createHelpers(current));
+    const markup = intro(current);
 
     expect(markup).toContain("Game mode: <strong>Champion</strong>");
     expect(markup).toContain('data-setup-step="mode"');
@@ -72,7 +58,7 @@ describe("setup and round guidance", () => {
 
   it("puts the rules beside the final CTA and keeps settings out of the setup panel", () => {
     const current = state({ setupStep: "length" });
-    const markup = intro(current, createHelpers(current));
+    const markup = intro(current);
 
     expect(markup).toContain("Higher stat wins the point.");
     expect(markup).toContain('id="start"');
@@ -94,23 +80,5 @@ describe("setup and round guidance", () => {
     expect(markup).toContain('role="dialog"');
     expect(markup).toContain('id="replay-seed"');
     expect(markup).toContain('id="save-seed"');
-  });
-
-  it("explains how a stat choice is resolved before the stat buttons", () => {
-    const match: Match = {
-      player: judoka,
-      opponent: { ...judoka, id: "opponent", slug: "opponent" },
-      target: 3,
-      matchNumber: 1,
-      scores: { player: 0, opponent: 0 },
-      mode: "classic",
-      phase: "selecting",
-      winner: null,
-    };
-    const current = state({ match });
-    const markup = game(match, current, createHelpers(current));
-
-    expect(markup).toContain("The higher value wins the exchange.");
-    expect(markup.indexOf("The higher value wins the exchange.")).toBeLessThan(markup.indexOf('aria-label="Stat selection"'));
   });
 });
