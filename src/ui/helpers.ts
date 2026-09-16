@@ -4,9 +4,13 @@
  * Shared formatting functions and context generation used across templates.
  */
 
-import { type Judoka, type StatKey } from "../api/types";
+import { type Judoka } from "../api/types";
 import { escapeHtml as esc } from "./controls";
 import { type GameState } from "../state";
+import { labels } from "./constants";
+
+// Re-export constants for backward compatibility
+export { labels, weights, lengths } from "./constants";
 
 export const createHelpers = (state: GameState) => ({
   nameOf: (j: Judoka) => `${j.firstname} ${j.surname}`,
@@ -17,10 +21,6 @@ export const createHelpers = (state: GameState) => ({
 });
 
 type Helpers = ReturnType<typeof createHelpers>;
-
-export const labels: Record<StatKey, string> = { power: "Power", speed: "Speed", technique: "Technique", kumikata: "Kumi-kata", newaza: "Ne-waza" };
-export const weights = ["-48", "-52", "-57", "-60", "-63", "-66", "-70", "-73", "-78", "-81", "-90", "-100", "+78", "+100"] as const;
-export const lengths = [3, 5, 10] as const;
 
 /**
  * Generate status message based on game state
@@ -47,3 +47,4 @@ export function headerContext(state: GameState, helpers: Helpers): string {
 }
 
 export type { Helpers };
+
