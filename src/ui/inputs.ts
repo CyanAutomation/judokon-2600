@@ -4,7 +4,7 @@
  * Radio choice cards and button choice options for setup and stat selection.
  */
 
-import { escapeHtml } from "./controls";
+import { escapeHtml } from "./utils/escapeHtml";
 
 export type RadioChoice = {
   id: string;

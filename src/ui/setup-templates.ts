@@ -7,7 +7,7 @@
 import { primaryButton, quietButton, radioChoice, terminalMenu, utilityButton } from "./controls";
 import { type GameState } from "../state";
 import { createHelpers, lengths, weights } from "./helpers";
-import { escapeHtml as esc } from "./controls";
+import { escapeHtml as esc } from "./utils/escapeHtml";
 
 /**
  * Generate advanced options section

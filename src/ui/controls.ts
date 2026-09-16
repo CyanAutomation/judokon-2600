@@ -1,18 +1,8 @@
 /**
  * Control Components Barrel
  * 
- * Re-exports all UI control components (buttons, inputs, containers) and the escapeHtml security utility.
+ * Re-exports all UI control components (buttons, inputs, containers).
  */
-
-// Security-critical HTML escaping utility
-export const escapeHtml = (value: string): string =>
-  value.replace(/[&<>"']/g, (character) => ({
-    "&": "&amp;",
-    "<": "&lt;",
-    ">": "&gt;",
-    '"': "&quot;",
-    "'": "&#039;",
-  })[character]!);
 
 // Re-export button components
 export { shortcutHint, primaryButton, quietButton } from "./buttons";

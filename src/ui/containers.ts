@@ -4,7 +4,7 @@
  * Layout wrapper components for sections, aside panels, and menu shells.
  */
 
-import { escapeHtml } from "./controls";
+import { escapeHtml } from "./utils/escapeHtml";
 
 export function surface(tag: "aside" | "section", classes: string, label: string, content: string): string {
   return `<${tag} class="surface panel ${escapeHtml(classes)}" aria-label="${escapeHtml(label)}">${content}</${tag}>`;
