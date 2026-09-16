@@ -10,12 +10,20 @@ import { STAT_KEYS } from "../api/types";
 export function handleClickEvent(
   e: MouseEvent,
   state: GameState,
-  handlers: { start: () => void; copyReplaySeed: () => Promise<void>; next: (m: Match) => Promise<void>; resolve: (s: StatKey) => void; clearAndExit: () => void; setSetupStep?: (step: SetupStep) => void }
+  handlers: { start: () => void; copyReplaySeed: () => Promise<void>; next: (m: Match) => Promise<void>; resolve: (s: StatKey) => void; clearAndExit: () => void; setSetupStep?: (step: SetupStep) => void; openSeedModal?: () => void; closeSeedModal?: () => void; saveReplaySeed?: (seed: string) => void; toggleSound?: () => void }
 ): void {
   const b = (e.target as Element).closest<HTMLButtonElement>("button");
   if (!b || b.disabled) return;
 
-  if (b.dataset.setupStep) {
+  if (b.id === "seed-button") {
+    handlers.openSeedModal?.();
+  } else if (b.id === "cancel-seed") {
+    handlers.closeSeedModal?.();
+  } else if (b.id === "save-seed") {
+    handlers.saveReplaySeed?.(b.closest<HTMLElement>(".seed-dialog")?.querySelector<HTMLInputElement>("#replay-seed")?.value ?? "");
+  } else if (b.id === "sound-enabled") {
+    handlers.toggleSound?.();
+  } else if (b.dataset.setupStep) {
     handlers.setSetupStep?.(b.dataset.setupStep as SetupStep);
   } else if (b.id === "confirm-weight") {
     handlers.setSetupStep?.("length");
@@ -70,7 +78,8 @@ export function handleChangeEvent(
   }
 
   if (input.id === "replay-seed") {
-    state.replaySeed = input.value;
+    if (state.seedModalOpen) state.seedDraft = input.value;
+    else state.replaySeed = input.value;
     return;
   }
 
@@ -114,10 +123,18 @@ export function handleIntroKeyboard(
   e: KeyboardEvent,
   state: GameState,
   root: HTMLElement,
-  handlers: { choose: (n: number) => void; start: () => void; keyboardTick: () => void }
+  handlers: { choose: (n: number) => void; start: () => void; keyboardTick: () => void; moveCursor?: (cursor: number) => void }
 ): void {
   const lengths = [3, 5, 10] as const;
   const step = state.setupStep ?? "mode";
+  const currentCursor = state.setupCursor ?? (step === "length" ? state.lengthIndex : 0);
+
+  if ((step === "mode" || step === "division") && (e.key === "ArrowUp" || e.key === "ArrowDown")) {
+    e.preventDefault();
+    const direction = e.key === "ArrowUp" ? -1 : 1;
+    handlers.moveCursor?.((currentCursor + 2 + direction) % 2);
+    return;
+  }
 
   if (step === "length" && e.key >= "1" && e.key <= "3") {
     e.preventDefault();
@@ -134,6 +151,9 @@ export function handleIntroKeyboard(
   } else if (step === "length" && (e.key === "ArrowRight" || e.key === "ArrowDown")) {
     e.preventDefault();
     handlers.choose(lengths[(state.lengthIndex + 1) % lengths.length]!);
+  } else if ((step === "mode" || step === "division") && (e.key === "Enter" || e.key === " ")) {
+    e.preventDefault();
+    root.querySelectorAll<HTMLInputElement>(step === "mode" ? "[data-intro-mode]" : "[data-division]")[currentCursor]?.click();
   } else if (step === "weight" && (e.key === "Enter" || e.key === " ")) {
     e.preventDefault();
     root.querySelector<HTMLButtonElement>("#confirm-weight")?.click();
