@@ -1,4 +1,25 @@
-:root { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: #d8ffd8; background: #071006; }
+:root {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: #d8ffd8;
+  background: #071006;
+  --color-canvas: #071006;
+  --color-surface: #091208;
+  --color-control: #102110;
+  --color-control-active: #214a21;
+  --color-text: #d8ffd8;
+  --color-muted: #a4caa4;
+  --color-accent: #8ee58e;
+  --color-border: #417841;
+  --color-win: #8ee58e;
+  --color-loss: #ef8f86;
+  --color-draw: #ffe49a;
+  --focus-ring: #ffffff;
+  --space-1: .35rem;
+  --space-2: .55rem;
+  --space-3: .8rem;
+  --space-4: 1rem;
+  --border: 1px solid var(--color-border);
+}
 * { box-sizing: border-box; }
 body { margin: 0; min-width: 320px; }
 header, main, footer { width: min(100%, 980px); margin: auto; padding: 1rem; }
@@ -104,11 +125,11 @@ button { transition: background-color .12s ease, border-color .12s ease, color .
 footer { display: flex; align-items: center; justify-content: space-between; gap: .8rem; }.footer-hint { display: inline-flex; flex-wrap: wrap; align-items: center; gap: .35rem; }
 @media (max-width: 560px) { .match-summary dl, .champion-progress dl { grid-template-columns: 1fr; }.fighter-card { min-height: 9.4rem; } footer { align-items: flex-start; } }
 
-/* On small screens, put the immediate decision before supporting player context. */
+/* On small screens, put the immediate decision before supporting context. */
 @media (max-width: 560px) {
   .player-column { display: grid; grid-template-columns: minmax(0, 1fr); }
-  .player-column > .scout-report { order: 1; margin-top: 0; }
-  .player-column > .stats { order: 2; }
+  .player-column > .stats { order: 1; }
+  .player-column > .scout-report { order: 2; margin-top: 0; }
   .player-column > .commitment, .player-column > .result-panel, .player-column > .match-summary { order: 3; }
   .player-column > .game-actions { order: 4; }
   .player-column > .fighter-card.player { order: 5; }
@@ -160,4 +181,84 @@ footer { flex-wrap: wrap; }
   .intro-copy h1 { font-size: 2.25rem; }
   .intro-lede { line-height: 1.55; }
   .intro-status { margin: .7rem 0; }
+}
+
+/* Design-system primitives: every interactive element and information block
+   shares the same terminal states, while variants communicate hierarchy. */
+.panel {
+  border: var(--border);
+  background: var(--color-surface);
+}
+
+.control {
+  color: var(--color-text);
+  border: var(--border);
+  background: var(--color-control);
+  transition: background-color .12s ease, border-color .12s ease, color .12s ease, box-shadow .12s ease;
+}
+
+.control:hover:not(:disabled) {
+  border-color: var(--color-accent);
+  background: var(--color-control-active);
+}
+
+.control:focus-visible,
+.choice-card:has(.choice-input:focus-visible) {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.control--primary {
+  border-color: var(--color-accent);
+  background: var(--color-control-active);
+  font-weight: 700;
+}
+
+.control--primary:hover:not(:disabled),
+.control--primary:focus-visible {
+  background: #326a32;
+}
+
+.control--quiet,
+.control--utility {
+  color: var(--color-muted);
+}
+
+.control--choice.is-selected,
+.control--utility[aria-pressed="true"] {
+  color: var(--color-text);
+  border-color: var(--color-accent);
+  background: var(--color-control-active);
+  box-shadow: inset 0 0 0 1px var(--color-accent);
+}
+
+.control--choice.is-strongest:not(.is-selected) {
+  border-color: var(--color-accent);
+  background: #173017;
+}
+
+.result-panel.outcome-player { border-left-color: var(--color-win); }
+.result-panel.outcome-opponent { border-left-color: var(--color-loss); }
+.result-panel.outcome-draw { border-left-color: var(--color-draw); }
+.score-pip.player.earned { background: var(--color-win); border-color: var(--color-win); }
+.score-pip.opponent.earned { background: var(--color-loss); border-color: var(--color-loss); }
+
+/* Keep the two combatants visually comparable without interrupting the left-to-right decision flow. */
+.battle-layout {
+  grid-template-columns: minmax(0, 1.15fr) minmax(17rem, .85fr);
+  max-width: 980px;
+}
+
+.fighter-card,
+.scout-report,
+.result-panel,
+.match-summary,
+.champion-progress {
+  border-color: var(--color-border);
+}
+
+.champion-progress { border-color: var(--color-accent); }
+
+@media (max-width: 700px) {
+  .battle-layout { grid-template-columns: 1fr; }
 }

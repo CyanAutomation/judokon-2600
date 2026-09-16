@@ -1,0 +1,16 @@
+{
+  "name": "JU-DO-KON! Classic Battle",
+  "short_name": "JU-DO-KON",
+  "description": "A terminal-style, text-first judo battle game.",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "theme_color": "#071006",
+  "background_color": "#071006",
+  "display": "standalone"
+}
