@@ -30,6 +30,11 @@ export interface GameState {
   seedMessage: string;
   /** The active stage of the compact pre-match setup flow. */
   setupStep?: SetupStep;
+  /** Cursor position in the active terminal menu; changing it does not commit a choice. */
+  setupCursor?: number;
+  /** Footer seed-dialog state is kept separate from the committed replay seed. */
+  seedModalOpen?: boolean;
+  seedDraft?: string;
 }
 
 /**
@@ -58,6 +63,9 @@ export function createGameState(): GameState {
     replaySeed: "",
     seedMessage: "",
     setupStep: "mode",
+    setupCursor: 0,
+    seedModalOpen: false,
+    seedDraft: "",
   };
 }
 

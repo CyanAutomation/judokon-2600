@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { Judoka } from "../api/types";
 import type { Match } from "../game/game";
 import type { GameState } from "../state";
-import { createHelpers, game, intro } from "./templates";
+import { advanced, createHelpers, game, intro } from "./templates";
 
 function state(overrides: Partial<GameState> = {}): GameState {
   return {
@@ -50,6 +50,16 @@ describe("setup and round guidance", () => {
     expect(markup).not.toContain('id="start"');
   });
 
+  it("uses one vertical terminal menu with a caret for each staged choice", () => {
+    const current = state({ setupStep: "mode" });
+    const markup = intro(current, createHelpers(current));
+
+    expect(markup).toContain('class="terminal-menu"');
+    expect(markup).toContain('class="menu-caret"');
+    expect(markup).toContain("↑ ↓</span> move");
+    expect(markup).not.toContain('class="choice-grid"');
+  });
+
   it("shows a compact mode summary before the division selection", () => {
     const current = state({ setupStep: "division", mode: "champion" });
     const markup = intro(current, createHelpers(current));
@@ -67,6 +77,23 @@ describe("setup and round guidance", () => {
     expect(markup).toContain("Higher stat wins the point.");
     expect(markup).toContain('id="start"');
     expect(markup).not.toContain("Advanced options");
+  });
+
+  it("renders seed and sound as direct footer utilities, not a disclosure", () => {
+    const markup = advanced(state({ replaySeed: "dojo-42" }));
+
+    expect(markup).toContain('id="seed-button"');
+    expect(markup).toContain("Seed: dojo-42");
+    expect(markup).toContain('id="sound-enabled"');
+    expect(markup).not.toContain("<details");
+  });
+
+  it("renders an accessible seed dialog when requested", () => {
+    const markup = advanced(state({ seedModalOpen: true, seedDraft: "dojo-42" }));
+
+    expect(markup).toContain('role="dialog"');
+    expect(markup).toContain('id="replay-seed"');
+    expect(markup).toContain('id="save-seed"');
   });
 
   it("explains how a stat choice is resolved before the stat buttons", () => {
