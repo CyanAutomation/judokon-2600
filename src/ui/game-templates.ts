@@ -14,7 +14,7 @@ import { escapeHtml as esc } from "./controls";
 /**
  * Generate fighter card HTML
  */
-export function fighter(j: Judoka, side: "player" | "opponent", state: GameState, helpers: Helpers): string {
+function fighter(j: Judoka, side: "player" | "opponent", state: GameState, helpers: Helpers): string {
   const label = side === "player" ? "Your judoka" : "Opponent";
   const value = state.result ? side === "player" ? state.result.playerValue : state.result.opponentValue : null;
   const chosen = state.result ? `<p class="selected-stat outcome-${state.result.outcome}"><span>${labels[state.result.stat]}</span><strong>${value}</strong></p>` : "";
@@ -32,7 +32,7 @@ function pips(score: number, side: "player" | "opponent", match: Match, result: 
 /**
  * Generate scoreboard HTML
  */
-export function scoreboard(m: Match, result: MatchResult | null): string {
+function scoreboard(m: Match, result: MatchResult | null): string {
   return `<section class="scoreboard" aria-label="Match score: You ${m.scores.player}, opponent ${m.scores.opponent}. First to ${m.target} points."><div class="score-side player"><span>You</span><strong>${m.scores.player}</strong><div class="score-pips">${pips(m.scores.player, "player", m, result)}</div></div><p>First to ${m.target}</p><div class="score-side opponent"><span>Opponent</span><strong>${m.scores.opponent}</strong><div class="score-pips">${pips(m.scores.opponent, "opponent", m, result)}</div></div></section>`;
 }
 
@@ -47,7 +47,7 @@ function callout(m: Match, r: MatchResult, helpers: Helpers): string {
 /**
  * Generate match history strip
  */
-export function historyStrip(state: GameState, helpers: Helpers): string {
+function historyStrip(state: GameState, helpers: Helpers): string {
   if (!state.history.length) return "";
   return `<section class="match-history" aria-label="Round history">${helpers.eyebrow("Round history")}<ol>${state.history.map((h) => `<li class="${h.outcome}"><span>R${h.roundNumber}</span><strong>${labels[h.stat]}</strong><span>${h.outcome === "player" ? "WIN" : h.outcome === "opponent" ? "LOSS" : "DRAW"}</span></li>`).join("")}</ol></section>`;
 }
@@ -55,7 +55,7 @@ export function historyStrip(state: GameState, helpers: Helpers): string {
 /**
  * Generate champion progress section
  */
-export function championProgress(m: Match, state: GameState, helpers: Helpers): string {
+function championProgress(m: Match, state: GameState, helpers: Helpers): string {
   if (m.mode !== "champion") return "";
   const details = matchSummary(m, state.history);
   const record = details.championRecord!;
@@ -66,7 +66,7 @@ export function championProgress(m: Match, state: GameState, helpers: Helpers): 
 /**
  * Generate match summary
  */
-export function summary(m: Match, state: GameState): string {
+function summary(m: Match, state: GameState): string {
   if (m.phase !== "matchOver") return "";
   const details = matchSummary(m, state.history);
   const progress = m.mode === "champion" ? `Run record: ${details.championRecord!.wins}–${details.championRecord!.losses}–${details.championRecord!.draws}` : `Points won: ${details.playerWins}`;
@@ -77,7 +77,7 @@ export function summary(m: Match, state: GameState): string {
 /**
  * Generate result panel for round outcome
  */
-export function resultPanel(m: Match, r: MatchResult, helpers: Helpers): string {
+function resultPanel(m: Match, r: MatchResult, helpers: Helpers): string {
   const title = m.phase === "matchOver" ? r.outcome === "draw" ? "MATCH DRAWN" : r.outcome === "player" ? "MATCH WON" : "MATCH LOST" : r.outcome === "draw" ? "NO POINT AWARDED" : r.outcome === "player" ? "POINT WON" : "POINT LOST";
   return surface("section", `result-panel outcome-${r.outcome}`, "Round result", `${helpers.eyebrow(title)}<p>You used <strong>${r.playerValue}</strong> in ${labels[r.stat]}. ${esc(helpers.nameOf(m.opponent))} had <strong>${r.opponentValue}</strong>.</p><p class="callout">${esc(callout(m, r, helpers))}</p>`);
 }
