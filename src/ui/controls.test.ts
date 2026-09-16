@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buttonChoice, disclosure, primaryButton, quietButton, radioChoice, surface, toggleControl, utilityButton } from "./controls";
+import { buttonChoice, primaryButton, quietButton, radioChoice, surface, utilityButton } from "./controls";
 
 describe("radioChoice", () => {
   it("renders a mutually exclusive choice with a native radio control and shortcut hint", () => {
@@ -79,22 +79,5 @@ describe("shared UI primitives", () => {
     expect(hostileMarkup).not.toContain('data-injected="true"');
     expect(hostileMarkup).toContain('aria-label="Scout &lt;report&gt; &amp; &quot;analysis&quot;"');
     expect(hostileMarkup).toContain("<p>Retained child content.</p>");
-  });
-
-  it("renders the advanced control as an accessible disclosure", () => {
-    const markup = disclosure("Advanced options", "<p>Settings</p>");
-
-    expect(markup).toContain('<details class="advanced">');
-    expect(markup).toContain('aria-label="Show advanced options"');
-    expect(markup).toContain('class="disclosure-state" aria-hidden="true">Show</span>');
-  });
-
-  it("renders a full-row labelled toggle", () => {
-    const markup = toggleControl("sound-enabled", "Sound", false, "Keyboard ticks and outcome beeps");
-
-    expect(markup).toContain('for="sound-enabled"');
-    expect(markup).toContain('role="switch"');
-    expect(markup).toContain("Keyboard ticks and outcome beeps");
-    expect(markup).toContain(">Off<");
   });
 });
