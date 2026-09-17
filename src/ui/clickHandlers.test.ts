@@ -1,75 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { handleClickEvent } from "./clickHandlers";
-import type { GameState } from "../state";
-import type { Match } from "../game/game";
-import type { Judoka, StatKey } from "../api/types";
-
-// Helper to create mock judoka
-function createMockJudoka(id: string): Judoka {
-  return {
-    id,
-    slug: id,
-    firstname: "Test",
-    surname: "Fighter",
-    country: "Japan",
-    countryCode: "JP",
-    weightClass: "-73",
-    stats: { power: 5, speed: 5, technique: 5, kumikata: 5, newaza: 5 }
-  };
-}
-
-// Helper to create mock match
-function createMockMatch(overrides?: Partial<Match>): Match {
-  return {
-    player: createMockJudoka("player"),
-    opponent: createMockJudoka("opponent"),
-    phase: "selecting",
-    scores: { player: 0, opponent: 0 },
-    target: 3,
-    matchNumber: 1,
-    mode: "classic",
-    winner: null,
-    ...overrides
-  };
-}
-
-// Helper to create mock game state
-function createMockGameState(overrides?: Partial<GameState>): GameState {
-  return {
-    match: null,
-    result: null,
-    pendingStat: null,
-    activeSeed: "",
-    activeWeight: undefined,
-    drawBuffer: [],
-    target: 3,
-    lengthIndex: 0,
-    busy: false,
-    errorMessage: "",
-    history: [],
-    division: "absolute",
-    mode: "classic",
-    weight: "random",
-    replaySeed: "",
-    seedMessage: "",
-    setupStep: "length",
-    ...overrides
-  };
-}
-
-// Helper to create mock button
-function createMockButton(id: string): HTMLButtonElement {
-  const button = document.createElement("button");
-  button.id = id;
-  return button;
-}
-
-// Helper to create mock click event
-function createClickEvent(target: Element): MouseEvent {
-  const event = new MouseEvent("click", { bubbles: true });
-  Object.defineProperty(event, "target", { value: target, enumerable: true });
-  return event;
-}
+import type { StatKey } from "../api/types";
+import { createMockMatch, createMockGameState, createMockButton, createClickEvent } from "../test/mocks";
 
 describe("handleClickEvent", () => {
   it("opens the seed modal from the footer utility", () => {

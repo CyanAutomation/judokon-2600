@@ -4,7 +4,7 @@ export type Outcome = "player" | "opponent" | "draw";
 export type Phase = "selecting" | "awaitingNext" | "matchOver";
 export type Winner = Outcome | null;
 export type GameMode = "classic" | "champion";
-export const MAX_ROUNDS = 25;
+const MAX_ROUNDS = 25;
 
 export interface Match {
   player: Judoka;

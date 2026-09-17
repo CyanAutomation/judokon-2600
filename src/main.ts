@@ -1,10 +1,13 @@
 import "./style.css";
 import { injectSpeedInsights } from "@vercel/speed-insights";
 import { BudokonClient } from "./api/budokon";
+import type { StatKey } from "./api/types";
 import { handleClickEvent, handleChangeEvent, handleIntroKeyboard, handleMatchKeyboard } from "./ui/eventHandlers";
+import type { SetupStep } from "./state";
 import { initAudio, keyboardTick, setSoundEnabled } from "./audio";
 import { createGameState, loadSavedGameState, persistPreferences, type GameState } from "./state";
 import { renderApp } from "./ui/render";
+import type { Match } from "./game/game";
 import { start, next, resolve, copyReplaySeed, clearAndExit, chooseLength, handleSetupStepClick, handleOpenSeedModal, handleCloseSeedModal, handleSaveReplaySeed, handleToggleSound, handleKeyboardMoveCursor, handleKeyboardCloseSeedModal, type OrchestratorDeps } from "./game/orchestrator";
 
 const app = document.querySelector<HTMLDivElement>("#app");
@@ -43,27 +46,107 @@ const deps: OrchestratorDeps = {
     game?.scrollIntoView({ block: "start" });
   }
 };
-root.addEventListener("click", (e) => {
-  handleClickEvent(e, state, {
+
+/**
+ * Create handlers object for click events
+ */
+function createClickHandlers() {
+  return {
     start: () => { start(state, deps); },
     copyReplaySeed: () => copyReplaySeed(state, deps),
-    next: (m) => next(state, m, deps),
-    resolve: (stat) => resolve(state, state.match!, stat, deps),
+    next: (m: Match) => next(state, m, deps),
+    resolve: (stat: StatKey) => resolve(state, state.match!, stat, deps),
     clearAndExit: () => clearAndExit(state, deps),
-    setSetupStep: (setupStep) => handleSetupStepClick(state, setupStep, deps),
+    setSetupStep: (setupStep: SetupStep) => handleSetupStepClick(state, setupStep, deps),
     openSeedModal: () => handleOpenSeedModal(state, deps),
     closeSeedModal: () => handleCloseSeedModal(state, deps),
-    saveReplaySeed: (seed) => handleSaveReplaySeed(state, seed, deps),
+    saveReplaySeed: (seed: string) => handleSaveReplaySeed(state, seed, deps),
     toggleSound: () => handleToggleSound(setSoundEnabled, deps)
-  });
-});
+  };
+}
 
-root.addEventListener("change", (e) => {
-  handleChangeEvent(e, state, root, {
+/**
+ * Create handlers object for change events
+ */
+function createChangeHandlers() {
+  return {
     render,
     persistPreferences: () => persistPreferences(state),
     setSoundEnabled
-  });
+  };
+}
+
+/**
+ * Create handlers object for intro keyboard events
+ */
+function createIntroKeyboardHandlers() {
+  return {
+    choose: (n: number) => {
+      state.setupCursor = [3, 5, 10].indexOf(n);
+      chooseLength(state, n, deps);
+    },
+    start: () => { if (!state.busy) void start(state, deps); },
+    keyboardTick,
+    moveCursor: (cursor: number) => handleKeyboardMoveCursor(state, cursor, deps)
+  };
+}
+
+/**
+ * Create handlers object for match keyboard events
+ */
+function createMatchKeyboardHandlers() {
+  return {
+    resolve: (stat: StatKey) => resolve(state, state.match!, stat, deps),
+    keyboardTick
+  };
+}
+
+/**
+ * Check if a key should trigger keyboard tick sound
+ */
+function shouldPlayKeyboardTick(key: string): boolean {
+  return /^[1-5]$/.test(key) || 
+    ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Enter", " ", "Escape"].includes(key) || 
+    ["a", "w", "c", "h", "q"].includes(key.toLowerCase());
+}
+
+/**
+ * Check if keyboard event target is an editable input
+ */
+function isEditableInput(target: EventTarget | null): boolean {
+  return (target as HTMLElement)?.matches("input:not(.choice-input), select") ?? false;
+}
+
+/**
+ * Handle keyboard events with branching logic
+ */
+function handleKeyboardEvent(e: KeyboardEvent): void {
+  // Handle escape in seed modal
+  if (state.seedModalOpen && e.key === "Escape") {
+    e.preventDefault();
+    handleKeyboardCloseSeedModal(state, deps);
+    return;
+  }
+
+  // Let editable inputs handle their own keys
+  if (isEditableInput(e.target)) return;
+
+  // Play keyboard tick for navigation keys
+  if (shouldPlayKeyboardTick(e.key)) keyboardTick();
+
+  // Dispatch to appropriate handler
+  const handlers = state.match ? createMatchKeyboardHandlers() : createIntroKeyboardHandlers();
+  const handlerFunction = state.match ? handleMatchKeyboard : handleIntroKeyboard;
+  handlerFunction(e, state, root, handlers);
+}
+
+// Event listeners
+root.addEventListener("click", (e) => {
+  handleClickEvent(e, state, createClickHandlers());
+});
+
+root.addEventListener("change", (e) => {
+  handleChangeEvent(e, state, root, createChangeHandlers());
 
   const input = e.target as HTMLInputElement;
   if (input.dataset.length && input.checked) {
@@ -71,33 +154,6 @@ root.addEventListener("change", (e) => {
   }
 });
 
-document.addEventListener("keydown", (e) => {
-  if (state.seedModalOpen && e.key === "Escape") {
-    e.preventDefault();
-    handleKeyboardCloseSeedModal(state, deps);
-    return;
-  }
-  // Setup radios are a terminal menu: their arrows move the caret and Enter commits.
-  // Text inputs and selects keep their native editing/navigation behaviour.
-  if ((e.target as HTMLElement).matches("input:not(.choice-input), select")) return;
-  if (/^[1-5]$/.test(e.key) || ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Enter", " ", "Escape"].includes(e.key) || ["a", "w", "c", "h", "q"].includes(e.key.toLowerCase())) keyboardTick();
-
-  if (!state.match) {
-    handleIntroKeyboard(e, state, root, {
-      choose: (n) => {
-        state.setupCursor = [3, 5, 10].indexOf(n);
-        chooseLength(state, n, deps);
-      },
-      start: () => { if (!state.busy) void start(state, deps); },
-      keyboardTick,
-      moveCursor: (cursor) => handleKeyboardMoveCursor(state, cursor, deps)
-    });
-  } else {
-    handleMatchKeyboard(e, state, root, {
-      resolve: (stat) => resolve(state, state.match!, stat, deps),
-      keyboardTick
-    });
-  }
-});
+document.addEventListener("keydown", handleKeyboardEvent);
 
 render();
