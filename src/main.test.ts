@@ -335,25 +335,39 @@ describe("Main Module - State Orchestration Functions", () => {
       expect(drawBatch).toHaveBeenCalledWith(providedSeed, 6, undefined, undefined);
     });
 
-    it("clears game state on start", () => {
+    it("clears game state on start and installs the newly drawn match", async () => {
+      const staleBuffer = [createMockJudoka("stale-buffer")];
+      const drawn = Array.from({ length: 6 }, (_, index) => createMockJudoka(`new-judoka-${index}`));
       const state = createMockGameState({
         match: createMockMatch(),
         result: createMockMatchResult(),
         history: [{ outcome: "player", stat: "power", roundNumber: 1 }],
-        pendingStat: "power"
+        pendingStat: "power",
+        errorMessage: "Previous draw failed",
+        drawBuffer: staleBuffer
       });
+      const client = new class extends BudokonClient {
+        override async drawBatch(): Promise<Judoka[]> {
+          return drawn;
+        }
+      }();
+      const render = vi.fn();
 
-      state.match = null;
-      state.result = null;
-      state.history = [];
-      state.pendingStat = null;
-      state.errorMessage = "";
-      state.drawBuffer = [];
+      await start(state, { client, render }, state.target, "new-seed");
 
-      expect(state.match).toBeNull();
+      expect(state.match).toMatchObject({
+        player: drawn[0],
+        opponent: drawn[1],
+        phase: "selecting",
+        matchNumber: 1
+      });
       expect(state.result).toBeNull();
-      expect(state.history).toHaveLength(0);
+      expect(state.history).toEqual([]);
       expect(state.pendingStat).toBeNull();
+      expect(state.errorMessage).toBe("");
+      expect(state.drawBuffer).toEqual(drawn.slice(2));
+      expect(state.drawBuffer).not.toContain(staleBuffer[0]);
+      expect(render).toHaveBeenCalledTimes(2);
     });
 
     it("sets active weight for weight division with specific class", () => {
