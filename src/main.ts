@@ -5,7 +5,7 @@ import { handleClickEvent, handleChangeEvent, handleIntroKeyboard, handleMatchKe
 import { initAudio, keyboardTick, setSoundEnabled } from "./audio";
 import { createGameState, loadSavedGameState, persistPreferences, type GameState } from "./state";
 import { renderApp } from "./ui/render";
-import { start, next, resolve, copyReplaySeed, clearAndExit, chooseLength, type OrchestratorDeps } from "./game/orchestrator";
+import { start, next, resolve, copyReplaySeed, clearAndExit, chooseLength, handleSetupStepClick, handleOpenSeedModal, handleCloseSeedModal, handleSaveReplaySeed, handleToggleSound, handleKeyboardMoveCursor, handleKeyboardCloseSeedModal, type OrchestratorDeps } from "./game/orchestrator";
 
 const app = document.querySelector<HTMLDivElement>("#app");
 if (!app) throw new Error("Application root is missing");
@@ -50,44 +50,11 @@ root.addEventListener("click", (e) => {
     next: (m) => next(state, m, deps),
     resolve: (stat) => resolve(state, state.match!, stat, deps),
     clearAndExit: () => clearAndExit(state, deps),
-    setSetupStep: (setupStep) => {
-      state.setupStep = setupStep;
-      state.setupCursor = setupStep === "length" ? state.lengthIndex : 0;
-      render();
-      const focusTarget = setupStep === "mode"
-        ? "#mode-classic"
-        : setupStep === "division"
-          ? "#division-absolute"
-          : setupStep === "weight"
-            ? "#weight-class"
-            : "#length-3";
-      root.querySelector<HTMLElement>(focusTarget)?.focus();
-    },
-    openSeedModal: () => {
-      state.seedDraft = state.replaySeed;
-      state.seedModalOpen = true;
-      render();
-      root.querySelector<HTMLInputElement>("#replay-seed")?.focus();
-    },
-    closeSeedModal: () => {
-      state.seedModalOpen = false;
-      render();
-      root.querySelector<HTMLButtonElement>("#seed-button")?.focus();
-    },
-    saveReplaySeed: (seed) => {
-      state.replaySeed = seed.trim();
-      state.seedDraft = state.replaySeed;
-      state.seedModalOpen = false;
-      render();
-      root.querySelector<HTMLButtonElement>("#seed-button")?.focus();
-    },
-    toggleSound: () => {
-      const enabled = localStorage.getItem("judokon.soundEnabled") !== "true";
-      setSoundEnabled(enabled);
-      localStorage.setItem("judokon.soundEnabled", String(enabled));
-      render();
-      root.querySelector<HTMLButtonElement>("#sound-enabled")?.focus();
-    }
+    setSetupStep: (setupStep) => handleSetupStepClick(state, setupStep, deps),
+    openSeedModal: () => handleOpenSeedModal(state, deps),
+    closeSeedModal: () => handleCloseSeedModal(state, deps),
+    saveReplaySeed: (seed) => handleSaveReplaySeed(state, seed, deps),
+    toggleSound: () => handleToggleSound(setSoundEnabled, deps)
   });
 });
 
@@ -107,9 +74,7 @@ root.addEventListener("change", (e) => {
 document.addEventListener("keydown", (e) => {
   if (state.seedModalOpen && e.key === "Escape") {
     e.preventDefault();
-    state.seedModalOpen = false;
-    render();
-    root.querySelector<HTMLButtonElement>("#seed-button")?.focus();
+    handleKeyboardCloseSeedModal(state, deps);
     return;
   }
   // Setup radios are a terminal menu: their arrows move the caret and Enter commits.
@@ -125,16 +90,7 @@ document.addEventListener("keydown", (e) => {
       },
       start: () => { if (!state.busy) void start(state, deps); },
       keyboardTick,
-      moveCursor: (cursor) => {
-        state.setupCursor = cursor;
-        render();
-        const selector = state.setupStep === "mode"
-          ? "[data-intro-mode]"
-          : state.setupStep === "division"
-            ? "[data-division]"
-            : "[data-length]";
-        root.querySelectorAll<HTMLInputElement>(selector)[cursor]?.focus();
-      }
+      moveCursor: (cursor) => handleKeyboardMoveCursor(state, cursor, deps)
     });
   } else {
     handleMatchKeyboard(e, state, root, {
