@@ -682,11 +682,22 @@ describe("Main Module - State Orchestration Functions", () => {
 describe("Main Module - Render Integration", () => {
   describe("Render function composition", () => {
     it("creates header with status and shortcut hints", () => {
-      const status = ">> Choose your stat:";
-      const hints = "1–5 Choose a stat";
+      const state = createMockGameState({
+        match: createMockMatch({ phase: "selecting" })
+      });
+      const root = document.createElement("div");
 
-      expect(status).toContain("Choose");
-      expect(hints).toContain("stat");
+      renderApp(root, state);
+
+      const status = root.querySelector<HTMLElement>("header + main #status");
+      const shortcutHints = root.querySelectorAll<HTMLElement>("footer .shortcut-hint");
+      const statShortcut = Array.from(shortcutHints).find((hint) => hint.textContent === "1–5");
+      const visibleStatus = status?.cloneNode(true) as HTMLElement | undefined;
+      visibleStatus?.querySelectorAll('[aria-hidden="true"]').forEach((element) => element.remove());
+
+      expect(visibleStatus?.textContent?.trim()).toBe(">> Choose your stat:");
+      expect(statShortcut).toBeDefined();
+      expect(statShortcut?.parentElement?.textContent).toContain("1–5 Choose a stat");
     });
 
     it.each([
