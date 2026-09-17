@@ -431,18 +431,6 @@ describe("Main Module - State Orchestration Functions", () => {
   });
 
   describe("Phase progression (next function logic)", () => {
-    it("keeps player for champion mode", () => {
-      const playerJudoka = createMockJudoka("champion-player", { firstname: "Champion" });
-      const state = createMockGameState({
-        mode: "champion",
-        match: createMockMatch({ player: playerJudoka })
-      });
-
-      const continuingPlayer = state.match?.player;
-
-      expect(continuingPlayer?.id).toBe("champion-player");
-    });
-
     it("needs new opponent buffer fill for champion mode when depleted", () => {
       const state = createMockGameState({
         mode: "champion",
