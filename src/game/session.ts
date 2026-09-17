@@ -16,42 +16,75 @@ export interface SavedMatch {
 const outcomes = new Set<Outcome>(["player", "opponent", "draw"]);
 const phases = new Set<Phase>(["selecting", "awaitingNext", "matchOver"]);
 
-function isMatch(value: unknown): value is Match {
+/**
+ * Validation schema for Match objects
+ */
+const matchSchema = {
+  player: isJudoka,
+  opponent: isJudoka,
+  target: (v: unknown) => Number.isInteger(v),
+  matchNumber: (v: unknown) => Number.isInteger(v),
+  mode: (v: unknown) => v === "classic" || v === "champion",
+  phase: (v: unknown) => typeof v === "string" && phases.has(v as Phase),
+  winner: (v: unknown) => v === null || outcomes.has(v as Outcome),
+  scores: (v: unknown) => {
+    if (!v || typeof v !== "object") return false;
+    const scores = v as Record<string, unknown>;
+    return typeof scores.player === "number" && typeof scores.opponent === "number";
+  }
+};
+
+/**
+ * Validates a value against a schema object
+ */
+function validateSchema(value: unknown, schema: Record<string, (v: unknown) => boolean>): boolean {
   if (!value || typeof value !== "object") return false;
   const candidate = value as Record<string, unknown>;
-  return isJudoka(candidate.player) && isJudoka(candidate.opponent)
-    && Number.isInteger(candidate.target) && Number.isInteger(candidate.matchNumber)
-    && !!candidate.scores && typeof candidate.scores === "object"
-    && typeof (candidate.scores as Record<string, unknown>).player === "number"
-    && typeof (candidate.scores as Record<string, unknown>).opponent === "number"
-    && (candidate.mode === "classic" || candidate.mode === "champion")
-    && typeof candidate.phase === "string" && phases.has(candidate.phase as Phase)
-    && (candidate.winner === null || outcomes.has(candidate.winner as Outcome));
+  return Object.entries(schema).every(([key, validator]) => validator(candidate[key]));
+}
+
+function isMatch(value: unknown): value is Match {
+  return validateSchema(value, matchSchema);
 }
 
 function isMatchOrNull(value: unknown): value is Match | null {
   return value === null || isMatch(value);
 }
 
+/**
+ * Validation schema for SavedHistoryItem
+ */
+const historyItemSchema = {
+  outcome: (v: unknown) => outcomes.has(v as Outcome),
+  stat: (v: unknown) => STAT_KEYS.includes(v as StatKey),
+  roundNumber: (v: unknown) => Number.isInteger(v)
+};
+
 function isHistory(value: unknown): value is SavedHistoryItem[] {
-  return Array.isArray(value) && value.every(item => !!item && typeof item === "object"
-    && outcomes.has((item as Record<string, unknown>).outcome as Outcome)
-    && STAT_KEYS.includes((item as Record<string, unknown>).stat as StatKey)
-    && Number.isInteger((item as Record<string, unknown>).roundNumber));
+  if (!Array.isArray(value)) return false;
+  return value.every(item => validateSchema(item, historyItemSchema));
 }
 
 export function stringifySavedMatch(value: SavedMatch): string { return JSON.stringify(value); }
+
+/**
+ * Validation schema for SavedMatch
+ */
+const savedMatchSchema = {
+  version: (v: unknown) => v === 1,
+  match: isMatchOrNull,
+  result: (v: unknown) => v === null || (v && typeof v === "object"),
+  history: isHistory,
+  activeSeed: (v: unknown) => typeof v === "string",
+  activeWeight: (v: unknown) => v === undefined || typeof v === "string",
+  drawBuffer: (v: unknown) => Array.isArray(v) && v.every(isJudoka)
+};
 
 export function parseSavedMatch(value: string | null): SavedMatch | null {
   if (!value) return null;
   try {
     const parsed: unknown = JSON.parse(value);
-    if (!parsed || typeof parsed !== "object") return null;
-    const candidate = parsed as Record<string, unknown>;
-    if (candidate.version !== 1 || !isMatchOrNull(candidate.match) || !isHistory(candidate.history)
-      || typeof candidate.activeSeed !== "string" || (candidate.activeWeight !== undefined && typeof candidate.activeWeight !== "string")
-      || !Array.isArray(candidate.drawBuffer) || !candidate.drawBuffer.every(isJudoka)) return null;
-    if (candidate.result !== null && (!candidate.result || typeof candidate.result !== "object")) return null;
-    return candidate as unknown as SavedMatch;
+    if (!validateSchema(parsed, savedMatchSchema)) return null;
+    return parsed as unknown as SavedMatch;
   } catch { return null; }
 }

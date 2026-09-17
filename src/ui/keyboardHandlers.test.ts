@@ -83,32 +83,66 @@ describe("handleIntroKeyboard", () => {
     expect(handlers.choose).toHaveBeenCalledWith(5); // Next length
   });
 
-  it("selects division with A/W keys", () => {
-    const state = createMockGameState({ setupStep: "division" });
-    const handlers = { choose: vi.fn(), start: vi.fn(), keyboardTick: vi.fn() };
-    const root = document.createElement("div");
-    const input = document.createElement("input");
-    input.setAttribute("data-division", "absolute");
-    const clickSpy = vi.spyOn(input, "click");
-    root.appendChild(input);
+  describe("cursor-based step handlers (mode/division)", () => {
+    it.each([
+      {
+        step: "mode" as const,
+        dataAttr: "data-intro-mode",
+        selector: "[data-intro-mode]",
+        shortcutKey: "c",
+        expectedValue: "classic"
+      },
+      {
+        step: "division" as const,
+        dataAttr: "data-division",
+        selector: "[data-division]",
+        shortcutKey: "a",
+        expectedValue: "absolute"
+      }
+    ])(
+      "handles arrow keys for $step selection",
+      ({ step }) => {
+        const state = createMockGameState({ setupStep: step, setupCursor: 0 });
+        const handlers = { choose: vi.fn(), start: vi.fn(), keyboardTick: vi.fn(), moveCursor: vi.fn() };
+        const root = document.createElement("div");
 
-    handleIntroKeyboard(createKeyboardEvent("a"), state, root, handlers);
+        handleIntroKeyboard(createKeyboardEvent("ArrowDown"), state, root, handlers);
 
-    expect(clickSpy).toHaveBeenCalled();
-  });
+        expect(handlers.moveCursor).toHaveBeenCalledWith(1);
+      }
+    );
 
-  it("selects mode with C/H keys", () => {
-    const state = createMockGameState({ setupStep: "mode" });
-    const handlers = { choose: vi.fn(), start: vi.fn(), keyboardTick: vi.fn() };
-    const root = document.createElement("div");
-    const input = document.createElement("input");
-    input.setAttribute("data-intro-mode", "classic");
-    const clickSpy = vi.spyOn(input, "click");
-    root.appendChild(input);
+    it.each([
+      {
+        step: "mode" as const,
+        dataAttr: "data-intro-mode",
+        selector: "[data-intro-mode]",
+        shortcutKey: "c",
+        expectedValue: "classic"
+      },
+      {
+        step: "division" as const,
+        dataAttr: "data-division",
+        selector: "[data-division]",
+        shortcutKey: "a",
+        expectedValue: "absolute"
+      }
+    ])(
+      "handles keyboard shortcuts for $step selection",
+      ({ step, dataAttr, expectedValue, shortcutKey }) => {
+        const state = createMockGameState({ setupStep: step });
+        const handlers = { choose: vi.fn(), start: vi.fn(), keyboardTick: vi.fn() };
+        const root = document.createElement("div");
+        const input = document.createElement("input");
+        input.setAttribute(dataAttr, expectedValue);
+        const clickSpy = vi.spyOn(input, "click");
+        root.appendChild(input);
 
-    handleIntroKeyboard(createKeyboardEvent("c"), state, root, handlers);
+        handleIntroKeyboard(createKeyboardEvent(shortcutKey), state, root, handlers);
 
-    expect(clickSpy).toHaveBeenCalled();
+        expect(clickSpy).toHaveBeenCalled();
+      }
+    );
   });
 
   it("starts match when Enter is pressed at length screen", () => {
