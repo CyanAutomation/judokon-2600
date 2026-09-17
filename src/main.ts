@@ -134,9 +134,13 @@ function handleKeyboardEvent(e: KeyboardEvent): void {
   if (shouldPlayKeyboardTick(e.key)) keyboardTick();
 
   // Dispatch to appropriate handler
-  const handlers = state.match ? createMatchKeyboardHandlers() : createIntroKeyboardHandlers();
-  const handlerFunction = state.match ? handleMatchKeyboard : handleIntroKeyboard;
-  handlerFunction(e, state, root, handlers);
+  if (state.match) {
+    const handlers = createMatchKeyboardHandlers();
+    handleMatchKeyboard(e, state, root, handlers);
+  } else {
+    const handlers = createIntroKeyboardHandlers();
+    handleIntroKeyboard(e, state, root, handlers);
+  }
 }
 
 // Event listeners
