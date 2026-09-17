@@ -430,19 +430,6 @@ describe("Main Module - State Orchestration Functions", () => {
     });
   });
 
-  describe("Phase progression (next function logic)", () => {
-    it("needs opponent buffer refill for classic mode when below 2", () => {
-      const state = createMockGameState({
-        mode: "classic",
-        drawBuffer: [createMockJudoka("one")]
-      });
-
-      const needsRefill = state.drawBuffer.length < 2;
-
-      expect(needsRefill).toBe(true);
-    });
-  });
-
   describe("Match resolution (resolve function logic)", () => {
     it("validates state before processing resolution", () => {
       const state = createMockGameState({

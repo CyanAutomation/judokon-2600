@@ -96,6 +96,84 @@ describe("draw operation ordering", () => {
 describe("next-round draws", () => {
   beforeEach(() => sessionStorage.clear());
 
+  it("refills a one-fighter Classic buffer and advances and saves only once", async () => {
+    const buffered = judoka("buffered");
+    const replacements = Array.from({ length: 6 }, (_, index) => judoka(`replacement-${index}`));
+    const client = { drawBatch: vi.fn().mockResolvedValue(replacements) };
+    const match = {
+      player: judoka("current-player"),
+      opponent: judoka("current-opponent"),
+      target: 3,
+      matchNumber: 4,
+      scores: { player: 2, opponent: 1 },
+      mode: "classic" as const,
+      phase: "awaitingNext" as const,
+      winner: null
+    };
+    const state = createGameState();
+    state.activeSeed = "classic-run";
+    state.activeWeight = "-73";
+    state.match = match;
+    state.mode = "classic";
+    state.drawBuffer = [buffered];
+    const render = vi.fn();
+    const deps = { client, render } as unknown as OrchestratorDeps;
+    const saveSpy = vi.spyOn(Storage.prototype, "setItem");
+
+    const firstTransition = next(state, match, deps);
+    const duplicateTransition = next(state, match, deps);
+    await Promise.all([firstTransition, duplicateTransition]);
+
+    expect(client.drawBatch).toHaveBeenCalledOnce();
+    expect(client.drawBatch).toHaveBeenCalledWith("classic-run:buffer:5", 6, "-73", undefined);
+    expect(state.match).toMatchObject({
+      player: { id: "replacement-0" },
+      opponent: { id: "replacement-1" },
+      matchNumber: 5,
+      phase: "selecting"
+    });
+    expect(state.drawBuffer.map(({ id }) => id)).toEqual([
+      "replacement-2",
+      "replacement-3",
+      "replacement-4",
+      "replacement-5"
+    ]);
+    expect(state.drawBuffer).not.toContain(buffered);
+    expect(saveSpy).toHaveBeenCalledTimes(1);
+    expect(render).toHaveBeenCalledTimes(2);
+  });
+
+  it("uses a two-fighter Classic buffer without refilling it", async () => {
+    const client = { drawBatch: vi.fn() };
+    const match = {
+      player: judoka("current-player"),
+      opponent: judoka("current-opponent"),
+      target: 3,
+      matchNumber: 2,
+      scores: { player: 1, opponent: 0 },
+      mode: "classic" as const,
+      phase: "awaitingNext" as const,
+      winner: null
+    };
+    const state = createGameState();
+    state.activeSeed = "classic-buffered-run";
+    state.match = match;
+    state.mode = "classic";
+    state.drawBuffer = [judoka("next-player"), judoka("next-opponent")];
+    const deps = { client, render: vi.fn() } as unknown as OrchestratorDeps;
+
+    await next(state, match, deps);
+
+    expect(client.drawBatch).not.toHaveBeenCalled();
+    expect(state.match).toMatchObject({
+      player: { id: "next-player" },
+      opponent: { id: "next-opponent" },
+      matchNumber: 3,
+      phase: "selecting"
+    });
+    expect(state.drawBuffer).toEqual([]);
+  });
+
   it("refills a depleted Champion buffer without redrawing either current fighter", async () => {
     const champion = judoka("champion");
     const lastOpponent = judoka("last-opponent");
