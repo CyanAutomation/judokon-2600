@@ -43,4 +43,49 @@ describe("saved matches", () => {
   ])("rejects $scenario", ({ value }) => {
     expect(parseSavedMatch(value)).toBeNull();
   });
+
+  describe("validation schema edge cases", () => {
+    it("accepts valid match with null result", () => {
+      const saved = JSON.parse(stringifySavedMatch(validSavedMatch)) as Record<string, unknown>;
+      saved.result = null;
+      expect(parseSavedMatch(JSON.stringify(saved))).not.toBeNull();
+    });
+
+    it("rejects match with invalid scores (non-numeric)", () => {
+      const saved = JSON.parse(stringifySavedMatch(validSavedMatch)) as Record<string, unknown>;
+      (saved.match as Record<string, unknown>).scores = { player: "zero", opponent: 0 };
+      expect(parseSavedMatch(JSON.stringify(saved))).toBeNull();
+    });
+
+    it("rejects match with missing score field", () => {
+      const saved = JSON.parse(stringifySavedMatch(validSavedMatch)) as Record<string, unknown>;
+      const match = saved.match as Record<string, unknown>;
+      delete (match.scores as Record<string, unknown>).player;
+      expect(parseSavedMatch(JSON.stringify(saved))).toBeNull();
+    });
+
+    it("rejects history with invalid outcome", () => {
+      const saved = JSON.parse(stringifySavedMatch(validSavedMatch)) as Record<string, unknown>;
+      (saved.history as Array<Record<string, unknown>>)[0].outcome = "tie";
+      expect(parseSavedMatch(JSON.stringify(saved))).toBeNull();
+    });
+
+    it("rejects history with non-integer roundNumber", () => {
+      const saved = JSON.parse(stringifySavedMatch(validSavedMatch)) as Record<string, unknown>;
+      (saved.history as Array<Record<string, unknown>>)[0].roundNumber = 1.5;
+      expect(parseSavedMatch(JSON.stringify(saved))).toBeNull();
+    });
+
+    it("accepts empty history", () => {
+      const saved = JSON.parse(stringifySavedMatch(validSavedMatch)) as Record<string, unknown>;
+      saved.history = [];
+      expect(parseSavedMatch(JSON.stringify(saved))).not.toBeNull();
+    });
+
+    it("rejects draw buffer with invalid judoka", () => {
+      const saved = JSON.parse(stringifySavedMatch(validSavedMatch)) as Record<string, unknown>;
+      (saved.drawBuffer as Array<Record<string, unknown>>)[0].id = 123;
+      expect(parseSavedMatch(JSON.stringify(saved))).toBeNull();
+    });
+  });
 });

@@ -13,66 +13,79 @@ import type { SetupStep } from "../state";
 const LENGTHS = [3, 5, 10] as const;
 
 /**
+ * Configuration for a cursor-based step handler
+ */
+interface CursorStepConfig {
+  optionCount: number;
+  dataAttribute: string;
+  keyMap?: Record<string, string>; // Maps key to data attribute value
+  optionSelector: string;
+}
+
+/**
+ * Factory function to create cursor-based step handlers (e.g., mode, division selection)
+ * Handles arrow keys for cursor movement, optional key shortcuts for direct selection,
+ * and Enter/Space to confirm selection.
+ */
+function createCursorStepHandler(
+  config: CursorStepConfig
+): (e: KeyboardEvent, root: HTMLElement, currentCursor: number, handlers: { moveCursor?: (cursor: number) => void }) => boolean {
+  return (e: KeyboardEvent, root: HTMLElement, currentCursor: number, handlers: { moveCursor?: (cursor: number) => void }): boolean => {
+    // Handle arrow key cursor movement
+    if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+      e.preventDefault();
+      const direction = e.key === "ArrowUp" ? -1 : 1;
+      handlers.moveCursor?.((currentCursor + config.optionCount + direction) % config.optionCount);
+      return true;
+    }
+
+    // Handle key shortcuts (if defined)
+    if (config.keyMap) {
+      const lowerKey = e.key.toLowerCase();
+      const dataValue = config.keyMap[lowerKey];
+      if (dataValue) {
+        e.preventDefault();
+        root.querySelector<HTMLInputElement>(`[${config.dataAttribute}="${dataValue}"]`)?.click();
+        return true;
+      }
+    }
+
+    // Handle Enter/Space to confirm
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      root.querySelectorAll<HTMLInputElement>(config.optionSelector)[currentCursor]?.click();
+      return true;
+    }
+
+    return false;
+  };
+}
+
+/**
  * Handle keyboard input for mode selection step
  */
-function handleModeSelection(
-  e: KeyboardEvent,
-  root: HTMLElement,
-  currentCursor: number,
-  handlers: { moveCursor?: (cursor: number) => void }
-): boolean {
-  if (e.key === "ArrowUp" || e.key === "ArrowDown") {
-    e.preventDefault();
-    const direction = e.key === "ArrowUp" ? -1 : 1;
-    handlers.moveCursor?.((currentCursor + 2 + direction) % 2);
-    return true;
-  }
-
-  if (e.key.toLowerCase() === "c" || e.key.toLowerCase() === "h") {
-    e.preventDefault();
-    root.querySelector<HTMLInputElement>(`[data-intro-mode="${e.key.toLowerCase() === "h" ? "champion" : "classic"}"]`)?.click();
-    return true;
-  }
-
-  if (e.key === "Enter" || e.key === " ") {
-    e.preventDefault();
-    root.querySelectorAll<HTMLInputElement>("[data-intro-mode]")[currentCursor]?.click();
-    return true;
-  }
-
-  return false;
-}
+const handleModeSelection = createCursorStepHandler({
+  optionCount: 2,
+  dataAttribute: "data-intro-mode",
+  keyMap: {
+    "c": "classic",
+    "h": "champion"
+  },
+  optionSelector: "[data-intro-mode]"
+});
 
 /**
  * Handle keyboard input for division selection step
  */
-function handleDivisionSelection(
-  e: KeyboardEvent,
-  root: HTMLElement,
-  currentCursor: number,
-  handlers: { moveCursor?: (cursor: number) => void }
-): boolean {
-  if (e.key === "ArrowUp" || e.key === "ArrowDown") {
-    e.preventDefault();
-    const direction = e.key === "ArrowUp" ? -1 : 1;
-    handlers.moveCursor?.((currentCursor + 2 + direction) % 2);
-    return true;
-  }
-
-  if (e.key.toLowerCase() === "a" || e.key.toLowerCase() === "w") {
-    e.preventDefault();
-    root.querySelector<HTMLInputElement>(`[data-division="${e.key.toLowerCase() === "w" ? "weight" : "absolute"}"]`)?.click();
-    return true;
-  }
-
-  if (e.key === "Enter" || e.key === " ") {
-    e.preventDefault();
-    root.querySelectorAll<HTMLInputElement>("[data-division]")[currentCursor]?.click();
-    return true;
-  }
-
-  return false;
-}
+const handleDivisionSelection = createCursorStepHandler({
+  optionCount: 2,
+  dataAttribute: "data-division",
+  keyMap: {
+    "a": "absolute",
+    "w": "weight"
+  },
+  optionSelector: "[data-division]"
+});
 
 /**
  * Handle keyboard input for weight selection step
