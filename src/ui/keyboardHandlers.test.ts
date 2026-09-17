@@ -1,66 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { handleIntroKeyboard, handleMatchKeyboard } from "./keyboardHandlers";
-import type { GameState } from "../state";
-import type { Match } from "../game/game";
-import type { Judoka, StatKey } from "../api/types";
-
-// Helper to create mock judoka
-function createMockJudoka(id: string): Judoka {
-  return {
-    id,
-    slug: id,
-    firstname: "Test",
-    surname: "Fighter",
-    country: "Japan",
-    countryCode: "JP",
-    weightClass: "-73",
-    stats: { power: 5, speed: 5, technique: 5, kumikata: 5, newaza: 5 }
-  };
-}
-
-// Helper to create mock match
-function createMockMatch(overrides?: Partial<Match>): Match {
-  return {
-    player: createMockJudoka("player"),
-    opponent: createMockJudoka("opponent"),
-    phase: "selecting",
-    scores: { player: 0, opponent: 0 },
-    target: 3,
-    matchNumber: 1,
-    mode: "classic",
-    winner: null,
-    ...overrides
-  };
-}
-
-// Helper to create mock game state
-function createMockGameState(overrides?: Partial<GameState>): GameState {
-  return {
-    match: null,
-    result: null,
-    pendingStat: null,
-    activeSeed: "",
-    activeWeight: undefined,
-    drawBuffer: [],
-    target: 3,
-    lengthIndex: 0,
-    busy: false,
-    errorMessage: "",
-    history: [],
-    division: "absolute",
-    mode: "classic",
-    weight: "random",
-    replaySeed: "",
-    seedMessage: "",
-    setupStep: "length",
-    ...overrides
-  };
-}
-
-// Helper to create mock keyboard event
-function createKeyboardEvent(key: string, options?: Partial<KeyboardEventInit>): KeyboardEvent {
-  return new KeyboardEvent("keydown", { key, ...options });
-}
+import type { StatKey } from "../api/types";
+import { createMockMatch, createMockGameState, createKeyboardEvent } from "../test/mocks";
 
 describe("handleIntroKeyboard", () => {
   it("chooses length when numeric key 1-3 is pressed", () => {

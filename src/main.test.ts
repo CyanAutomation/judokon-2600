@@ -1,80 +1,14 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { GameState } from "./state";
-import type { Match, MatchResult } from "./game/game";
-import type { Judoka } from "./api/types";
+import type { MatchResult } from "./game/game";
 import { BudokonClient } from "./api/budokon";
 import { chooseLength, copyReplaySeed, MATCH_RESOLUTION_DELAY_MS, next, resolve, selectWeightForSeed, start, type OrchestratorDeps } from "./game/orchestrator";
 import { handleClickEvent } from "./ui/eventHandlers";
 import { renderApp } from "./ui/render";
+import { createMockJudoka, createMockMatch, createMockMatchResult, createMockGameState } from "./test/mocks";
 
 // Note: These tests are designed to test the logic that WILL be extracted from main.ts
 // during Phase 2-3. For now, we test the core functions that would be extracted.
 // We import the types and test helper logic that would be part of orchestrator.ts
-
-// Mock judoka helper
-function createMockJudoka(id: string, overrides?: Partial<Judoka>): Judoka {
-  return {
-    id,
-    slug: id,
-    firstname: "Test",
-    surname: "Fighter",
-    country: "Japan",
-    countryCode: "JP",
-    weightClass: "-73",
-    stats: { power: 8, speed: 5, technique: 6, kumikata: 7, newaza: 6 },
-    ...overrides
-  };
-}
-
-// Mock match helper
-function createMockMatch(overrides?: Partial<Match>): Match {
-  return {
-    player: createMockJudoka("player"),
-    opponent: createMockJudoka("opponent"),
-    phase: "selecting",
-    scores: { player: 0, opponent: 0 },
-    target: 3,
-    matchNumber: 1,
-    mode: "classic",
-    winner: null,
-    ...overrides
-  };
-}
-
-// Mock result helper
-function createMockMatchResult(): MatchResult {
-  return {
-    match: createMockMatch(),
-    outcome: "player",
-    stat: "power",
-    playerValue: 8,
-    opponentValue: 5
-  };
-}
-
-// Mock game state
-function createMockGameState(overrides?: Partial<GameState>): GameState {
-  return {
-    match: null,
-    result: null,
-    pendingStat: null,
-    activeSeed: "",
-    activeWeight: undefined,
-    drawBuffer: [],
-    target: 3,
-    lengthIndex: 0,
-    busy: false,
-    errorMessage: "",
-    history: [],
-    division: "absolute",
-    mode: "classic",
-    weight: "random",
-    replaySeed: "",
-    seedMessage: "",
-    setupStep: "length",
-    ...overrides
-  };
-}
 
 describe("Main Module - Render Functions", () => {
   describe("Helper utilities", () => {

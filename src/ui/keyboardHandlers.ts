@@ -101,19 +101,25 @@ function handleWeightSelection(e: KeyboardEvent, root: HTMLElement): boolean {
 }
 
 /**
- * Handle keyboard input for length selection step
+ * Handle numeric shortcut keys (1-3) for length selection
  */
-function handleLengthSelection(
-  e: KeyboardEvent,
-  state: GameState,
-  handlers: { choose: (n: number) => void; start: () => void }
-): boolean {
+function handleLengthNumericKey(e: KeyboardEvent, handlers: { choose: (n: number) => void }): boolean {
   if (e.key >= "1" && e.key <= "3") {
     e.preventDefault();
     handlers.choose(LENGTHS[Number(e.key) - 1]!);
     return true;
   }
+  return false;
+}
 
+/**
+ * Handle arrow key navigation for length selection
+ */
+function handleLengthArrowKey(
+  e: KeyboardEvent,
+  state: GameState,
+  handlers: { choose: (n: number) => void }
+): boolean {
   if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
     e.preventDefault();
     handlers.choose(LENGTHS[(state.lengthIndex + LENGTHS.length - 1) % LENGTHS.length]!);
@@ -125,6 +131,20 @@ function handleLengthSelection(
     handlers.choose(LENGTHS[(state.lengthIndex + 1) % LENGTHS.length]!);
     return true;
   }
+
+  return false;
+}
+
+/**
+ * Handle length selection step
+ */
+function handleLengthSelection(
+  e: KeyboardEvent,
+  state: GameState,
+  handlers: { choose: (n: number) => void; start: () => void }
+): boolean {
+  if (handleLengthNumericKey(e, handlers)) return true;
+  if (handleLengthArrowKey(e, state, handlers)) return true;
 
   if (e.key === "Enter" || e.key === " ") {
     e.preventDefault();

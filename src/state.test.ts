@@ -6,49 +6,9 @@ import {
   saveGameState,
   loadSavedGameState
 } from "./state";
-import type { Match, MatchResult } from "./game/game";
-import type { Judoka } from "./api/types";
+import { createMockJudoka, createMockMatch, createMockMatchResult } from "./test/mocks";
 
 // jsdom provides localStorage and sessionStorage automatically
-
-// Helper to create mock judoka for testing
-function createMockJudoka(id: string): Judoka {
-  return {
-    id,
-    slug: id,
-    firstname: "Test",
-    surname: "Fighter",
-    country: "Japan",
-    countryCode: "JP",
-    weightClass: "-73",
-    stats: { power: 5, speed: 5, technique: 5, kumikata: 5, newaza: 5 }
-  };
-}
-
-// Helper to create mock match for testing
-function createMockMatch(): Match {
-  return {
-    player: createMockJudoka("player"),
-    opponent: createMockJudoka("opponent"),
-    phase: "selecting",
-    scores: { player: 0, opponent: 0 },
-    target: 3,
-    matchNumber: 1,
-    mode: "classic",
-    winner: null
-  };
-}
-
-// Helper to create mock match result
-function createMockMatchResult(): MatchResult {
-  return {
-    match: createMockMatch(),
-    outcome: "player",
-    stat: "power",
-    playerValue: 8,
-    opponentValue: 5
-  };
-}
 
 describe("State Management", () => {
   beforeEach(() => {

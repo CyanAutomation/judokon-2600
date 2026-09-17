@@ -1,37 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { handleChangeEvent } from "./changeHandlers";
-import type { GameState } from "../state";
-
-// Helper to create mock game state
-function createMockGameState(overrides?: Partial<GameState>): GameState {
-  return {
-    match: null,
-    result: null,
-    pendingStat: null,
-    activeSeed: "",
-    activeWeight: undefined,
-    drawBuffer: [],
-    target: 3,
-    lengthIndex: 0,
-    busy: false,
-    errorMessage: "",
-    history: [],
-    division: "absolute",
-    mode: "classic",
-    weight: "random",
-    replaySeed: "",
-    seedMessage: "",
-    setupStep: "length",
-    ...overrides
-  };
-}
-
-// Helper to create mock change event
-function createChangeEvent(target: HTMLElement): Event {
-  const event = new Event("change", { bubbles: true });
-  Object.defineProperty(event, "target", { value: target, enumerable: true });
-  return event;
-}
+import { createMockGameState, createChangeEvent } from "../test/mocks";
 
 describe("handleChangeEvent", () => {
   it("updates state.division when division radio changes to weight", () => {

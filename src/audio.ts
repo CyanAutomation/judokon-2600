@@ -1,7 +1,7 @@
 import type { MatchResult } from "./game/game";
 
 // Sound effect definitions - consolidated to eliminate duplication
-export const SoundEffects = {
+const SoundEffects = {
   KEYBOARD: { frequency: 780, duration: 0.025, volume: 0.014 },
   PLAYER_WIN: [
     { frequency: 880, duration: 0.08, volume: 0.025, delay: 0 },
@@ -31,7 +31,7 @@ export function setSoundEnabled(enabled: boolean): void {
 /**
  * Play a tone at specified frequency and duration
  */
-export function tone(frequency: number, duration: number, volume = 0.025): void {
+function tone(frequency: number, duration: number, volume = 0.025): void {
   if (!soundEnabled) return;
   audioContext ??= new AudioContext();
   if (audioContext.state === "suspended") void audioContext.resume();
