@@ -431,17 +431,6 @@ describe("Main Module - State Orchestration Functions", () => {
   });
 
   describe("Phase progression (next function logic)", () => {
-    it("determines opponent for classic mode (fresh draw)", () => {
-      const state = createMockGameState({
-        mode: "classic",
-        drawBuffer: [createMockJudoka("next-opp")]
-      });
-
-      const nextOpponent = state.drawBuffer[0];
-
-      expect(nextOpponent.id).toBe("next-opp");
-    });
-
     it("keeps player for champion mode", () => {
       const playerJudoka = createMockJudoka("champion-player", { firstname: "Champion" });
       const state = createMockGameState({
@@ -903,6 +892,22 @@ describe("Main Module - Complex Integration Scenarios", () => {
     expect([state.match?.player.id, state.match?.opponent.id]).toEqual(["buffer-0", "buffer-1"]);
     expect(state.drawBuffer.map(({ id }) => id)).toEqual(["buffer-2", "buffer-3", "buffer-4", "buffer-5"]);
     expect(saveSpy).toHaveBeenCalledTimes(1);
+    const [storageKey, serializedState] = saveSpy.mock.calls[0]!;
+    expect(storageKey).toBe("judokon.activeMatch.v1");
+    expect(JSON.parse(serializedState)).toMatchObject({
+      match: {
+        mode: "classic",
+        matchNumber: 3,
+        player: { id: "buffer-0" },
+        opponent: { id: "buffer-1" }
+      },
+      drawBuffer: [
+        { id: "buffer-2" },
+        { id: "buffer-3" },
+        { id: "buffer-4" },
+        { id: "buffer-5" }
+      ]
+    });
   });
 
   it("handles full match flow from start to resolution", async () => {
