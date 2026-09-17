@@ -431,18 +431,6 @@ describe("Main Module - State Orchestration Functions", () => {
   });
 
   describe("Phase progression (next function logic)", () => {
-    it("needs new opponent buffer fill for champion mode when depleted", () => {
-      const state = createMockGameState({
-        mode: "champion",
-        drawBuffer: [],
-        match: createMockMatch({ matchNumber: 5 })
-      });
-
-      const needsRefill = state.drawBuffer.length < 1;
-
-      expect(needsRefill).toBe(true);
-    });
-
     it("needs opponent buffer refill for classic mode when below 2", () => {
       const state = createMockGameState({
         mode: "classic",

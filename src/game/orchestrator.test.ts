@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Judoka } from "../api/types";
 import { createGameState } from "../state";
-import { draw, type OrchestratorDeps } from "./orchestrator";
+import { draw, next, type OrchestratorDeps } from "./orchestrator";
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -90,5 +90,55 @@ describe("draw operation ordering", () => {
     expect(state.busy).toBe(false);
     expect(sessionStorage.getItem("judokon.activeMatch.v1")).toBeNull();
     expect(onMatchReady).not.toHaveBeenCalled();
+  });
+});
+
+describe("next-round draws", () => {
+  beforeEach(() => sessionStorage.clear());
+
+  it("refills a depleted Champion buffer without redrawing either current fighter", async () => {
+    const champion = judoka("champion");
+    const lastOpponent = judoka("last-opponent");
+    const replacements = Array.from({ length: 5 }, (_, index) => judoka(`replacement-${index}`));
+    const client = { drawBatch: vi.fn().mockResolvedValue(replacements) };
+    const match = {
+      player: champion,
+      opponent: lastOpponent,
+      target: 3,
+      matchNumber: 4,
+      scores: { player: 2, opponent: 1 },
+      mode: "champion" as const,
+      phase: "awaitingNext" as const,
+      winner: null
+    };
+    const state = createGameState();
+    state.activeSeed = "champion-run";
+    state.activeWeight = "-73";
+    state.match = match;
+    state.mode = "champion";
+    state.drawBuffer = [];
+    const deps = { client, render: vi.fn() } as unknown as OrchestratorDeps;
+
+    await next(state, match, deps);
+
+    expect(client.drawBatch).toHaveBeenCalledOnce();
+    expect(client.drawBatch).toHaveBeenCalledWith(
+      "champion-run:buffer:5",
+      5,
+      "-73",
+      [champion.id, lastOpponent.id]
+    );
+    expect(state.match).toMatchObject({
+      player: { id: champion.id },
+      opponent: { id: "replacement-0" },
+      matchNumber: 5,
+      phase: "selecting"
+    });
+    expect(state.drawBuffer.map(({ id }) => id)).toEqual([
+      "replacement-1",
+      "replacement-2",
+      "replacement-3",
+      "replacement-4"
+    ]);
   });
 });
