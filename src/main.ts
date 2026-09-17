@@ -9,6 +9,7 @@ import { createGameState, loadSavedGameState, persistPreferences, type GameState
 import { renderApp } from "./ui/render";
 import type { Match } from "./game/game";
 import { start, next, resolve, copyReplaySeed, clearAndExit, chooseLength, handleSetupStepClick, handleOpenSeedModal, handleCloseSeedModal, handleSaveReplaySeed, handleToggleSound, handleKeyboardMoveCursor, handleKeyboardCloseSeedModal, type OrchestratorDeps } from "./game/orchestrator";
+import { shouldHandleKeyboardEvent, shouldPlayKeyboardTick } from "./ui/keyboardGuards";
 
 const app = document.querySelector<HTMLDivElement>("#app");
 if (!app) throw new Error("Application root is missing");
@@ -102,19 +103,18 @@ function createMatchKeyboardHandlers() {
 }
 
 /**
- * Check if a key should trigger keyboard tick sound
+ * Check if this keyboard event is an escape in the seed modal (has closure access to state)
  */
-function shouldPlayKeyboardTick(key: string): boolean {
-  return /^[1-5]$/.test(key) || 
-    ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Enter", " ", "Escape"].includes(key) || 
-    ["a", "w", "c", "h", "q"].includes(key.toLowerCase());
+function isSeedModalEscapeLocal(e: KeyboardEvent): boolean {
+  return state.seedModalOpen === true && e.key === "Escape";
 }
 
 /**
- * Check if keyboard event target is an editable input
+ * Handle escape key press in seed modal
  */
-function isEditableInput(target: EventTarget | null): boolean {
-  return (target as HTMLElement)?.matches("input:not(.choice-input), select") ?? false;
+function handleSeedModalEscape(e: KeyboardEvent): void {
+  e.preventDefault();
+  handleKeyboardCloseSeedModal(state, deps);
 }
 
 /**
@@ -122,14 +122,13 @@ function isEditableInput(target: EventTarget | null): boolean {
  */
 function handleKeyboardEvent(e: KeyboardEvent): void {
   // Handle escape in seed modal
-  if (state.seedModalOpen && e.key === "Escape") {
-    e.preventDefault();
-    handleKeyboardCloseSeedModal(state, deps);
+  if (isSeedModalEscapeLocal(e)) {
+    handleSeedModalEscape(e);
     return;
   }
 
   // Let editable inputs handle their own keys
-  if (isEditableInput(e.target)) return;
+  if (!shouldHandleKeyboardEvent(e)) return;
 
   // Play keyboard tick for navigation keys
   if (shouldPlayKeyboardTick(e.key)) keyboardTick();
