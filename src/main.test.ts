@@ -431,17 +431,6 @@ describe("Main Module - State Orchestration Functions", () => {
   });
 
   describe("Match resolution (resolve function logic)", () => {
-    it("validates state before processing resolution", () => {
-      const state = createMockGameState({
-        match: createMockMatch({ phase: "selecting" }),
-        pendingStat: null
-      });
-
-      const isValid = state.match && state.match.phase === "selecting" && !state.pendingStat;
-
-      expect(isValid).toBe(true);
-    });
-
     it("rejects resolution when match is null", () => {
       const state = createMockGameState({ match: null });
 
@@ -473,10 +462,20 @@ describe("Main Module - State Orchestration Functions", () => {
 
     it("resolves a selecting match after the configured delay", () => {
       vi.useFakeTimers();
-      const match = createMockMatch({ phase: "selecting" });
-      const state = createMockGameState({ match });
+      const match = createMockMatch({
+        phase: "selecting",
+        scores: { player: 1, opponent: 1 },
+        player: createMockJudoka("player", {
+          stats: { power: 9, speed: 5, technique: 6, kumikata: 7, newaza: 6 }
+        }),
+        opponent: createMockJudoka("opponent", {
+          stats: { power: 4, speed: 5, technique: 6, kumikata: 7, newaza: 6 }
+        })
+      });
+      const state = createMockGameState({ match, pendingStat: null });
       const render = vi.fn();
       const deps: OrchestratorDeps = { client: new BudokonClient(), render };
+      const saveSpy = vi.spyOn(Storage.prototype, "setItem");
 
       resolve(state, match, "power", deps);
 
@@ -495,14 +494,20 @@ describe("Main Module - State Orchestration Functions", () => {
 
       expect(state.pendingStat).toBeNull();
       expect(state.result).toMatchObject({
-        outcome: "draw",
+        outcome: "player",
         stat: "power",
-        playerValue: 8,
-        opponentValue: 8
+        playerValue: 9,
+        opponentValue: 4
       });
       expect(state.match?.phase).toBe("awaitingNext");
+      expect(state.match?.scores).toEqual({ player: 2, opponent: 1 });
       expect(state.history).toHaveLength(1);
-      expect(state.history[0]).toEqual({ outcome: "draw", stat: "power", roundNumber: 1 });
+      expect(state.history[0]).toEqual({ outcome: "player", stat: "power", roundNumber: 1 });
+      expect(saveSpy).toHaveBeenCalledOnce();
+      expect(saveSpy).toHaveBeenCalledWith(
+        "judokon.activeMatch.v1",
+        expect.stringContaining('"stat":"power"')
+      );
       expect(render).toHaveBeenCalledTimes(2);
 
       const secondMatch = createMockMatch({ matchNumber: 2 });
@@ -513,6 +518,7 @@ describe("Main Module - State Orchestration Functions", () => {
 
       expect(state.history).toHaveLength(2);
       expect(state.history[1]).toEqual({ outcome: "draw", stat: "speed", roundNumber: 2 });
+      expect(saveSpy).toHaveBeenCalledTimes(2);
       expect(render).toHaveBeenCalledTimes(4);
     });
   });
