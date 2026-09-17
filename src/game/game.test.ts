@@ -82,17 +82,21 @@ describe("Classic Battle game engine", () => {
   });
   it("keeps the player's judoka and replaces the opponent in Champion mode", () => {
     const resolved = selectStat(createMatch(player, opponent, 3, 1, { player: 0, opponent: 0 }, "champion"), "power").match;
+    const bufferedOpponent = { ...nextOpponent, id: "buffered-opponent" };
 
-    const next = nextMatch(resolved, nextPlayer, nextOpponent);
+    const next = nextMatch(resolved, nextPlayer, bufferedOpponent);
     expect(next).toMatchObject({
       player,
-      opponent: nextOpponent,
+      opponent: bufferedOpponent,
       target: 3,
       matchNumber: 2,
       scores: { player: 1, opponent: 0 },
       mode: "champion",
       phase: "selecting"
     });
+    expect(next.player.id).toBe("player");
+    expect(next.opponent.id).toBe("buffered-opponent");
+    expect(next.opponent.id).not.toBe(opponent.id);
   });
   it("formats the score and identifies the most-selected decisive stat", () => {
     const history: MatchHistoryItem[] = [
