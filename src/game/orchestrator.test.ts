@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Judoka } from "../api/types";
 import { createGameState } from "../state";
-import { draw, next, type OrchestratorDeps } from "./orchestrator";
+import { draw, next, handleSetupStepClick, handleOpenSeedModal, handleCloseSeedModal, handleSaveReplaySeed, handleToggleSound, handleKeyboardMoveCursor, handleKeyboardCloseSeedModal, type OrchestratorDeps } from "./orchestrator";
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -218,5 +218,102 @@ describe("next-round draws", () => {
       "replacement-3",
       "replacement-4"
     ]);
+  });
+});
+
+describe("event handlers", () => {
+  beforeEach(() => sessionStorage.clear());
+
+  it("handleSetupStepClick updates step and cursor", () => {
+    const state = createGameState();
+    const render = vi.fn();
+    const deps = { client: {}, render } as unknown as OrchestratorDeps;
+
+    handleSetupStepClick(state, "length", deps);
+
+    expect(state.setupStep).toBe("length");
+    expect(state.setupCursor).toBe(state.lengthIndex);
+    expect(render).toHaveBeenCalledOnce();
+  });
+
+  it("handleOpenSeedModal sets modal state and draft", () => {
+    const state = createGameState();
+    state.replaySeed = "test-seed";
+    const render = vi.fn();
+    const deps = { client: {}, render } as unknown as OrchestratorDeps;
+
+    handleOpenSeedModal(state, deps);
+
+    expect(state.seedModalOpen).toBe(true);
+    expect(state.seedDraft).toBe("test-seed");
+    expect(render).toHaveBeenCalledOnce();
+  });
+
+  it("handleCloseSeedModal closes modal without saving", () => {
+    const state = createGameState();
+    state.seedModalOpen = true;
+    state.replaySeed = "original";
+    state.seedDraft = "modified";
+    const render = vi.fn();
+    const deps = { client: {}, render } as unknown as OrchestratorDeps;
+
+    handleCloseSeedModal(state, deps);
+
+    expect(state.seedModalOpen).toBe(false);
+    expect(state.replaySeed).toBe("original");
+    expect(state.seedDraft).toBe("modified");
+    expect(render).toHaveBeenCalledOnce();
+  });
+
+  it("handleSaveReplaySeed saves and closes modal", () => {
+    const state = createGameState();
+    state.seedModalOpen = true;
+    const render = vi.fn();
+    const deps = { client: {}, render } as unknown as OrchestratorDeps;
+
+    handleSaveReplaySeed(state, "  new-seed  ", deps);
+
+    expect(state.replaySeed).toBe("new-seed");
+    expect(state.seedDraft).toBe("new-seed");
+    expect(state.seedModalOpen).toBe(false);
+    expect(render).toHaveBeenCalledOnce();
+  });
+
+  it("handleToggleSound toggles sound enabled in localStorage", () => {
+    localStorage.clear();
+    localStorage.setItem("judokon.soundEnabled", "false");
+    const setSoundEnabled = vi.fn();
+    const render = vi.fn();
+    const deps = { client: {}, render } as unknown as OrchestratorDeps;
+
+    handleToggleSound(setSoundEnabled, deps);
+
+    expect(setSoundEnabled).toHaveBeenCalledWith(true);
+    expect(localStorage.getItem("judokon.soundEnabled")).toBe("true");
+    expect(render).toHaveBeenCalledOnce();
+  });
+
+  it("handleKeyboardMoveCursor updates cursor position", () => {
+    const state = createGameState();
+    state.setupStep = "mode";
+    const render = vi.fn();
+    const deps = { client: {}, render } as unknown as OrchestratorDeps;
+
+    handleKeyboardMoveCursor(state, 1, deps);
+
+    expect(state.setupCursor).toBe(1);
+    expect(render).toHaveBeenCalledOnce();
+  });
+
+  it("handleKeyboardCloseSeedModal closes modal from keyboard", () => {
+    const state = createGameState();
+    state.seedModalOpen = true;
+    const render = vi.fn();
+    const deps = { client: {}, render } as unknown as OrchestratorDeps;
+
+    handleKeyboardCloseSeedModal(state, deps);
+
+    expect(state.seedModalOpen).toBe(false);
+    expect(render).toHaveBeenCalledOnce();
   });
 });

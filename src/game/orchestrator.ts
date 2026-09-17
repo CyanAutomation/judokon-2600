@@ -10,7 +10,7 @@ import { BudokonClient } from "../api/budokon";
 import { type Judoka, type StatKey } from "../api/types";
 import { createMatch, nextMatch, selectStat, type Match } from "./game";
 import { outcomeBeep } from "../audio";
-import { clearSavedMatch, persistPreferences, saveGameState, type GameState } from "../state";
+import { clearSavedMatch, persistPreferences, saveGameState, type GameState, type SetupStep } from "../state";
 
 const DRAW_BUFFER_SIZE = 6;
 export const MATCH_RESOLUTION_DELAY_MS = 650;
@@ -297,4 +297,93 @@ export function chooseLength(state: GameState, n: number, deps: OrchestratorDeps
   state.lengthIndex = lengths.indexOf(n as (typeof lengths)[number]);
   deps.render();
   document.querySelector<HTMLInputElement>(`[data-length="${n}"]`)?.focus();
+}
+
+/**
+ * Handle setup step transitions (mode, division, weight, length)
+ * Updates step and cursor, renders, and focuses the appropriate element
+ */
+export function handleSetupStepClick(state: GameState, setupStep: SetupStep, deps: OrchestratorDeps): void {
+  state.setupStep = setupStep;
+  state.setupCursor = setupStep === "length" ? state.lengthIndex : 0;
+  deps.render();
+  const focusTarget = 
+    setupStep === "mode"
+      ? "#mode-classic"
+      : setupStep === "division"
+        ? "#division-absolute"
+        : setupStep === "weight"
+          ? "#weight-class"
+          : "#length-3";
+  document.querySelector<HTMLElement>(focusTarget)?.focus();
+}
+
+/**
+ * Open the replay seed modal
+ * Sets up draft and focuses the input field
+ */
+export function handleOpenSeedModal(state: GameState, deps: OrchestratorDeps): void {
+  state.seedDraft = state.replaySeed;
+  state.seedModalOpen = true;
+  deps.render();
+  document.querySelector<HTMLInputElement>("#replay-seed")?.focus();
+}
+
+/**
+ * Close the replay seed modal without saving
+ * Returns focus to the seed button
+ */
+export function handleCloseSeedModal(state: GameState, deps: OrchestratorDeps): void {
+  state.seedModalOpen = false;
+  deps.render();
+  document.querySelector<HTMLButtonElement>("#seed-button")?.focus();
+}
+
+/**
+ * Save the replay seed and close the modal
+ * Trims the seed value and persists state
+ */
+export function handleSaveReplaySeed(state: GameState, seed: string, deps: OrchestratorDeps): void {
+  state.replaySeed = seed.trim();
+  state.seedDraft = state.replaySeed;
+  state.seedModalOpen = false;
+  deps.render();
+  document.querySelector<HTMLButtonElement>("#seed-button")?.focus();
+}
+
+/**
+ * Toggle sound enabled state
+ * Persists to localStorage and focuses the sound button
+ */
+export function handleToggleSound(setSoundEnabled: (enabled: boolean) => void, deps: OrchestratorDeps): void {
+  const enabled = localStorage.getItem("judokon.soundEnabled") !== "true";
+  setSoundEnabled(enabled);
+  localStorage.setItem("judokon.soundEnabled", String(enabled));
+  deps.render();
+  document.querySelector<HTMLButtonElement>("#sound-enabled")?.focus();
+}
+
+/**
+ * Move keyboard cursor for navigation
+ * Used for arrow key navigation in setup steps
+ */
+export function handleKeyboardMoveCursor(state: GameState, cursor: number, deps: OrchestratorDeps): void {
+  state.setupCursor = cursor;
+  deps.render();
+  const selector = state.setupStep === "mode"
+    ? "[data-intro-mode]"
+    : state.setupStep === "division"
+      ? "[data-division]"
+      : "[data-length]";
+  document.querySelectorAll<HTMLInputElement>(selector)[cursor]?.focus();
+}
+
+/**
+ * Close seed modal from keyboard (Escape key)
+ * Returns focus to the seed button
+ */
+export function handleKeyboardCloseSeedModal(state: GameState, deps: OrchestratorDeps): void {
+  state.seedModalOpen = false;
+  deps.render();
+  document.querySelector<HTMLButtonElement>("#seed-button")?.focus();
 }

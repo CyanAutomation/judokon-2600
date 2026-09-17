@@ -7,6 +7,64 @@
 
 import type { GameState } from "../state";
 
+/**
+ * Handle division selection (absolute vs weight class)
+ */
+function handleDivisionChange(
+  input: HTMLInputElement,
+  state: GameState,
+  root: HTMLElement,
+  onUpdate: { render: () => void; persistPreferences: () => void }
+): void {
+  state.division = input.dataset.division === "weight" ? "weight" : "absolute";
+  state.setupStep = state.division === "weight" ? "weight" : "length";
+  onUpdate.persistPreferences();
+  onUpdate.render();
+  root.querySelector<HTMLElement>(state.division === "weight" ? "#weight-class" : "#length-3")?.focus();
+}
+
+/**
+ * Handle intro mode selection (classic vs champion)
+ */
+function handleModeChange(
+  input: HTMLInputElement,
+  state: GameState,
+  root: HTMLElement,
+  onUpdate: { render: () => void; persistPreferences: () => void }
+): void {
+  state.mode = input.dataset.introMode === "champion" ? "champion" : "classic";
+  state.setupStep = "division";
+  onUpdate.persistPreferences();
+  onUpdate.render();
+  root.querySelector<HTMLInputElement>("#division-absolute")?.focus();
+}
+
+/**
+ * Handle seed input change (replay seed or draft)
+ */
+function handleSeedChange(input: HTMLInputElement, state: GameState): void {
+  if (state.seedModalOpen) state.seedDraft = input.value;
+  else state.replaySeed = input.value;
+}
+
+/**
+ * Handle weight class selection
+ */
+function handleWeightChange(input: HTMLInputElement, state: GameState): void {
+  state.weight = input.value;
+}
+
+/**
+ * Handle sound toggle
+ */
+function handleSoundChange(
+  input: HTMLInputElement,
+  onUpdate: { setSoundEnabled: (enabled: boolean) => void }
+): void {
+  onUpdate.setSoundEnabled(input.checked);
+  localStorage.setItem("judokon.soundEnabled", String(input.checked));
+}
+
 export function handleChangeEvent(
   e: Event,
   state: GameState,
@@ -15,21 +73,14 @@ export function handleChangeEvent(
 ): void {
   const input = e.target as HTMLInputElement;
 
+  // Route to specific handlers based on input attributes
   if (input.dataset.division && input.checked) {
-    state.division = input.dataset.division === "weight" ? "weight" : "absolute";
-    state.setupStep = state.division === "weight" ? "weight" : "length";
-    onUpdate.persistPreferences();
-    onUpdate.render();
-    root.querySelector<HTMLElement>(state.division === "weight" ? "#weight-class" : "#length-3")?.focus();
+    handleDivisionChange(input, state, root, onUpdate);
     return;
   }
 
   if (input.dataset.introMode && input.checked) {
-    state.mode = input.dataset.introMode === "champion" ? "champion" : "classic";
-    state.setupStep = "division";
-    onUpdate.persistPreferences();
-    onUpdate.render();
-    root.querySelector<HTMLInputElement>("#division-absolute")?.focus();
+    handleModeChange(input, state, root, onUpdate);
     return;
   }
 
@@ -39,18 +90,16 @@ export function handleChangeEvent(
   }
 
   if (input.id === "replay-seed") {
-    if (state.seedModalOpen) state.seedDraft = input.value;
-    else state.replaySeed = input.value;
+    handleSeedChange(input, state);
     return;
   }
 
   if (input.id === "weight-class") {
-    state.weight = input.value;
-  }
-
-  if (input.id === "sound-enabled") {
-    onUpdate.setSoundEnabled(input.checked);
-    localStorage.setItem("judokon.soundEnabled", String(input.checked));
+    handleWeightChange(input, state);
+  } else if (input.id === "sound-enabled") {
+    handleSoundChange(input, onUpdate);
+  } else {
+    return;
   }
 
   onUpdate.persistPreferences();
