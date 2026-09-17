@@ -73,11 +73,11 @@ export function stringifySavedMatch(value: SavedMatch): string { return JSON.str
 const savedMatchSchema = {
   version: (v: unknown) => v === 1,
   match: isMatchOrNull,
-  result: (v: unknown) => v === null || (v && typeof v === "object"),
+  result: (v: unknown) => (v === null || (v && typeof v === "object")) as boolean,
   history: isHistory,
   activeSeed: (v: unknown) => typeof v === "string",
-  activeWeight: (v: unknown) => v === undefined || typeof v === "string",
-  drawBuffer: (v: unknown) => Array.isArray(v) && v.every(isJudoka)
+  activeWeight: (v: unknown) => (v === undefined || typeof v === "string") as boolean,
+  drawBuffer: (v: unknown) => (Array.isArray(v) && v.every(isJudoka)) as boolean
 };
 
 export function parseSavedMatch(value: string | null): SavedMatch | null {
