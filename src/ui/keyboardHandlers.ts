@@ -186,6 +186,52 @@ export function handleIntroKeyboard(
 }
 
 /**
+ * Handle numeric stat selection (1-5) during stat selection phase
+ */
+function handleStatSelection(e: KeyboardEvent, handlers: { resolve: (s: StatKey) => void }): boolean {
+  if (e.key >= "1" && e.key <= "5") {
+    handlers.resolve(STAT_KEYS[Number(e.key) - 1]!);
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Handle next round action during awaiting-next phase
+ */
+function handleNextRound(e: KeyboardEvent, root: HTMLElement, state: GameState): boolean {
+  if ((e.key === "Enter" || e.key === " ") && !state.busy) {
+    e.preventDefault();
+    root.querySelector<HTMLButtonElement>("#next")?.click();
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Handle replay action during match-over phase
+ */
+function handleReplay(e: KeyboardEvent, root: HTMLElement): boolean {
+  if (e.key === "Enter" || e.key === " ") {
+    e.preventDefault();
+    root.querySelector<HTMLButtonElement>("#replay")?.click();
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Handle quit action (available in any phase)
+ */
+function handleQuitMatch(e: KeyboardEvent, root: HTMLElement): boolean {
+  if (e.key.toLowerCase() === "q" || e.key === "Escape") {
+    root.querySelector<HTMLButtonElement>("#quit")?.click();
+    return true;
+  }
+  return false;
+}
+
+/**
  * Handles keyboard input during an active match.
  * Supports: numbered keys for stat selection (1-5), Enter for next round, Escape/Q to quit.
  */
@@ -198,21 +244,19 @@ export function handleMatchKeyboard(
   if (!state.match) return;
   const { phase } = state.match;
 
-  if (e.key >= "1" && e.key <= "5" && phase === "selecting") {
-    handlers.resolve(STAT_KEYS[Number(e.key) - 1]!);
-  }
+  // Handle quit (works in any phase)
+  if (handleQuitMatch(e, root)) return;
 
-  if ((e.key === "Enter" || e.key === " ") && phase === "awaitingNext" && !state.busy) {
-    e.preventDefault();
-    root.querySelector<HTMLButtonElement>("#next")?.click();
-  }
-
-  if ((e.key === "Enter" || e.key === " ") && phase === "matchOver") {
-    e.preventDefault();
-    root.querySelector<HTMLButtonElement>("#replay")?.click();
-  }
-
-  if (e.key.toLowerCase() === "q" || e.key === "Escape") {
-    root.querySelector<HTMLButtonElement>("#quit")?.click();
+  // Handle phase-specific actions
+  switch (phase) {
+    case "selecting":
+      handleStatSelection(e, handlers);
+      break;
+    case "awaitingNext":
+      handleNextRound(e, root, state);
+      break;
+    case "matchOver":
+      handleReplay(e, root);
+      break;
   }
 }

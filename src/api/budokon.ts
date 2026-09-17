@@ -43,6 +43,16 @@ export class BudokonClient {
     );
   }
 
+  /**
+   * Check if an error is a timeout/abort error
+   */
+  private static isTimeoutError(error: unknown): boolean {
+    return (
+      (error instanceof Error && error.message === "Aborted") ||
+      (typeof error === "object" && error !== null && (error as Record<string, unknown>).name === "AbortError")
+    );
+  }
+
   private async performDraw(
     seed: string,
     count: number,
@@ -66,11 +76,7 @@ export class BudokonClient {
       const body = await response.json();
       return this.validator.validateJudokaArray(body, count);
     } catch (error) {
-      // Check for abort/timeout error (handles both Error and DOMException)
-      if (
-        (error instanceof Error && error.message === "Aborted") ||
-        (typeof error === "object" && error !== null && (error as Record<string, unknown>).name === "AbortError")
-      ) {
+      if (BudokonClient.isTimeoutError(error)) {
         throw new Error("Judoka draw timed out");
       }
       throw error;
