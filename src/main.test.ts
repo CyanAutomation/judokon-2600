@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { MatchResult } from "./game/game";
+import type { Match, MatchResult } from "./game/game";
 import type { Judoka } from "./api/types";
 import { BudokonClient } from "./api/budokon";
+import * as audio from "./audio";
 import { chooseLength, copyReplaySeed, MATCH_RESOLUTION_DELAY_MS, next, resolve, selectWeightForSeed, start, type OrchestratorDeps } from "./game/orchestrator";
 import { handleClickEvent } from "./ui/eventHandlers";
 import { renderApp } from "./ui/render";
@@ -366,33 +367,30 @@ describe("Main Module - State Orchestration Functions", () => {
   });
 
   describe("Match resolution (resolve function logic)", () => {
-    it("rejects resolution when match is null", () => {
-      const state = createMockGameState({ match: null });
+    it.each([
+      { name: "match is null", match: null, pendingStat: null },
+      { name: "phase is not selecting", match: createMockMatch({ phase: "awaitingNext" }), pendingStat: null },
+      { name: "a selection is already pending", match: createMockMatch(), pendingStat: "power" as const }
+    ])("rejects resolution when $name without state changes or side effects", ({ match, pendingStat }) => {
+      vi.useFakeTimers();
+      const state = createMockGameState({ match, pendingStat });
+      const stateBeforeResolution = structuredClone(state);
+      const client = new BudokonClient();
+      const drawBatch = vi.spyOn(client, "drawBatch");
+      const render = vi.fn();
+      const onMatchReady = vi.fn();
+      const save = vi.spyOn(Storage.prototype, "setItem");
+      const playOutcome = vi.spyOn(audio, "outcomeBeep");
 
-      const isValid = state.match?.phase === "selecting" && !state.pendingStat;
+      resolve(state, match as Match, "speed", { client, render, onMatchReady });
 
-      expect(isValid).toBe(false);
-    });
-
-    it("rejects resolution when phase is not selecting", () => {
-      const state = createMockGameState({
-        match: createMockMatch({ phase: "awaitingNext" })
-      });
-
-      const isValid = state.match?.phase === "selecting";
-
-      expect(isValid).toBe(false);
-    });
-
-    it("rejects resolution when already pending", () => {
-      const state = createMockGameState({
-        match: createMockMatch({ phase: "selecting" }),
-        pendingStat: "power"
-      });
-
-      const isValid = !state.pendingStat;
-
-      expect(isValid).toBe(false);
+      expect(state).toEqual(stateBeforeResolution);
+      expect(render).not.toHaveBeenCalled();
+      expect(onMatchReady).not.toHaveBeenCalled();
+      expect(drawBatch).not.toHaveBeenCalled();
+      expect(save).not.toHaveBeenCalled();
+      expect(playOutcome).not.toHaveBeenCalled();
+      expect(vi.getTimerCount()).toBe(0);
     });
 
     it("resolves a selecting match after the configured delay", () => {
