@@ -28,7 +28,7 @@ jobs:
 
     # Configure KASEKI_API_TOKEN as a secret and KASEKI_BASE_URL as an
     # environment variable.
-    environment: kaseki-dry-sweep
+    environment: kaseki-docs
 
     env:
       KASEKI_BASE_URL: ${{ vars.KASEKI_BASE_URL }}
