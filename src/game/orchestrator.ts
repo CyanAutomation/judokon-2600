@@ -1,6 +1,6 @@
 /**
  * Game State Orchestration Functions
- * 
+ *
  * Pure orchestration logic for state transitions, API calls, and side effects.
  * These functions manage game flow (start, draw, next, resolve) and persist state.
  * Separated from rendering to enable testing and reusability.
@@ -11,11 +11,10 @@ import { type Judoka, type StatKey } from "../api/types";
 import { createMatch, nextMatch, selectStat, type Match } from "./game";
 import { outcomeBeep } from "../audio";
 import { clearSavedMatch, persistPreferences, saveGameState, type GameState, type SetupStep } from "../state";
+import { weights, lengths } from "../ui/constants";
 
 const DRAW_BUFFER_SIZE = 6;
 export const MATCH_RESOLUTION_DELAY_MS = 650;
-const weights = ["-48", "-52", "-57", "-60", "-63", "-66", "-70", "-73", "-78", "-81", "-90", "-100", "+78", "+100"] as const;
-const lengths = [3, 5, 10] as const;
 let nextOperationId = 0;
 const currentOperations = new WeakMap<GameState, number>();
 
@@ -307,7 +306,7 @@ export function handleSetupStepClick(state: GameState, setupStep: SetupStep, dep
   state.setupStep = setupStep;
   state.setupCursor = setupStep === "length" ? state.lengthIndex : 0;
   deps.render();
-  const focusTarget = 
+  const focusTarget =
     setupStep === "mode"
       ? "#mode-classic"
       : setupStep === "division"
