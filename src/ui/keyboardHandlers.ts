@@ -1,6 +1,6 @@
 /**
  * Keyboard Event Handlers
- * 
+ *
  * Handles keyboard input during setup (intro) and match phases.
  * Supports navigation, selection, and action shortcuts.
  */
@@ -10,7 +10,7 @@ import type { StatKey } from "../api/types";
 import { STAT_KEYS } from "../api/types";
 import type { SetupStep } from "../state";
 
-const LENGTHS = [3, 5, 10] as const;
+import { lengths } from "./helpers";
 
 /**
  * Configuration for a cursor-based step handler
@@ -106,7 +106,7 @@ function handleWeightSelection(e: KeyboardEvent, root: HTMLElement): boolean {
 function handleLengthNumericKey(e: KeyboardEvent, handlers: { choose: (n: number) => void }): boolean {
   if (e.key >= "1" && e.key <= "3") {
     e.preventDefault();
-    handlers.choose(LENGTHS[Number(e.key) - 1]!);
+    handlers.choose(lengths[Number(e.key) - 1]!);
     return true;
   }
   return false;
@@ -122,13 +122,13 @@ function handleLengthArrowKey(
 ): boolean {
   if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
     e.preventDefault();
-    handlers.choose(LENGTHS[(state.lengthIndex + LENGTHS.length - 1) % LENGTHS.length]!);
+    handlers.choose(lengths[(state.lengthIndex + lengths.length - 1) % lengths.length]!);
     return true;
   }
 
   if (e.key === "ArrowRight" || e.key === "ArrowDown") {
     e.preventDefault();
-    handlers.choose(LENGTHS[(state.lengthIndex + 1) % LENGTHS.length]!);
+    handlers.choose(lengths[(state.lengthIndex + 1) % lengths.length]!);
     return true;
   }
 
