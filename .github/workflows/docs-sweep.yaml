@@ -24,7 +24,7 @@ jobs:
     timeout-minutes: 200
     # Configure KASEKI_API_TOKEN as a secret and KASEKI_BASE_URL as an
     # environment variable. Restrict deployments to main and require a reviewer.
-    environment: kaseki-docs-sweep
+    environment: kaseki-agent
     env:
       KASEKI_BASE_URL: ${{ vars.KASEKI_BASE_URL }}
       KASEKI_API_TOKEN: ${{ secrets.KASEKI_API_TOKEN }}
