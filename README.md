@@ -45,7 +45,7 @@ Run the complete local quality gate with:
 npm run check
 ```
 
-This runs lint, test, and build in sequence (`tsc -p tsconfig.app.json && vite build`).
+This runs lint, test, and build in sequence (the build step compiles with `tsc -p tsconfig.app.json` then produces the bundle with `vite build`).
 
 ## Vercel deployment
 
