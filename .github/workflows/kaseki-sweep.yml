@@ -23,7 +23,8 @@ jobs:
   sweep:
     name: Run Kaseki ${{ inputs.sweep_name }} sweep
     runs-on: ubuntu-latest
-    timeout-minutes: 200
+    # Leave enough time for setup and result publication around the 175-minute poll.
+    timeout-minutes: 220
     environment: kaseki-agent
     env:
       KASEKI_BASE_URL: ${{ vars.KASEKI_BASE_URL }}
@@ -42,6 +43,8 @@ jobs:
           set -euo pipefail
           : "${KASEKI_BASE_URL:?Configure KASEKI_BASE_URL as an environment variable}"
           : "${KASEKI_API_TOKEN:?Configure KASEKI_API_TOKEN as an environment secret}"
+          # Register the token explicitly so any value echoed by a failed tool is redacted.
+          printf '::add-mask::%s\n' "$KASEKI_API_TOKEN"
           if [[ ! "$KASEKI_BASE_URL" =~ ^https:// ]]; then
             echo "::error title=Invalid Kaseki URL::KASEKI_BASE_URL must use HTTPS"
             exit 1
@@ -134,16 +137,8 @@ jobs:
             echo "::error title=Invalid Kaseki run ID::Controller returned an invalid run ID"
             exit 1
           fi
-          delimiter="$(uuidgen)"
-          if [[ "$run_id" == *"$delimiter"* ]]; then
-            echo "::error title=Delimiter collision::Generated delimiter appears in run_id"
-            exit 1
-          fi
-          {
-            echo "run_id<<$delimiter"
-            echo "$run_id"
-            echo "$delimiter"
-          } >> "$GITHUB_OUTPUT"
+          # The validation above makes run_id safe for GitHub's single-line format.
+          printf 'run_id=%s\n' "$run_id" >> "$GITHUB_OUTPUT"
 
       - name: Wait for Kaseki completion
         id: wait
