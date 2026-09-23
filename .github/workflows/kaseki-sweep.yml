@@ -135,6 +135,10 @@ jobs:
             exit 1
           fi
           delimiter="$(uuidgen)"
+          if [[ "$run_id" == *"$delimiter"* ]]; then
+            echo "::error title=Delimiter collision::Generated delimiter appears in run_id"
+            exit 1
+          fi
           {
             echo "run_id<<$delimiter"
             echo "$run_id"
