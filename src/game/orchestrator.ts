@@ -12,6 +12,7 @@ import { createMatch, nextMatch, selectStat, type Match } from "./game";
 import { outcomeBeep } from "../audio";
 import { clearSavedMatch, persistPreferences, saveGameState, type GameState, type SetupStep } from "../state";
 import { weights, lengths } from "../ui/constants";
+import { getSoundEnabled, setSoundEnabledPersisted } from "../ui/helpers/soundStorage";
 
 const DRAW_BUFFER_SIZE = 6;
 export const MATCH_RESOLUTION_DELAY_MS = 650;
@@ -355,9 +356,9 @@ export function handleSaveReplaySeed(state: GameState, seed: string, deps: Orche
  * Persists to localStorage and focuses the sound button
  */
 export function handleToggleSound(setSoundEnabled: (enabled: boolean) => void, deps: OrchestratorDeps): void {
-  const enabled = localStorage.getItem("judokon.soundEnabled") !== "true";
+  const enabled = !getSoundEnabled();
   setSoundEnabled(enabled);
-  localStorage.setItem("judokon.soundEnabled", String(enabled));
+  setSoundEnabledPersisted(enabled);
   deps.render();
   document.querySelector<HTMLButtonElement>("#sound-enabled")?.focus();
 }

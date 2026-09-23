@@ -10,6 +10,7 @@ import { renderApp } from "./ui/render";
 import type { Match } from "./game/game";
 import { start, next, resolve, copyReplaySeed, clearAndExit, chooseLength, handleSetupStepClick, handleOpenSeedModal, handleCloseSeedModal, handleSaveReplaySeed, handleToggleSound, handleKeyboardMoveCursor, handleKeyboardCloseSeedModal, type OrchestratorDeps } from "./game/orchestrator";
 import { shouldHandleKeyboardEvent, shouldPlayKeyboardTick } from "./ui/keyboardGuards";
+import { getSoundEnabled } from "./ui/helpers/soundStorage";
 
 const app = document.querySelector<HTMLDivElement>("#app");
 if (!app) throw new Error("Application root is missing");
@@ -29,7 +30,7 @@ if (savedMatch) {
 }
 
 // Initialize audio system
-initAudio(localStorage.getItem("judokon.soundEnabled") === "true");
+initAudio(getSoundEnabled());
 
 // Initialize Vercel Speed Insights
 injectSpeedInsights();
