@@ -1,11 +1,12 @@
 /**
  * Change Event Handlers
- * 
+ *
  * Handles input change events (radio buttons, selects, checkboxes).
  * Routes to appropriate handlers based on data attributes and input IDs.
  */
 
 import type { GameState } from "../state";
+import { setSoundEnabledPersisted } from "./helpers/soundStorage";
 
 /**
  * Handle division selection (absolute vs weight class)
@@ -62,7 +63,7 @@ function handleSoundChange(
   onUpdate: { setSoundEnabled: (enabled: boolean) => void }
 ): void {
   onUpdate.setSoundEnabled(input.checked);
-  localStorage.setItem("judokon.soundEnabled", String(input.checked));
+  setSoundEnabledPersisted(input.checked);
 }
 
 export function handleChangeEvent(
