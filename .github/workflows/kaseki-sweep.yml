@@ -91,6 +91,10 @@ jobs:
         run: |
           set -euo pipefail
           idempotency_key="$(tr '[:upper:]' '[:lower:]' < /proc/sys/kernel/random/uuid)"
+          if [[ ! "$idempotency_key" =~ ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$ ]]; then
+            echo "::error title=Invalid UUID generation::Failed to generate valid idempotency key"
+            exit 1
+          fi
           payload="$(
             jq -n \
               --arg repoUrl "$REPO_URL" \
