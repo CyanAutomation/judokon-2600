@@ -172,7 +172,7 @@ jobs:
                 ;;
             esac
           done
-          echo "::error title=Kaseki run timed out::No terminal status after 175 minutes"
+          echo "::error title=Kaseki run timed out::No terminal status after $((POLLING_BUDGET_SECONDS / 60)) minutes"
           exit 1
 
       - name: Publish run details
