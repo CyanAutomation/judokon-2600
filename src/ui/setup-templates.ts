@@ -1,19 +1,20 @@
 /**
  * Setup Screen Templates
- * 
+ *
  * HTML generation for game mode selection, division choice, weight class selection, and match length configuration.
  */
 
 import { primaryButton, quietButton, radioChoice, terminalMenu, utilityButton } from "./controls";
 import { type GameState } from "../state";
 import { createHelpers, lengths, weights } from "./helpers";
+import { getSoundEnabled } from "./helpers/soundStorage";
 import { escapeHtml as esc } from "./utils/escapeHtml";
 
 /**
  * Generate advanced options section
  */
 export function advanced(state: GameState): string {
-  const soundEnabled = localStorage.getItem("judokon.soundEnabled") === "true";
+  const soundEnabled = getSoundEnabled();
   const seedLabel = state.replaySeed ? `Seed: ${state.replaySeed}` : "Seed: Random";
   const dialog = state.seedModalOpen
     ? `<div class="modal-backdrop"><section class="panel seed-dialog" role="dialog" aria-modal="true" aria-labelledby="seed-dialog-title"><p class="eyebrow">Replay setup</p><h2 id="seed-dialog-title">Set replay seed</h2><p>Use the same seed to replay a matchup.</p><label for="replay-seed">Seed<input id="replay-seed" value="${esc(state.seedDraft ?? state.replaySeed)}" placeholder="Leave blank for a fresh draw" autocomplete="off" spellcheck="false" /></label><div class="dialog-actions">${quietButton("cancel-seed", "Cancel", "Esc")}${primaryButton("save-seed", "Use seed", "Enter")}</div></section></div>`
