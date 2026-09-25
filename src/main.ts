@@ -9,7 +9,7 @@ import { createGameState, loadSavedGameState, persistPreferences, type GameState
 import { renderApp } from "./ui/render";
 import type { Match } from "./game/game";
 import { start, next, resolve, copyReplaySeed, clearAndExit, chooseLength, handleSetupStepClick, handleOpenSeedModal, handleCloseSeedModal, handleSaveReplaySeed, handleToggleSound, handleKeyboardMoveCursor, handleKeyboardCloseSeedModal, type OrchestratorDeps } from "./game/orchestrator";
-import { shouldHandleKeyboardEvent, shouldPlayKeyboardTick } from "./ui/keyboardGuards";
+import { isSeedModalEscape, shouldHandleKeyboardEvent, shouldPlayKeyboardTick } from "./ui/keyboardGuards";
 import { getSoundEnabled } from "./ui/helpers/soundStorage";
 
 const app = document.querySelector<HTMLDivElement>("#app");
@@ -102,14 +102,6 @@ function createMatchKeyboardHandlers() {
     keyboardTick
   };
 }
-
-/**
- * Check if this keyboard event is an escape in the seed modal (has closure access to state)
- */
-function isSeedModalEscapeLocal(e: KeyboardEvent): boolean {
-  return state.seedModalOpen === true && e.key === "Escape";
-}
-
 /**
  * Handle escape key press in seed modal
  */
@@ -123,7 +115,7 @@ function handleSeedModalEscape(e: KeyboardEvent): void {
  */
 function handleKeyboardEvent(e: KeyboardEvent): void {
   // Handle escape in seed modal
-  if (isSeedModalEscapeLocal(e)) {
+  if (isSeedModalEscape(e, state)) {
     handleSeedModalEscape(e);
     return;
   }
