@@ -33,8 +33,8 @@ export class BudokonCache {
     this.expirationMs = options.expirationMs ?? DEFAULT_CACHE_EXPIRATION_MS;
     this.clock = options.clock ?? Date.now;
 
-    if (!Number.isSafeInteger(this.maxEntries) || this.maxEntries < 0) {
-      throw new Error("cache maxEntries must be a non-negative integer");
+    if (!Number.isSafeInteger(this.maxEntries) || this.maxEntries < 1) {
+      throw new Error("cache maxEntries must be a positive integer");
     }
     if (!Number.isFinite(this.expirationMs) || this.expirationMs < 0) {
       throw new Error("cache expirationMs must be a non-negative number");
