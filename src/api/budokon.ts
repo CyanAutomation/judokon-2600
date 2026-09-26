@@ -1,5 +1,5 @@
 import type { Judoka } from "./types";
-import { BudokonCache } from "./cache";
+import { BudokonCache, type BudokonCacheOptions } from "./cache";
 import { BudokonRequestBuilder } from "./requestBuilder";
 import { BudokonResponseValidator } from "./responseValidator";
 
@@ -12,9 +12,10 @@ export class BudokonClient {
 
   constructor(
     private readonly fetcher: Fetcher = globalThis.fetch.bind(globalThis),
-    private readonly timeoutMs = 10_000
+    private readonly timeoutMs = 10_000,
+    cacheOptions: BudokonCacheOptions = {}
   ) {
-    this.cache = new BudokonCache();
+    this.cache = new BudokonCache(cacheOptions);
     this.builder = new BudokonRequestBuilder();
     this.validator = new BudokonResponseValidator();
   }
