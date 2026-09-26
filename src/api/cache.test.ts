@@ -14,6 +14,12 @@ const result = (id: string): Judoka[] => [{
 }];
 
 describe("BudokonCache", () => {
+  it("rejects a zero entry limit", () => {
+    expect(() => new BudokonCache({ maxEntries: 0 })).toThrow(
+      "cache maxEntries must be a positive integer"
+    );
+  });
+
   it("expires a completed entry after the configured lifetime", async () => {
     let now = 100;
     const cache = new BudokonCache({ expirationMs: 10, clock: () => now });
