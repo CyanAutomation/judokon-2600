@@ -76,4 +76,21 @@ describe("BudokonCache", () => {
     await expect(Promise.all([first, second])).resolves.toEqual([result("shared"), result("shared")]);
     expect(fetcher).toHaveBeenCalledTimes(1);
   });
+
+  it("isolates cached judoka and nested stats from caller mutations", async () => {
+    const cache = new BudokonCache();
+    const original = result("original");
+    const fetcher = vi.fn().mockResolvedValue(original);
+
+    const first = await cache.getCached("key", fetcher);
+    first[0]!.firstname = "Mutated";
+    first[0]!.stats.power = 99;
+
+    const second = await cache.getCached("key", fetcher);
+
+    expect(second).toEqual(result("original"));
+    expect(second[0]).not.toBe(first[0]);
+    expect(second[0]!.stats).not.toBe(first[0]!.stats);
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
 });
