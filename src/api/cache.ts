@@ -16,6 +16,17 @@ interface CacheEntry {
   completed: boolean;
 }
 
+function cloneJudoka(judoka: Judoka): Judoka {
+  return {
+    ...judoka,
+    stats: { ...judoka.stats }
+  };
+}
+
+function cloneJudokaArray(judoka: Judoka[]): Judoka[] {
+  return judoka.map(cloneJudoka);
+}
+
 export const DEFAULT_CACHE_MAX_ENTRIES = 100;
 export const DEFAULT_CACHE_EXPIRATION_MS = 5 * 60 * 1_000;
 
@@ -49,11 +60,13 @@ export class BudokonCache {
     const cached = this.draws.get(key);
     if (cached && (!cached.completed || !this.isExpired(cached, now))) {
       cached.lastAccessedAt = now;
-      return [...await cached.request];
+      return cloneJudokaArray(await cached.request);
     }
     if (cached) this.draws.delete(key);
 
-    const request = fetcher();
+    // Keep a cache-owned copy so neither the fetcher nor any caller can mutate
+    // the value shared by later cache hits.
+    const request = fetcher().then(cloneJudokaArray);
     const entry: CacheEntry = {
       request,
       createdAt: now,
@@ -68,7 +81,7 @@ export class BudokonCache {
       entry.completed = true;
       this.removeExpired(this.clock());
       this.enforceLimit();
-      return [...result];
+      return cloneJudokaArray(result);
     } catch (error) {
       // Only remove this request: a future implementation may replace the key
       // while an older request is settling.
