@@ -2,6 +2,7 @@ import type { Judoka } from "./types";
 import { BudokonCache, type BudokonCacheOptions } from "./cache";
 import { BudokonRequestBuilder } from "./requestBuilder";
 import { BudokonResponseValidator } from "./responseValidator";
+import { normalizeDrawParameters, type DrawParameters } from "./drawParameters";
 
 type Fetcher = typeof fetch;
 
@@ -38,9 +39,10 @@ export class BudokonClient {
     if (!Number.isSafeInteger(count) || count < 1) {
       throw new Error("draw count must be a positive integer");
     }
-    const key = this.builder.getUrl() + "#" + this.cache.getCacheKey(seed, count, weightClass, exclude);
+    const parameters = normalizeDrawParameters(seed, count, weightClass, exclude);
+    const key = this.builder.getUrl() + "#" + this.cache.getCacheKey(parameters);
     return this.cache.getCached(key, () =>
-      this.performDraw(seed, count, weightClass, exclude)
+      this.performDraw(parameters)
     );
   }
 
@@ -54,17 +56,13 @@ export class BudokonClient {
     );
   }
 
-  private async performDraw(
-    seed: string,
-    count: number,
-    weightClass?: string,
-    exclude?: string[]
-  ): Promise<Judoka[]> {
+  private async performDraw(parameters: DrawParameters): Promise<Judoka[]> {
+    const { count, weightClass } = parameters;
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
 
     try {
-      const request = this.builder.buildRequest(seed, count, weightClass, exclude);
+      const request = this.builder.buildRequest(parameters);
       const response = await this.fetcher(this.builder.getUrl(), {
         ...request,
         signal: controller.signal
