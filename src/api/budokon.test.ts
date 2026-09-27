@@ -31,7 +31,7 @@ describe("BudokonClient", () => {
     expect(fetcher).toHaveBeenCalledTimes(1);
   });
 
-  it("returns a fresh array without exposing the cached deterministic draw", async () => {
+  it("returns deep copies without exposing the cached deterministic draw", async () => {
     const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify({ judoka }), { status: 200 }));
     const client = new BudokonClient(fetcher);
 
@@ -39,11 +39,16 @@ describe("BudokonClient", () => {
     first.shift();
     first.reverse();
 
+    const mutableFirst = await client.drawBatch("known-seed", 2);
+    mutableFirst[0]!.firstname = "Mutated";
+    mutableFirst[0]!.stats.power = 99;
+
     const second = await client.drawBatch("known-seed", 2);
 
-    expect(second.map(fighter => fighter.id)).toEqual(["a", "b"]);
-    expect(second).toHaveLength(2);
+    expect(second).toEqual(judoka);
     expect(second).not.toBe(first);
+    expect(second[0]).not.toBe(mutableFirst[0]);
+    expect(second[0]!.stats).not.toBe(mutableFirst[0]!.stats);
     expect(fetcher).toHaveBeenCalledTimes(1);
   });
 
