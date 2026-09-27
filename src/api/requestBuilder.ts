@@ -1,3 +1,5 @@
+import type { DrawParameters } from "./drawParameters";
+
 /**
  * Constructs HTTP requests to the Budokon API
  */
@@ -7,12 +9,8 @@ export class BudokonRequestBuilder {
   /**
    * Builds a fetch request for drawing judoka
    */
-  buildRequest(
-    seed: string,
-    count: number,
-    weightClass?: string,
-    exclude?: string[]
-  ): RequestInit {
+  buildRequest(parameters: DrawParameters): RequestInit {
+    const { seed, count, weightClass, exclude } = parameters;
     return {
       method: "POST",
       headers: { "content-type": "application/json" },
