@@ -1,4 +1,5 @@
 import type { Judoka } from "./types";
+import type { DrawParameters } from "./drawParameters";
 
 export interface BudokonCacheOptions {
   /** Maximum number of entries retained. In-flight entries are never evicted. */
@@ -120,17 +121,7 @@ export class BudokonCache {
   /**
    * Generates a cache key from draw parameters
    */
-  getCacheKey(
-    seed: string,
-    count: number,
-    weightClass?: string,
-    exclude?: string[]
-  ): string {
-    return JSON.stringify({
-      seed,
-      count,
-      weightClass,
-      exclude: exclude ? [...exclude].sort() : []
-    });
+  getCacheKey(parameters: DrawParameters): string {
+    return JSON.stringify(parameters);
   }
 }
