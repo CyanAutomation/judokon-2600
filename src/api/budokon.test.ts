@@ -31,6 +31,41 @@ describe("BudokonClient", () => {
     expect(fetcher).toHaveBeenCalledTimes(1);
   });
 
+  it("canonicalizes optional values and exclusions for the request and cache", async () => {
+    const fetcher = vi.fn((...args: Parameters<typeof fetch>) => {
+      void args;
+      return Promise.resolve(new Response(JSON.stringify({ judoka }), { status: 200 }));
+    });
+    const client = new BudokonClient(fetcher);
+
+    await client.drawBatch("known-seed", 2, "", ["b", "a", "b"]);
+    await client.drawBatch("known-seed", 2, undefined, ["a", "b"]);
+    await client.drawBatch("known-seed", 2, undefined, []);
+    await client.drawBatch("known-seed", 2);
+
+    expect(fetcher).toHaveBeenCalledTimes(2);
+    const canonicalRequest = fetcher.mock.calls[0]?.[1] as RequestInit;
+    expect(JSON.parse(canonicalRequest.body as string)).toEqual({
+      count: 2,
+      seed: "known-seed",
+      exclude: ["a", "b"]
+    });
+    const emptyRequest = fetcher.mock.calls[1]?.[1] as RequestInit;
+    expect(JSON.parse(emptyRequest.body as string)).toEqual({ count: 2, seed: "known-seed" });
+  });
+
+  it("keeps genuinely different normalized draws in separate cache entries", async () => {
+    const fetcher = vi.fn(() => Promise.resolve(new Response(JSON.stringify({ judoka }), { status: 200 })));
+    const client = new BudokonClient(fetcher);
+
+    await client.drawBatch("seed-a", 2, undefined, ["a"]);
+    await client.drawBatch("seed-b", 2, undefined, ["a"]);
+    await client.drawBatch("seed-a", 2, "-81", ["a"]);
+    await client.drawBatch("seed-a", 2, undefined, ["b"]);
+
+    expect(fetcher).toHaveBeenCalledTimes(4);
+  });
+
   it("returns deep copies without exposing the cached deterministic draw", async () => {
     const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify({ judoka }), { status: 200 }));
     const client = new BudokonClient(fetcher);
