@@ -13,6 +13,7 @@ import { outcomeBeep } from "../audio";
 import { clearSavedMatch, persistPreferences, saveGameState, type GameState, type SetupStep } from "../state";
 import { weights, lengths } from "../ui/constants";
 import { getSoundEnabled, setSoundEnabledPersisted } from "../ui/helpers/soundStorage";
+import { extractTacticalFeatures, type TacticalAssessment } from "./tacticalAssessment";
 
 const DRAW_BUFFER_SIZE = 6;
 export const MATCH_RESOLUTION_DELAY_MS = 650;
@@ -44,6 +45,7 @@ export interface OrchestratorDeps {
   client: BudokonClient;
   render: () => void;
   onMatchReady?: () => void;
+  assessTactics?: (features: ReturnType<typeof extractTacticalFeatures>) => Promise<TacticalAssessment | null>;
 }
 
 /**
@@ -94,6 +96,7 @@ export async function start(
       : undefined;
 
   state.pendingStat = null;
+  state.tacticalAssessment = null;
   state.history = [];
   state.result = null;
   state.drawBuffer = [];
@@ -250,6 +253,27 @@ export function resolve(state: GameState, _match: Match, stat: StatKey, deps: Or
     saveGameState(state);
     deps.render();
 
+    if (state.match.phase === "matchOver" && deps.assessTactics) {
+      const completedMatch = state.match;
+      const operationId = currentOperations.get(state);
+      const features = extractTacticalFeatures(completedMatch.scores, state.history);
+      // Do not await optional network work: deterministic resolution and UI are complete.
+      try {
+        void deps.assessTactics(features)
+          .then((assessment) => {
+            if (!assessment || state.match !== completedMatch) return;
+            if (operationId !== undefined && !isCurrentOperation(state, operationId)) return;
+            state.tacticalAssessment = assessment;
+            deps.render();
+          })
+          .catch(() => {
+            // An unavailable assessment leaves the deterministic match summary in place.
+          });
+      } catch {
+        // A synchronous adapter failure is optional too; the deterministic summary remains.
+      }
+    }
+
     // Focus next/replay button for keyboard navigation
     const root = document.querySelector<HTMLDivElement>("#app");
     root?.querySelector<HTMLButtonElement>("#next, #replay")?.focus();
@@ -279,6 +303,7 @@ export function clearAndExit(state: GameState, deps: OrchestratorDeps): void {
   state.busy = false;
   state.match = null;
   state.result = null;
+  state.tacticalAssessment = null;
   state.pendingStat = null;
   state.errorMessage = "";
   state.history = [];

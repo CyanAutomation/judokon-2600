@@ -11,6 +11,7 @@ import type { Match } from "./game/game";
 import { start, next, resolve, copyReplaySeed, clearAndExit, chooseLength, handleSetupStepClick, handleOpenSeedModal, handleCloseSeedModal, handleSaveReplaySeed, handleToggleSound, handleKeyboardMoveCursor, handleKeyboardCloseSeedModal, type OrchestratorDeps } from "./game/orchestrator";
 import { isSeedModalEscape, shouldHandleKeyboardEvent, shouldPlayKeyboardTick } from "./ui/keyboardGuards";
 import { getSoundEnabled } from "./ui/helpers/soundStorage";
+import { requestTacticalAssessment } from "./api/tacticalAssessment";
 
 const app = document.querySelector<HTMLDivElement>("#app");
 if (!app) throw new Error("Application root is missing");
@@ -42,6 +43,7 @@ function render(): void {
 const deps: OrchestratorDeps = {
   client,
   render,
+  assessTactics: requestTacticalAssessment,
   onMatchReady: () => {
     const game = root.querySelector<HTMLElement>("#game");
     game?.focus();

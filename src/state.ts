@@ -1,6 +1,7 @@
 import type { Judoka } from "./api/types";
 import type { GameMode, Match, MatchResult } from "./game/game";
 import { parseSavedMatch, stringifySavedMatch } from "./game/session";
+import type { TacticalAssessment } from "./game/tacticalAssessment";
 
 const SAVED_MATCH_KEY = "judokon.activeMatch.v1";
 
@@ -14,6 +15,8 @@ export type History = Pick<MatchResult, "outcome" | "stat"> & { roundNumber: num
 export interface GameState {
   match: Match | null;
   result: MatchResult | null;
+  /** Optional, non-persisted tactical signals from a completed match. */
+  tacticalAssessment: TacticalAssessment | null;
   pendingStat: string | null;
   activeSeed: string;
   activeWeight: string | undefined;
@@ -48,6 +51,7 @@ export function createGameState(): GameState {
   return {
     match: null,
     result: null,
+    tacticalAssessment: null,
     pendingStat: null,
     activeSeed: "",
     activeWeight: undefined,
