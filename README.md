@@ -12,6 +12,8 @@ Optional keyboard ticks and outcome beeps are available in **Advanced options**.
 
 After each match, the match summary recommends your best stat using this ranking contract: most rounds won, then highest win rate, then the first stat in the displayed order (`power`, `speed`, `technique`, `kumikata`, `newaza`). The tiebreak favors whichever stat appears earliest in that list. The recommendation reports both the number of wins and the total number of times that stat was selected; if no stat won a round, no recommendation is shown.
 
+An optional post-match tactical insight can interpret patterns in the player's recorded choices, such as repeated losses with a favoured stat or changes after losing. The deterministic summary remains authoritative: JEV cannot change round outcomes, scores, match length, replay behavior, or the best-stat recommendation. The browser sends only compact counts and outcome patterns to the same-origin `/api/tactical-assessment` Vercel Function. It does not send judoka IDs, stat values, replay seeds, local storage, or hidden opponent values. Insight text is assembled by application code; JEV supplies only typed scores, and low-confidence results are omitted. If the key is missing, the route fails, or a response is invalid or uncertain, the existing match summary remains available unchanged. On Vercel, configure `OPENROUTER_API_KEY`; `JEV_MODEL` optionally selects another model and defaults to `~typesafe/jev-latest`. Plain `npm run dev` uses Vite's static development server without the Vercel function, so tactical insight is unavailable there and the deterministic summary continues to work.
+
 In **Champion** mode, you keep the same judoka while opponents rotate. The **Current streak** counts consecutive rounds won at the end of the run: each win extends it, while either a loss or a draw resets it to zero. Earlier wins remain part of the run record but do not count toward the current streak.
 
 Judoka are fetched directly from the public [Budokon catalogue API](https://budokon.scheimann.workers.dev/docs). Before each match six judoka are drawn into a buffer so subsequent opponents can appear instantly. The seed button in the footer **Advanced options** bar opens a dialog for an optional replay seed; otherwise each match gets a fresh seed. Draw requests time out after 10 seconds and display an error message.
@@ -28,9 +30,13 @@ Today's scout report is free and always visible. A future progression release co
 4. Keep the report hidden by default and present it as a deliberate action with a clear cost and remaining uses. Never reveal an exact opponent value.
 5. Seed and record buff use in the match log so replayed matches remain explainable; add engine tests for reward earning, buff consumption, and the default no-scout experience.
 
+If scouting gains JEV support, deterministic disclosure rules should first produce a short list of safe, pre-approved facts. JEV may rank only those candidates for relevance to the player's recent choices; it must never inspect hidden opponent values or create a new disclosure. Future Budokon playstyle metadata should be consumed as flavour/context when available and must not change stat values.
+
 ## Potential future feature: career loop
 
 A light career loop could reward wins with distinctive judoka unlocks, counter-pick and rivalry discovery, and short challenges such as winning three matches using Ne-waza. It should stay optional, preserving the crisp arcade-like match flow.
+
+Future career challenges can follow the same boundary: code constructs valid challenge candidates, then JEV may rank those candidates against a small local play-history profile. Other possible extensions are an opt-in or internal in-match tactical state and matchup classifications based on Budokon playstyle metadata. JEV must not invent challenge rules or rewards, infer undisclosed stats, or predict match winners.
 
 ## Development
 

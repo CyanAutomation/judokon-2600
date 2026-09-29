@@ -6,6 +6,7 @@ function state(overrides: Partial<GameState> = {}): GameState {
   return {
     match: null,
     result: null,
+    tacticalAssessment: null,
     pendingStat: null,
     activeSeed: "",
     activeWeight: undefined,
