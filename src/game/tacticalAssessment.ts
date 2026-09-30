@@ -84,7 +84,7 @@ function mapOutcome(outcome: Outcome): TacticalOutcome {
 function findMissedOpportunityCandidate(
   selections: Record<StatKey, TacticalStatRecord>
 ): TacticalFeatures["missedOpportunityCandidate"] {
-  const highestSelectionCount = Math.max(...STAT_KEYS.map((stat) => selections[stat].selected));
+  const highestSelectionCount = Math.max(0, ...STAT_KEYS.map((stat) => selections[stat].selected));
   const favoredStats = STAT_KEYS.filter((stat) => selections[stat].selected === highestSelectionCount);
   if (highestSelectionCount < 2 || favoredStats.length !== 1) return null;
 
