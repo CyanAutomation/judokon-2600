@@ -1,7 +1,11 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Judoka } from "../api/types";
 import { createGameState } from "../state";
-import { draw, next, handleSetupStepClick, handleOpenSeedModal, handleCloseSeedModal, handleSaveReplaySeed, handleToggleSound, handleKeyboardMoveCursor, handleKeyboardCloseSeedModal, type OrchestratorDeps } from "./orchestrator";
+import { draw, next, resolve, MATCH_RESOLUTION_DELAY_MS, handleSetupStepClick, handleOpenSeedModal, handleCloseSeedModal, handleSaveReplaySeed, handleToggleSound, handleKeyboardMoveCursor, handleKeyboardCloseSeedModal, type OrchestratorDeps } from "./orchestrator";
+import type { TacticalAssessment } from "./tacticalAssessment";
+import type { TacticalFeatures } from "./tacticalAssessment";
+
+afterEach(() => vi.useRealTimers());
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -218,6 +222,58 @@ describe("next-round draws", () => {
       "replacement-3",
       "replacement-4"
     ]);
+  });
+});
+
+describe("optional post-match assessment", () => {
+  beforeEach(() => {
+    sessionStorage.clear();
+    vi.useFakeTimers();
+  });
+
+  it("keeps deterministic resolution immediate while an assessment is pending", async () => {
+    const player = judoka("player");
+    const opponent = { ...judoka("opponent"), stats: { ...judoka("opponent").stats, power: 0 } };
+    const match = {
+      player,
+      opponent,
+      target: 1,
+      matchNumber: 1,
+      scores: { player: 0, opponent: 0 },
+      mode: "classic" as const,
+      phase: "selecting" as const,
+      winner: null
+    };
+    const state = createGameState();
+    state.match = match;
+    const pending = deferred<TacticalAssessment | null>();
+    let assessedFeatures: TacticalFeatures | undefined;
+    const assessTactics = vi.fn((features: TacticalFeatures) => {
+      assessedFeatures = features;
+      return pending.promise;
+    });
+    const deps = { client: {}, render: vi.fn(), assessTactics } as unknown as OrchestratorDeps;
+
+    resolve(state, match, "power", deps);
+    vi.advanceTimersByTime(MATCH_RESOLUTION_DELAY_MS);
+
+    expect(state.match?.phase).toBe("matchOver");
+    expect(state.match?.scores).toEqual({ player: 1, opponent: 0 });
+    expect(state.result?.outcome).toBe("player");
+    expect(sessionStorage.getItem("judokon.activeMatch.v1")).not.toContain("tacticalAssessment");
+
+    await Promise.resolve();
+    expect(assessTactics).toHaveBeenCalledOnce();
+    expect(assessedFeatures).toMatchObject({
+      rounds: 1,
+      score: { player: 1, opponent: 0 },
+      selections: { power: { selected: 1, wins: 1 } }
+    });
+
+    pending.resolve({ adaptation: true });
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(state.tacticalAssessment).toEqual({ adaptation: true });
   });
 });
 
