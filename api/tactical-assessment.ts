@@ -40,7 +40,7 @@ export function createTacticalAssessmentHandler(options: TacticalAssessmentHandl
     if (!features) return json({ assessment: null }, 400);
 
     const apiKey = (options.getApiKey ?? (() => process.env.OPENROUTER_API_KEY))()?.trim();
-    if (!apiKey) return json({ assessment: null });
+    if (!apiKey || apiKey.length === 0) return json({ assessment: null });
 
     const model = (options.getModel ?? (() => process.env.JEV_MODEL))()?.trim() || "~typesafe/jev-latest";
     const client = options.client ?? (options.createClient ?? ((key, selectedModel) => new OpenRouterJevClient(key, selectedModel)))(apiKey, model);

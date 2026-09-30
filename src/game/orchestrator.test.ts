@@ -275,6 +275,42 @@ describe("optional post-match assessment", () => {
     await Promise.resolve();
     expect(state.tacticalAssessment).toEqual({ adaptation: true });
   });
+
+  it("ignores an assessment when a newer game operation starts", async () => {
+    const player = judoka("player");
+    const opponent = { ...judoka("opponent"), stats: { ...judoka("opponent").stats, power: 0 } };
+    const state = createGameState();
+    state.match = {
+      player,
+      opponent,
+      target: 1,
+      matchNumber: 1,
+      scores: { player: 0, opponent: 0 },
+      mode: "classic",
+      phase: "selecting",
+      winner: null
+    };
+    const assessment = deferred<TacticalAssessment | null>();
+    const nextDraw = deferred<Judoka[]>();
+    const deps = {
+      client: { drawBatch: vi.fn(() => nextDraw.promise) },
+      render: vi.fn(),
+      assessTactics: vi.fn(() => assessment.promise)
+    } as unknown as OrchestratorDeps;
+
+    resolve(state, state.match, "power", deps);
+    vi.advanceTimersByTime(MATCH_RESOLUTION_DELAY_MS);
+    await Promise.resolve();
+    const pendingDraw = draw(state, deps);
+
+    assessment.resolve({ adaptation: true });
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(state.tacticalAssessment).toBeNull();
+    nextDraw.resolve(Array.from({ length: 6 }, (_, index) => judoka(`next-${index}`)));
+    await pendingDraw;
+  });
 });
 
 describe("event handlers", () => {
