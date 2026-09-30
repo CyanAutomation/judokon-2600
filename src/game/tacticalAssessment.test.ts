@@ -89,6 +89,10 @@ describe("tactical feature extraction", () => {
     expect(extractTacticalFeatures(scoreFor(ambiguous), ambiguous).missedOpportunityCandidate).toBeNull();
   });
 
+  it("does not derive a favored stat when no stats were selected", () => {
+    expect(extractTacticalFeatures({ player: 0, opponent: 0 }, []).missedOpportunityCandidate).toBeNull();
+  });
+
   it("is deterministic, does not mutate the match history, and contains no seed or opponent values", () => {
     const rounds = history([["power", "opponent"], ["technique", "player"], ["technique", "player"]]);
     const before = structuredClone(rounds);

@@ -40,6 +40,17 @@ describe("tactical assessment API route", () => {
     expect(client.decide).not.toHaveBeenCalled();
   });
 
+  it("does not construct a provider client for a whitespace-only API key", async () => {
+    const createClient = vi.fn();
+    const handler = createTacticalAssessmentHandler({ getApiKey: () => "   \t", createClient });
+
+    const response = await handler(request({ features }));
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ assessment: null });
+    expect(createClient).not.toHaveBeenCalled();
+  });
+
   it("passes only allow-listed match features to the injected JEV client", async () => {
     let receivedState: unknown;
     const client = { decide: vi.fn(async (state: unknown) => {
