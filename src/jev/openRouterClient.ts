@@ -34,7 +34,10 @@ export class OpenRouterJevClient implements JevDecisionClient {
         signal: controller.signal
       });
 
-      if (!response.ok) throw new Error(`JEV provider returned HTTP ${response.status}`);
+      if (!response.ok) {
+        const requestId = response.headers.get("x-request-id");
+        throw new Error(`JEV provider returned HTTP ${response.status}${requestId ? ` (request ${requestId})` : ""}`);
+      }
 
       const body: unknown = await response.json();
       if (!isRecord(body) || !isRecord(body.answers)) throw new Error("JEV provider returned an invalid decision response");

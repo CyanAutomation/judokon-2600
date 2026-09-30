@@ -255,14 +255,14 @@ export function resolve(state: GameState, _match: Match, stat: StatKey, deps: Or
 
     if (state.match.phase === "matchOver" && deps.assessTactics) {
       const completedMatch = state.match;
-      const operationId = currentOperations.get(state);
+      const operationId = beginOperation(state);
       const features = extractTacticalFeatures(completedMatch.scores, state.history);
       // Do not await optional network work: deterministic resolution and UI are complete.
       try {
         void deps.assessTactics(features)
           .then((assessment) => {
             if (!assessment || state.match !== completedMatch) return;
-            if (operationId !== undefined && !isCurrentOperation(state, operationId)) return;
+            if (!isCurrentOperation(state, operationId)) return;
             state.tacticalAssessment = assessment;
             deps.render();
           })
