@@ -10,6 +10,7 @@ import { matchSummary, type Match, type MatchResult, strongestStats } from "../g
 import { type GameState } from "../state";
 import { labels, type Helpers } from "./helpers";
 import { escapeHtml as esc } from "./utils/escapeHtml";
+import { extractTacticalFeatures } from "../game/tacticalAssessment";
 
 /**
  * Generate fighter card HTML
@@ -87,6 +88,46 @@ function summary(m: Match, state: GameState): string {
   return sectionPanel("match-summary", "Match summary", content);
 }
 
+/** Render code-authored feedback only for high-confidence JEV signals with matching facts. */
+function tacticalInsight(m: Match, state: GameState): string {
+  const assessment = state.tacticalAssessment;
+  if (!assessment) return "";
+
+  const features = extractTacticalFeatures(m.scores, state.history);
+  const details = matchSummary(m, state.history);
+  const messages: string[] = [];
+
+  if (assessment.overReliance && details.decisiveStat && features.repeatedFailedSelections > 0) {
+    const record = features.selections[details.decisiveStat];
+    if (record.selected >= 3 && record.losses > record.wins) {
+      messages.push(`${labels[details.decisiveStat]} was your most-used stat; it lost ${record.losses} of ${record.selected} selections.`);
+    }
+  }
+
+  if (assessment.adaptation && features.choicesAfterLosses.switches > 0) {
+    messages.push(`You changed stats after ${features.choicesAfterLosses.switches} of ${features.choicesAfterLosses.decisions} choices following a loss.`);
+  }
+
+  if (assessment.missedOpportunity && features.missedOpportunityCandidate) {
+    const candidate = features.missedOpportunityCandidate;
+    const favored = features.selections[candidate.favoredStat];
+    const alternative = features.selections[candidate.alternativeStat];
+    messages.push(`${labels[candidate.alternativeStat]} won ${alternative.wins}/${alternative.selected} selections while ${labels[candidate.favoredStat]}, your most-used stat, won ${favored.wins}/${favored.selected}.`);
+  }
+
+  if (assessment.momentumResponse) {
+    const decisions = features.choicesAfterWinRuns.decisions + features.choicesAfterLossRuns.decisions;
+    const switches = features.choicesAfterWinRuns.switches + features.choicesAfterLossRuns.switches;
+    if (decisions > 0 && switches > 0) {
+      messages.push(`You switched stats after ${switches} of ${decisions} choices made following runs of wins or losses.`);
+    }
+  }
+
+  if (!messages.length) return "";
+  const content = `<p class="eyebrow">Optional tactical insight</p>${messages.map((message) => `<p>${esc(message)}</p>`).join("")}`;
+  return sectionPanel("tactical-insight", "Tactical insight", content);
+}
+
 /**
  * Generate result panel for round outcome
  */
@@ -114,7 +155,7 @@ export function game(m: Match, state: GameState, helpers: Helpers): string {
     return buttonChoice(config);
   }).join("");
   const committing = state.pendingStat ? `<section class="commitment" aria-live="polite"><span class="block-cursor" aria-hidden="true">█</span><div><strong>Opponent commits…</strong><p>Resolving ${labels[state.pendingStat as StatKey]}.</p></div></section>` : "";
-  const reveal = state.result ? `${resultPanel(m, state.result, helpers)}${summary(m, state)}` : "";
+  const reveal = state.result ? `${resultPanel(m, state.result, helpers)}${summary(m, state)}${tacticalInsight(m, state)}` : "";
   const action = m.phase === "awaitingNext" ? primaryButton("next", "Next round", "Enter", state.busy) : m.phase === "matchOver" ? `${primaryButton("replay", "Replay match", "Enter")}${quietButton("copy-seed", "Copy replay seed", "Copy")}<p class="replay-seed">Replay seed: <code>${esc(state.activeSeed)}</code></p>${state.seedMessage ? `<p class="seed-message" role="status">${esc(state.seedMessage)}</p>` : ""}` : "";
   const scout = state.result ? "" : surface("aside", "scout-report", "Scout report", `${helpers.eyebrow("Scout report")}<p>Opponent's likely strength: <strong>${strongestStats(m.opponent).map((stat) => labels[stat]).join(" / ")}</strong>. Choose your exchange carefully.</p>`);
   const decisionGuide = state.result ? "" : `<p class="decision-guide">Choose one of your judoka's stats. The higher value wins the exchange.</p>`;

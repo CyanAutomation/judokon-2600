@@ -114,10 +114,11 @@ button { transition: background-color .12s ease, border-color .12s ease, color .
 .score-side.opponent { justify-content: flex-end; }
 .score-pips { height: 2rem; min-height: 0; align-items: center; line-height: 0; }
 .score-pip { align-self: center; }
-.result-panel, .match-summary, .match-rules, .scout-report, .champion-progress { margin: 1rem 0; padding: 1rem; }
+.result-panel, .match-summary, .tactical-insight, .match-rules, .scout-report, .champion-progress { margin: 1rem 0; padding: 1rem; }
 .result-panel { border-left-width: 4px; animation: outcome-arrive .28s ease-out; }
 .result-panel p { margin-top: .5rem; }.result-panel.outcome-player { border-left-color: #8ee58e; }.result-panel.outcome-opponent { border-left-color: #ef8f86; }.result-panel.outcome-draw { border-left-color: #ffe49a; }.result-panel .callout { color: #d8ffd8; font-weight: 700; }
 .match-summary dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr)); gap: .65rem; margin: .75rem 0 0; }.match-summary dt { color: #a4caa4; font-size: .75rem; }.match-summary dd { margin: .25rem 0 0; font-weight: 700; }
+.tactical-insight { border-color: var(--color-accent); }.tactical-insight p + p { margin-top: .4rem; }
 .champion-progress { border-color: #8ee58e; background: #102110; }.champion-progress dl { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .65rem; margin: .75rem 0 0; }.champion-progress dt { color: #a4caa4; font-size: .75rem; }.champion-progress dd { margin: .25rem 0 0; font-weight: 700; }
 .match-history { margin: 1rem 0; }.match-history ol { display: flex; flex-wrap: wrap; gap: .45rem; margin: .5rem 0 0; padding: 0; list-style: none; }.match-history li { display: grid; grid-template-rows: repeat(3, 1fr); gap: .12rem; flex: 0 0 6.25rem; inline-size: 6.25rem; min-height: 4.5rem; padding: .45rem .55rem; border: 1px solid #417841; color: #b3cdb3; font-size: .76rem; }.match-history li strong { color: #d8ffd8; font-size: .9rem; }.match-history li.player { border-color: #8ee58e; }.match-history li.player span:last-child { color: #8ee58e; }.match-history li.opponent { border-color: #ef8f86; }.match-history li.opponent span:last-child { color: #ef8f86; }.match-history li.draw { border-color: #ffe49a; }.match-history li.draw span:last-child { color: #ffe49a; }
 .match-rules { margin-top: 1rem; color: #b3cdb3; font-size: .82rem; }.match-rules strong { color: #8ee58e; text-transform: uppercase; letter-spacing: .06em; }.match-rules p, .scout-report p + p { margin-top: .4rem; }.scout-report { border-style: dashed; color: #b3cdb3; }.scout-report strong { color: #ffe49a; }
@@ -130,7 +131,7 @@ footer { display: flex; align-items: center; justify-content: space-between; gap
   .player-column { display: grid; grid-template-columns: minmax(0, 1fr); }
   .player-column > .stats { order: 1; }
   .player-column > .scout-report { order: 2; margin-top: 0; }
-  .player-column > .commitment, .player-column > .result-panel, .player-column > .match-summary { order: 3; }
+  .player-column > .commitment, .player-column > .result-panel, .player-column > .match-summary, .player-column > .tactical-insight { order: 3; }
   .player-column > .game-actions { order: 4; }
   .player-column > .fighter-card.player { order: 5; }
   .player-column > .champion-progress { order: 6; }

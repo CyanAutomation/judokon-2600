@@ -27,6 +27,7 @@ describe("State Management", () => {
       expect(state).toEqual({
         match: null,
         result: null,
+        tacticalAssessment: null,
         pendingStat: null,
         activeSeed: "",
         activeWeight: undefined,
@@ -190,6 +191,19 @@ describe("State Management", () => {
       saveGameState(state);
 
       expect(sessionStorage.getItem("judokon.activeMatch.v1")).not.toBeNull();
+    });
+
+    it("does not persist optional tactical assessment with replay state", () => {
+      const state = createGameState();
+      state.match = createMockMatch();
+      state.tacticalAssessment = { overReliance: true };
+
+      saveGameState(state);
+
+      const saved = sessionStorage.getItem("judokon.activeMatch.v1");
+      expect(saved).not.toBeNull();
+      expect(saved).not.toContain("tacticalAssessment");
+      expect(loadSavedGameState()).not.toHaveProperty("tacticalAssessment");
     });
   });
 
