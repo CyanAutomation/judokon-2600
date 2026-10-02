@@ -631,6 +631,20 @@ describe("Main Module - Render Integration", () => {
       for (const action of actions) expect(footer?.textContent).toContain(action);
     });
 
+    it("groups footer shortcuts and setup utilities in one toolbar and keeps dialogs outside it", () => {
+      const root = document.createElement("div");
+
+      renderApp(root, createMockGameState({ match: null, seedModalOpen: true }));
+
+      const toolbar = root.querySelector("footer .footer-toolbar");
+      expect(toolbar).not.toBeNull();
+      expect(toolbar?.querySelector(".footer-hint") ?? null).not.toBeNull();
+      expect(toolbar?.querySelector(".footer-utilities #seed-button") ?? null).not.toBeNull();
+      expect(toolbar?.querySelector(".footer-utilities #sound-enabled") ?? null).not.toBeNull();
+      expect(root.querySelector("footer .seed-dialog")).toBeNull();
+      expect(root.querySelector(".modal-backdrop .seed-dialog")).not.toBeNull();
+    });
+
     it("renders intro screen when no match", () => {
       const state = createMockGameState({ match: null });
       const isIntro = !state.match;
