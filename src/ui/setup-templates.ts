@@ -10,16 +10,24 @@ import { createHelpers, lengths, weights } from "./helpers";
 import { getSoundEnabled } from "./helpers/soundStorage";
 import { escapeHtml as esc } from "./utils/escapeHtml";
 
+export function footerUtilities(state: GameState): string {
+  const soundEnabled = getSoundEnabled();
+  const seedLabel = state.replaySeed ? `Seed: ${state.replaySeed}` : "Seed: Random";
+  return `<div class="footer-utilities" aria-label="Match utilities">${utilityButton("seed-button", seedLabel)}${utilityButton("sound-enabled", `Sound: ${soundEnabled ? "On" : "Off"}`, soundEnabled)}</div>`;
+}
+
+export function seedDialog(state: GameState): string {
+  const dialog = state.seedModalOpen
+    ? `<div class="modal-backdrop"><section class="panel seed-dialog" role="dialog" aria-modal="true" aria-labelledby="seed-dialog-title"><p class="eyebrow">Replay setup</p><h2 id="seed-dialog-title">Set replay seed</h2><p>Use the same seed to replay a matchup.</p><label for="replay-seed">Seed<input id="replay-seed" value="${esc(state.seedDraft ?? state.replaySeed)}" placeholder="Leave blank for a fresh draw" autocomplete="off" spellcheck="false" /></label><div class="dialog-actions">${quietButton("cancel-seed", "Cancel", "Esc")}${primaryButton("save-seed", "Use seed", "Enter")}</div></section></div>`
+    : "";
+  return dialog;
+}
+
 /**
  * Generate advanced options section
  */
 export function advanced(state: GameState): string {
-  const soundEnabled = getSoundEnabled();
-  const seedLabel = state.replaySeed ? `Seed: ${state.replaySeed}` : "Seed: Random";
-  const dialog = state.seedModalOpen
-    ? `<div class="modal-backdrop"><section class="panel seed-dialog" role="dialog" aria-modal="true" aria-labelledby="seed-dialog-title"><p class="eyebrow">Replay setup</p><h2 id="seed-dialog-title">Set replay seed</h2><p>Use the same seed to replay a matchup.</p><label for="replay-seed">Seed<input id="replay-seed" value="${esc(state.seedDraft ?? state.replaySeed)}" placeholder="Leave blank for a fresh draw" autocomplete="off" spellcheck="false" /></label><div class="dialog-actions">${quietButton("cancel-seed", "Cancel", "Esc")}${primaryButton("save-seed", "Use seed", "Enter")}</div></section></div>`
-    : "";
-  return `<div class="footer-utilities" aria-label="Match utilities">${utilityButton("seed-button", seedLabel)}${utilityButton("sound-enabled", `Sound: ${soundEnabled ? "On" : "Off"}`, soundEnabled)}</div>${dialog}`;
+  return `${footerUtilities(state)}${seedDialog(state)}`;
 }
 
 /**

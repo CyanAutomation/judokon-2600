@@ -66,6 +66,13 @@ describe("setup templates", () => {
     expect(markup).not.toContain("Advanced options");
   });
 
+  it("puts the match length on the full clickable choice card", () => {
+    const markup = intro(state({ setupStep: "length" }));
+    const card = markup.match(/<label class="choice-card is-selected is-active" for="length-3">([\s\S]*?)<\/label>/)?.[1];
+
+    expect(card).toContain('input class="choice-input" id="length-3" name="match-length" type="radio" data-length="3"');
+  });
+
   it("renders seed and sound as direct footer utilities, not a disclosure", () => {
     const markup = advanced(state({ replaySeed: "dojo-42" }));
 
