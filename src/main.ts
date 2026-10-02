@@ -65,7 +65,8 @@ function createClickHandlers() {
     openSeedModal: () => handleOpenSeedModal(state, deps),
     closeSeedModal: () => handleCloseSeedModal(state, deps),
     saveReplaySeed: (seed: string) => handleSaveReplaySeed(state, seed, deps),
-    toggleSound: () => handleToggleSound(setSoundEnabled, deps)
+    toggleSound: () => handleToggleSound(setSoundEnabled, deps),
+    startWithLength: (points: number) => { if (!state.busy) void start(state, deps, points); }
   };
 }
 
