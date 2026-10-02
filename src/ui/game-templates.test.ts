@@ -98,4 +98,35 @@ describe("game templates", () => {
     expect(markup).toContain("Technique won 2/2 selections while Power, your most-used stat, won 1/4.");
     expect(markup).not.toContain("JEV says");
   });
+
+  it("keeps the result, both judoka, and round history together before the decision controls", () => {
+    const match: Match = {
+      player: judoka,
+      opponent: { ...judoka, id: "opponent", slug: "opponent", firstname: "Rival" },
+      target: 3,
+      matchNumber: 2,
+      scores: { player: 0, opponent: 1 },
+      mode: "classic",
+      phase: "awaitingNext",
+      winner: null,
+    };
+    const current = state({
+      match,
+      result: { match, outcome: "opponent", stat: "power", playerValue: 8, opponentValue: 9 },
+      history: [{ stat: "power", outcome: "opponent", roundNumber: 1 }]
+    });
+
+    const markup = game(match, current, createHelpers(current));
+    const result = markup.indexOf('class="surface panel result-panel outcome-opponent"');
+    const player = markup.indexOf('class="surface panel fighter-card player"');
+    const opponent = markup.indexOf('class="surface panel fighter-card opponent"');
+    const history = markup.indexOf('aria-label="Round history"');
+    const controls = markup.indexOf('aria-label="Stat selection"');
+
+    expect(result).toBeGreaterThan(-1);
+    expect(player).toBeGreaterThan(result);
+    expect(opponent).toBeGreaterThan(player);
+    expect(history).toBeGreaterThan(opponent);
+    expect(controls).toBeGreaterThan(history);
+  });
 });

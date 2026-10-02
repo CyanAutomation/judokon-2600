@@ -80,6 +80,59 @@ describe("handleClickEvent", () => {
     expect(handlers.start).toHaveBeenCalled();
   });
 
+  it("starts the match when a match-length choice is clicked", () => {
+    const startWithLength = vi.fn();
+    const handlers = {
+      start: vi.fn(),
+      copyReplaySeed: vi.fn(),
+      next: vi.fn(),
+      resolve: vi.fn(),
+      clearAndExit: vi.fn(),
+      startWithLength
+    };
+    const state = createMockGameState({ match: null, busy: false });
+    const label = document.createElement("label");
+    label.className = "choice-card";
+    const input = document.createElement("input");
+    input.type = "radio";
+    input.dataset.length = "5";
+    const child = document.createElement("span");
+    label.append(input, child);
+    const event = new MouseEvent("click", { bubbles: true, cancelable: true });
+    Object.defineProperty(event, "target", { value: child });
+
+    handleClickEvent(event, state, handlers);
+
+    expect(startWithLength).toHaveBeenCalledOnce();
+    expect(startWithLength).toHaveBeenCalledWith(5);
+    expect(event.defaultPrevented).toBe(true);
+  });
+
+  it("ignores match-length clicks while a match is being drawn", () => {
+    const startWithLength = vi.fn();
+    const handlers = {
+      start: vi.fn(),
+      copyReplaySeed: vi.fn(),
+      next: vi.fn(),
+      resolve: vi.fn(),
+      clearAndExit: vi.fn(),
+      startWithLength
+    };
+    const state = createMockGameState({ match: null, busy: true });
+    const label = document.createElement("label");
+    label.className = "choice-card";
+    const input = document.createElement("input");
+    input.type = "radio";
+    input.dataset.length = "10";
+    label.append(input);
+    const event = new MouseEvent("click", { bubbles: true, cancelable: true });
+    Object.defineProperty(event, "target", { value: label });
+
+    handleClickEvent(event, state, handlers);
+
+    expect(startWithLength).not.toHaveBeenCalled();
+  });
+
   it("invokes resolve handler when button with data-stat attribute is clicked", () => {
     const resolve = vi.fn<(stat: StatKey) => void>();
     const handlers = {

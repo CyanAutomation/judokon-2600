@@ -22,6 +22,7 @@ interface ButtonHandlers {
   closeSeedModal?: () => void;
   saveReplaySeed?: (seed: string) => void;
   toggleSound?: () => void;
+  startWithLength?: (points: number) => void;
 }
 
 /**
@@ -46,7 +47,19 @@ export function handleClickEvent(
   state: GameState,
   handlers: ButtonHandlers
 ): void {
-  const b = (e.target as Element).closest<HTMLButtonElement>("button");
+  const target = e.target as Element;
+  const lengthChoice = target.closest<HTMLInputElement>("input[data-length]")
+    ?? target.closest<HTMLElement>(".choice-card")?.querySelector<HTMLInputElement>("input[data-length]");
+  if (lengthChoice && !state.match && !state.busy && handlers.startWithLength) {
+    const points = Number(lengthChoice.dataset.length);
+    if (Number.isInteger(points) && points > 0) {
+      e.preventDefault();
+      handlers.startWithLength(points);
+      return;
+    }
+  }
+
+  const b = target.closest<HTMLButtonElement>("button");
   if (!b || b.disabled) return;
 
   // Check for direct ID match
