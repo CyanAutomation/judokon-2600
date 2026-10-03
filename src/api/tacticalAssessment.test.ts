@@ -35,23 +35,43 @@ function providerResult(score = 2, confidence = 0.9): JevDecisionResult {
 describe("tactical assessment API route", () => {
   it("returns deterministic-summary fallback without an API key", async () => {
     const client = { decide: vi.fn() };
-    const handler = createTacticalAssessmentHandler({ getApiKey: () => undefined, client });
+    const isRateLimited = vi.fn(async () => false);
+    const handler = createTacticalAssessmentHandler({ getApiKey: () => undefined, isRateLimited, client });
 
-    const response = await handler(request({ features }));
+    const incoming = request({ features });
+    const response = await handler(incoming);
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ assessment: null });
+    expect(isRateLimited).toHaveBeenCalledWith(incoming);
     expect(client.decide).not.toHaveBeenCalled();
   });
 
   it("does not construct a provider client for a whitespace-only API key", async () => {
     const createClient = vi.fn();
-    const handler = createTacticalAssessmentHandler({ getApiKey: () => "   \t", createClient });
+    const handler = createTacticalAssessmentHandler({
+      getApiKey: () => "   \t",
+      isRateLimited: async () => false,
+      createClient
+    });
 
     const response = await handler(request({ features }));
 
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ assessment: null });
     expect(createClient).not.toHaveBeenCalled();
+  });
+
+  it("rate-limits requests even when the provider API key is missing", async () => {
+    const client = { decide: vi.fn() };
+    const isRateLimited = vi.fn(async () => true);
+    const handler = createTacticalAssessmentHandler({ getApiKey: () => undefined, isRateLimited, client });
+
+    const response = await handler(request({ features }));
+
+    expect(response.status).toBe(429);
+    expect(await response.json()).toEqual({ assessment: null });
+    expect(isRateLimited).toHaveBeenCalledOnce();
+    expect(client.decide).not.toHaveBeenCalled();
   });
 
   it("passes only allow-listed match features to the injected JEV client", async () => {
@@ -186,7 +206,10 @@ describe("tactical assessment API route", () => {
     });
     expect((await malformed(request({ features }))).status).toBe(502);
 
-    const disabled = createTacticalAssessmentHandler({ getApiKey: () => undefined });
+    const disabled = createTacticalAssessmentHandler({
+      getApiKey: () => undefined,
+      isRateLimited: async () => false
+    });
     expect((await disabled(request({ features: { ...features, rounds: 50 } }))).status).toBe(400);
     expect((await disabled(new Request("https://judokon.example/api/tactical-assessment", { method: "GET" }))).status).toBe(405);
   });
