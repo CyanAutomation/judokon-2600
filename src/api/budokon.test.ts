@@ -21,6 +21,26 @@ describe("BudokonClient", () => {
     expect(requestBody).toEqual(expect.objectContaining({ count: 2, seed: "known-seed" }));
   });
 
+  it("accepts the versioned draw envelope and additive canonical judoka fields", async () => {
+    const canonicalJudoka = judoka.map((record, index) => ({
+      ...record,
+      category: "Judo",
+      rarity: index === 0 ? "Rare" : "Epic",
+      isHidden: false,
+      profileUrl: `https://example.test/judoka/${record.slug}`,
+      aliases: [`${record.firstname} ${record.surname}`],
+    }));
+    const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      datasetVersion: "2026.08.1",
+      algorithm: "budokon-v1",
+      seed: "known-seed",
+      poolSize: 2,
+      judoka: canonicalJudoka,
+    }), { status: 200 }));
+
+    await expect(new BudokonClient(fetcher).drawBatch("known-seed", 2)).resolves.toEqual(canonicalJudoka);
+  });
+
   it("reuses an in-flight or completed deterministic draw instead of issuing another API call", async () => {
     const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify({ judoka }), { status: 200 }));
     const client = new BudokonClient(fetcher);
@@ -88,7 +108,7 @@ describe("BudokonClient", () => {
   });
 
   describe("rarity response validation", () => {
-    // The API's Judoka response schema makes `rarity` optional: https://budokon.scheimann.workers.dev/docs
+    // The game tolerates missing rarity in older fixtures/responses even though the current API contract requires it.
     it.each([
       { scenario: "valid string rarity", rarity: "Rare", outcome: "accepted" },
       { scenario: "omitted rarity", outcome: "accepted" },
