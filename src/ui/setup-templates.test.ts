@@ -88,5 +88,6 @@ describe("setup templates", () => {
     expect(markup).toContain('role="dialog"');
     expect(markup).toContain('id="replay-seed"');
     expect(markup).toContain('id="save-seed"');
+    expect(markup).toContain("while the Budokon catalogue version stays the same");
   });
 });
