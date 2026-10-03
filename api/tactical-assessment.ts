@@ -89,14 +89,12 @@ export function createTacticalAssessmentHandler(options: TacticalAssessmentHandl
     if (request.method !== "POST") return json({ assessment: null }, 405);
 
     const apiKey = (options.getApiKey ?? (() => process.env.OPENROUTER_API_KEY))()?.trim();
-    if (apiKey) {
-      try {
-        const isRateLimited = await (options.isRateLimited ?? checkVercelRateLimit)(request);
-        if (isRateLimited) return json({ assessment: null }, 429);
-      } catch {
-        // A missing or unavailable firewall rule must never make the paid route fail open.
-        return json({ assessment: null }, 503);
-      }
+    try {
+      const isRateLimited = await (options.isRateLimited ?? checkVercelRateLimit)(request);
+      if (isRateLimited) return json({ assessment: null }, 429);
+    } catch {
+      // A missing or unavailable firewall rule must never make the public route fail open.
+      return json({ assessment: null }, 503);
     }
 
     const parsedBody = await parseJsonBody(request);
