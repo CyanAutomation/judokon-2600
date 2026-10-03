@@ -18,7 +18,7 @@ export function footerUtilities(state: GameState): string {
 
 export function seedDialog(state: GameState): string {
   const dialog = state.seedModalOpen
-    ? `<div class="modal-backdrop"><section class="panel seed-dialog" role="dialog" aria-modal="true" aria-labelledby="seed-dialog-title"><p class="eyebrow">Replay setup</p><h2 id="seed-dialog-title">Set replay seed</h2><p>Use the same seed to replay a matchup.</p><label for="replay-seed">Seed<input id="replay-seed" value="${esc(state.seedDraft ?? state.replaySeed)}" placeholder="Leave blank for a fresh draw" autocomplete="off" spellcheck="false" /></label><div class="dialog-actions">${quietButton("cancel-seed", "Cancel", "Esc")}${primaryButton("save-seed", "Use seed", "Enter")}</div></section></div>`
+    ? `<div class="modal-backdrop"><section class="panel seed-dialog" role="dialog" aria-modal="true" aria-labelledby="seed-dialog-title"><p class="eyebrow">Replay setup</p><h2 id="seed-dialog-title">Set replay seed</h2><p>The same seed reproduces draws while the Budokon catalogue version stays the same.</p><label for="replay-seed">Seed<input id="replay-seed" value="${esc(state.seedDraft ?? state.replaySeed)}" placeholder="Leave blank for a fresh draw" autocomplete="off" spellcheck="false" /></label><div class="dialog-actions">${quietButton("cancel-seed", "Cancel", "Esc")}${primaryButton("save-seed", "Use seed", "Enter")}</div></section></div>`
     : "";
   return dialog;
 }
