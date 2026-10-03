@@ -1,9 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
+import { checkRateLimit } from "@vercel/firewall";
 import { createTacticalAssessmentHandler } from "../../api/tactical-assessment";
 import type { JevDecisionResult } from "../jev/types";
 import type { MatchHistoryItem } from "../game/game";
 import { extractTacticalFeatures } from "../game/tacticalAssessment";
 import { requestTacticalAssessment } from "./tacticalAssessment";
+
+vi.mock("@vercel/firewall", () => ({ checkRateLimit: vi.fn() }));
 
 const rounds: MatchHistoryItem[] = [
   { stat: "power", outcome: "opponent" },
@@ -57,7 +60,11 @@ describe("tactical assessment API route", () => {
       receivedState = state;
       return providerResult();
     }) };
-    const handler = createTacticalAssessmentHandler({ getApiKey: () => "test-key", client });
+    const handler = createTacticalAssessmentHandler({
+      getApiKey: () => "test-key",
+      isRateLimited: async () => false,
+      client
+    });
     const response = await handler(request({
       features,
       opponent: { stats: { power: 999, hidden: "secret" } },
@@ -70,9 +77,94 @@ describe("tactical assessment API route", () => {
     expect(client.decide).toHaveBeenCalledOnce();
   });
 
+  it("rejects rate-limited requests before calling the provider", async () => {
+    const client = { decide: vi.fn() };
+    const incoming = request({ features });
+    const isRateLimited = vi.fn(async () => true);
+    const handler = createTacticalAssessmentHandler({
+      getApiKey: () => "test-key",
+      client,
+      isRateLimited
+    });
+
+    const response = await handler(incoming);
+
+    expect(response.status).toBe(429);
+    expect(await response.json()).toEqual({ assessment: null });
+    expect(isRateLimited).toHaveBeenCalledWith(incoming);
+    expect(client.decide).not.toHaveBeenCalled();
+  });
+
+  it("fails closed when rate-limit enforcement is unavailable", async () => {
+    const client = { decide: vi.fn() };
+    const handler = createTacticalAssessmentHandler({
+      getApiKey: () => "test-key",
+      client,
+      isRateLimited: vi.fn(async () => { throw new Error("firewall unavailable"); })
+    });
+
+    const response = await handler(request({ features }));
+
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({ assessment: null });
+    expect(client.decide).not.toHaveBeenCalled();
+  });
+
+  it("fails closed when the Vercel Firewall rule ID is not configured", async () => {
+    vi.stubEnv("JEV_ASSESSMENT_RATE_LIMIT_ID", "");
+    const client = { decide: vi.fn() };
+    const handler = createTacticalAssessmentHandler({ getApiKey: () => "test-key", client });
+
+    try {
+      const response = await handler(request({ features }));
+
+      expect(response.status).toBe(503);
+      expect(await response.json()).toEqual({ assessment: null });
+      expect(client.decide).not.toHaveBeenCalled();
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it("fails closed when the configured Vercel Firewall rule is missing", async () => {
+    vi.stubEnv("JEV_ASSESSMENT_RATE_LIMIT_ID", "assessment-rule");
+    vi.mocked(checkRateLimit).mockResolvedValue({ rateLimited: false, error: "not-found" });
+    const client = { decide: vi.fn() };
+    const incoming = request({ features });
+    const handler = createTacticalAssessmentHandler({ getApiKey: () => "test-key", client });
+
+    try {
+      const response = await handler(incoming);
+
+      expect(response.status).toBe(503);
+      expect(await response.json()).toEqual({ assessment: null });
+      expect(checkRateLimit).toHaveBeenCalledWith("assessment-rule", { request: incoming });
+      expect(client.decide).not.toHaveBeenCalled();
+    } finally {
+      vi.mocked(checkRateLimit).mockReset();
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it("rejects oversized request bodies before calling the provider", async () => {
+    const client = { decide: vi.fn() };
+    const handler = createTacticalAssessmentHandler({
+      getApiKey: () => "test-key",
+      client,
+      isRateLimited: vi.fn(async () => false)
+    });
+
+    const response = await handler(request({ features, padding: "x".repeat(10_000) }));
+
+    expect(response.status).toBe(413);
+    expect(await response.json()).toEqual({ assessment: null });
+    expect(client.decide).not.toHaveBeenCalled();
+  });
+
   it("returns no insight for low confidence and degrades provider errors", async () => {
     const lowConfidence = createTacticalAssessmentHandler({
       getApiKey: () => "test-key",
+      isRateLimited: async () => false,
       client: { decide: vi.fn(async () => providerResult(2, 0.2)) }
     });
     const low = await lowConfidence(request({ features }));
@@ -80,6 +172,7 @@ describe("tactical assessment API route", () => {
 
     const failed = createTacticalAssessmentHandler({
       getApiKey: () => "test-key",
+      isRateLimited: async () => false,
       client: { decide: vi.fn(async () => { throw new Error("provider timeout"); }) }
     });
     expect((await failed(request({ features }))).status).toBe(503);
@@ -88,6 +181,7 @@ describe("tactical assessment API route", () => {
   it("rejects malformed provider answers and invalid request shapes", async () => {
     const malformed = createTacticalAssessmentHandler({
       getApiKey: () => "test-key",
+      isRateLimited: async () => false,
       client: { decide: vi.fn(async () => ({ answers: { overReliance: { type: "noul", noul: 1 } } } as unknown as JevDecisionResult)) }
     });
     expect((await malformed(request({ features }))).status).toBe(502);
