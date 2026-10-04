@@ -71,13 +71,93 @@ describe("handleClickEvent", () => {
       resolve: vi.fn(),
       clearAndExit: vi.fn()
     };
-    const state = createMockGameState();
+    const state = createMockGameState({ activeSeed: "completed-match-seed" });
     const button = createMockButton("replay");
     const event = createClickEvent(button);
 
     handleClickEvent(event, state, handlers);
 
-    expect(handlers.start).toHaveBeenCalled();
+    expect(handlers.start).toHaveBeenCalledWith("completed-match-seed");
+  });
+
+  it("confirms an already-selected mode choice when clicked", () => {
+    const setSetupStep = vi.fn();
+    const handlers = {
+      start: vi.fn(),
+      copyReplaySeed: vi.fn(),
+      next: vi.fn(),
+      resolve: vi.fn(),
+      clearAndExit: vi.fn(),
+      setSetupStep
+    };
+    const state = createMockGameState({ match: null, setupStep: "mode", mode: "classic" });
+    const input = document.createElement("input");
+    input.checked = true;
+    input.dataset.introMode = "classic";
+
+    handleClickEvent(createClickEvent(input), state, handlers);
+
+    expect(setSetupStep).toHaveBeenCalledWith("division");
+  });
+
+  it("does not confirm a newly-selected mode before its change handler runs", () => {
+    const setSetupStep = vi.fn();
+    const handlers = {
+      start: vi.fn(),
+      copyReplaySeed: vi.fn(),
+      next: vi.fn(),
+      resolve: vi.fn(),
+      clearAndExit: vi.fn(),
+      setSetupStep
+    };
+    const state = createMockGameState({ match: null, setupStep: "mode", mode: "classic" });
+    const input = document.createElement("input");
+    input.checked = true;
+    input.dataset.introMode = "champion";
+
+    handleClickEvent(createClickEvent(input), state, handlers);
+
+    expect(setSetupStep).not.toHaveBeenCalled();
+  });
+
+  it("confirms an already-selected division choice when clicked", () => {
+    const setSetupStep = vi.fn();
+    const handlers = {
+      start: vi.fn(),
+      copyReplaySeed: vi.fn(),
+      next: vi.fn(),
+      resolve: vi.fn(),
+      clearAndExit: vi.fn(),
+      setSetupStep
+    };
+    const state = createMockGameState({ match: null, setupStep: "division", division: "weight" });
+    const input = document.createElement("input");
+    input.checked = true;
+    input.dataset.division = "weight";
+
+    handleClickEvent(createClickEvent(input), state, handlers);
+
+    expect(setSetupStep).toHaveBeenCalledWith("weight");
+  });
+
+  it("does not confirm a newly-selected division before its change handler runs", () => {
+    const setSetupStep = vi.fn();
+    const handlers = {
+      start: vi.fn(),
+      copyReplaySeed: vi.fn(),
+      next: vi.fn(),
+      resolve: vi.fn(),
+      clearAndExit: vi.fn(),
+      setSetupStep
+    };
+    const state = createMockGameState({ match: null, setupStep: "division", division: "absolute" });
+    const input = document.createElement("input");
+    input.checked = true;
+    input.dataset.division = "weight";
+
+    handleClickEvent(createClickEvent(input), state, handlers);
+
+    expect(setSetupStep).not.toHaveBeenCalled();
   });
 
   it("starts the match when a match-length choice is clicked", () => {

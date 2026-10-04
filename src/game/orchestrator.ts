@@ -294,6 +294,32 @@ export async function copyReplaySeed(state: GameState, deps: OrchestratorDeps): 
   deps.render();
 }
 
+function setupCursorForStep(state: GameState, step: SetupStep): number {
+  switch (step) {
+    case "mode":
+      return state.mode === "champion" ? 1 : 0;
+    case "division":
+      return state.division === "weight" ? 1 : 0;
+    case "length":
+      return state.lengthIndex;
+    case "weight":
+      return 0;
+  }
+}
+
+function setupFocusTarget(state: GameState, step: SetupStep): string {
+  switch (step) {
+    case "mode":
+      return `#mode-${state.mode}`;
+    case "division":
+      return `#division-${state.division}`;
+    case "weight":
+      return "#weight-class";
+    case "length":
+      return `#length-${lengths[state.lengthIndex] ?? lengths[0]}`;
+  }
+}
+
 /**
  * Clear game state and return to intro
  * Used when user quits or changes settings
@@ -309,6 +335,7 @@ export function clearAndExit(state: GameState, deps: OrchestratorDeps): void {
   state.history = [];
   state.drawBuffer = [];
   state.setupStep = "mode";
+  state.setupCursor = setupCursorForStep(state, "mode");
   clearSavedMatch();
   deps.render();
 }
@@ -330,17 +357,9 @@ export function chooseLength(state: GameState, n: number, deps: OrchestratorDeps
  */
 export function handleSetupStepClick(state: GameState, setupStep: SetupStep, deps: OrchestratorDeps): void {
   state.setupStep = setupStep;
-  state.setupCursor = setupStep === "length" ? state.lengthIndex : 0;
+  state.setupCursor = setupCursorForStep(state, setupStep);
   deps.render();
-  const focusTarget =
-    setupStep === "mode"
-      ? "#mode-classic"
-      : setupStep === "division"
-        ? "#division-absolute"
-        : setupStep === "weight"
-          ? "#weight-class"
-          : "#length-3";
-  document.querySelector<HTMLElement>(focusTarget)?.focus();
+  document.querySelector<HTMLElement>(setupFocusTarget(state, setupStep))?.focus();
 }
 
 /**
