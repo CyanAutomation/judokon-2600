@@ -53,6 +53,8 @@ npm run check
 
 This runs lint, test, and build in sequence (the build step compiles with `tsc -p tsconfig.app.json` then produces the bundle with `vite build`).
 
+The behavior IDs used by UI and game tests are documented in [Test behavior contracts](docs/test-contracts.md).
+
 ## Vercel deployment
 
 `vercel.json` configures Vercel to run `npm run check` before publishing Vite's `dist` output. This runs lint, tests, and build in the deployment itself, so a failed quality check blocks the deployment. In Vercel, import `CyanAutomation/judokon-2600` and enable its Git integration. Pushes to `main` create production deployments; pull requests create preview deployments. The separate GitHub Actions workflow runs the same gate on every pull request and on pushes to `main`.

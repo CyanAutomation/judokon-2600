@@ -188,12 +188,18 @@ describe("Classic Battle game engine", () => {
       scenario: "a streak ending in a loss",
       outcomes: ["player", "player", "opponent"] as const,
       championStreak: 0
+    },
+    {
+      scenario: "a streak ending in a draw",
+      outcomes: ["player", "player", "draw"] as const,
+      championStreak: 0
     }
-  ])("calculates the Champion streak from the player's wins: $scenario", ({ outcomes, championStreak }) => {
+  ])("[REQ-CHAMPION-005] calculates the current streak from trailing round outcomes: $scenario", ({ outcomes, championStreak }) => {
     const history: MatchHistoryItem[] = outcomes.map((outcome) => ({ outcome, stat: "power" }));
     const summary = matchSummary(completedMatch(history, "champion"), history);
 
     expect(summary.championStreak).toBe(championStreak);
+    expect(summary.championRecord?.wins).toBe(outcomes.filter((outcome) => outcome === "player").length);
   });
 
   it("reports a Champion run's win, loss, and draw record", () => {
