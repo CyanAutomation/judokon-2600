@@ -67,7 +67,7 @@ export function createGameState(): GameState {
     replaySeed: "",
     seedMessage: "",
     setupStep: "mode",
-    setupCursor: 0,
+    setupCursor: mode === "champion" ? 1 : 0,
     seedModalOpen: false,
     seedDraft: "",
   };

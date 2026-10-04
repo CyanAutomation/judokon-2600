@@ -50,7 +50,7 @@ function callout(m: Match, r: MatchResult, helpers: Helpers): string {
  */
 function historyStrip(state: GameState, helpers: Helpers): string {
   if (!state.history.length) return "";
-  return `<section class="match-history" aria-label="Round history">${helpers.eyebrow("Round history")}<ol>${state.history.map((h) => `<li class="${h.outcome}"><span>R${h.roundNumber}</span><strong>${labels[h.stat]}</strong><span>${h.outcome === "player" ? "WIN" : h.outcome === "opponent" ? "LOSS" : "DRAW"}</span></li>`).join("")}</ol></section>`;
+  return `<section class="match-history" aria-label="Round history">${helpers.eyebrow("Round history")}<ol tabindex="0" aria-label="Round history. Use the left and right arrow keys to view all rounds.">${state.history.map((h) => `<li class="${h.outcome}"><span>R${h.roundNumber}</span><strong>${labels[h.stat]}</strong><span>${h.outcome === "player" ? "WIN" : h.outcome === "opponent" ? "LOSS" : "DRAW"}</span></li>`).join("")}</ol></section>`;
 }
 
 /**
