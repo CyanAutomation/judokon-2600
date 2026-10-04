@@ -129,4 +129,26 @@ describe("game templates", () => {
     expect(history).toBeGreaterThan(opponent);
     expect(controls).toBeGreaterThan(history);
   });
+
+  it("makes the horizontally scrolling round history keyboard focusable and described", () => {
+    const match: Match = {
+      player: judoka,
+      opponent: { ...judoka, id: "opponent", slug: "opponent" },
+      target: 3,
+      matchNumber: 2,
+      scores: { player: 0, opponent: 1 },
+      mode: "classic",
+      phase: "awaitingNext",
+      winner: null,
+    };
+    const current = state({
+      match,
+      result: { match, outcome: "opponent", stat: "power", playerValue: 8, opponentValue: 9 },
+      history: [{ stat: "power", outcome: "opponent", roundNumber: 1 }]
+    });
+
+    const markup = game(match, current, createHelpers(current));
+
+    expect(markup).toContain('<ol tabindex="0" aria-label="Round history. Use the left and right arrow keys to view all rounds.">');
+  });
 });

@@ -12,7 +12,7 @@ import type { StatKey } from "../api/types";
 type ButtonHandler = (button: HTMLButtonElement, state: GameState, handlers: ButtonHandlers) => void;
 
 interface ButtonHandlers {
-  start: () => void;
+  start: (seed?: string) => void;
   copyReplaySeed: () => Promise<void>;
   next: (m: Match) => Promise<void>;
   resolve: (s: StatKey) => void;
@@ -36,7 +36,7 @@ const buttonHandlers = new Map<string, ButtonHandler>([
   ["confirm-weight", (_, __, h) => h.setSetupStep?.("length")],
   ["start", (_, __, h) => h.start()],
   ["retry", (_, __, h) => h.start()],
-  ["replay", (_, __, h) => h.start()],
+  ["replay", (_, state, h) => h.start(state.activeSeed)],
   ["copy-seed", (_, __, h) => void h.copyReplaySeed()],
   ["next", (_, s, h) => s.match && void h.next(s.match)],
   ["quit", (_, __, h) => h.clearAndExit()]
@@ -48,6 +48,20 @@ export function handleClickEvent(
   handlers: ButtonHandlers
 ): void {
   const target = e.target as Element;
+
+  const setupChoice = target.closest<HTMLInputElement>("input[data-intro-mode], input[data-division]")
+    ?? target.closest<HTMLLabelElement>(".choice-card")?.querySelector<HTMLInputElement>("input[data-intro-mode], input[data-division]");
+  if (!state.match && !state.busy && setupChoice?.checked) {
+    if (state.setupStep === "mode" && setupChoice.dataset.introMode === state.mode) {
+      handlers.setSetupStep?.("division");
+      return;
+    }
+    if (state.setupStep === "division" && setupChoice.dataset.division === state.division) {
+      handlers.setSetupStep?.(setupChoice.dataset.division === "weight" ? "weight" : "length");
+      return;
+    }
+  }
+
   const lengthChoice = target.closest<HTMLInputElement>("input[data-length]")
     ?? target.closest<HTMLElement>(".choice-card")?.querySelector<HTMLInputElement>("input[data-length]");
   if (lengthChoice && !state.match && !state.busy && handlers.startWithLength) {
