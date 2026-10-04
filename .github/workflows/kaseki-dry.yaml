@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 run-name: >-
-  DRY sweep · ${{ github.repository }}@${{ github.event.repository.default_branch }}
+  DRY sweep · ${{ github.repository }}@${{ github.sha }}
 
 permissions:
   contents: read
@@ -17,11 +17,12 @@ concurrency:
 
 jobs:
   dry_sweep:
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
     uses: ./.github/workflows/kaseki-sweep.yml
     with:
       sweep_name: DRY
       task_description: Perform a conservative DRY-principle review of this repository.
-      allowlist: src/**/*,scripts/**/*,test/**/*,tests/**/*
+      allowlist: src/**/*,api/**/*,scripts/**/*,test/**/*,tests/**/*
       task_prompt: >-
         Look for duplicated knowledge rather than merely duplicated text. Strong
         candidates include repeated business rules, validation rules, constants,
@@ -37,4 +38,3 @@ jobs:
         sensible scope. Make at most one focused refactoring. A no-change result is
         successful. If there is no sufficiently valuable, high-confidence DRY
         improvement, make no changes.
-    secrets: inherit

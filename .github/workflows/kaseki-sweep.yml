@@ -23,34 +23,32 @@ jobs:
   sweep:
     name: Run Kaseki ${{ inputs.sweep_name }} sweep
     runs-on: ubuntu-latest
-    # Leave enough time for setup and result publication around the 175-minute poll.
+    # Leave enough time for setup and result publication around the 185-minute poll.
     timeout-minutes: 220
     environment: kaseki-agent
     env:
       KASEKI_BASE_URL: ${{ vars.KASEKI_BASE_URL }}
-      KASEKI_API_TOKEN: ${{ secrets.KASEKI_API_TOKEN }}
       REPO_URL: ${{ github.server_url }}/${{ github.repository }}
-      REF: ${{ github.event.repository.default_branch }}
+      REF: ${{ github.sha }}
       TASK_DESCRIPTION: ${{ inputs.task_description }}
       ALLOWLIST: ${{ inputs.allowlist }}
       TASK_PROMPT: ${{ inputs.task_prompt }}
       VALIDATION_COMMAND: npm run check
-      POLLING_BUDGET_SECONDS: 10500
+      POLLING_BUDGET_SECONDS: 11100
     steps:
+      - name: Check out the workflow commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
       - name: Validate Kaseki configuration
         shell: bash
         run: |
           set -euo pipefail
           : "${KASEKI_BASE_URL:?Configure KASEKI_BASE_URL as an environment variable}"
-          : "${KASEKI_API_TOKEN:?Configure KASEKI_API_TOKEN as an environment secret}"
-          # Register the token explicitly so any value echoed by a failed tool is redacted.
-          printf '::add-mask::%s\n' "$KASEKI_API_TOKEN"
-          if [[ ! "$KASEKI_BASE_URL" =~ ^https:// ]]; then
-            echo "::error title=Invalid Kaseki URL::KASEKI_BASE_URL must use HTTPS"
-            exit 1
-          fi
-          if [[ "$KASEKI_BASE_URL" =~ [@[:space:]] ]]; then
-            echo "::error title=Invalid Kaseki URL::KASEKI_BASE_URL must not contain credentials or whitespace"
+          if [[ "$KASEKI_BASE_URL" != "https://kaseki-tunnel.scheimann.xyz" ]]; then
+            echo "::error title=Invalid Kaseki controller URL::Use the approved HTTPS controller URL."
             exit 1
           fi
 
@@ -61,6 +59,7 @@ jobs:
           response_file="$(mktemp)"
           trap 'rm -f "$response_file"' EXIT
           curl --fail-with-body --silent --show-error --retry 3 --retry-all-errors \
+            --proto '=https' --tlsv1.2 --max-filesize 1048576 \
             --connect-timeout 10 --max-time 20 --output "$response_file" \
             "$KASEKI_BASE_URL/health"
           jq -e '.status == "healthy"' "$response_file" >/dev/null
@@ -72,17 +71,22 @@ jobs:
           response_file="$(mktemp)"
           trap 'rm -f "$response_file"' EXIT
           curl --fail-with-body --silent --show-error --retry 3 --retry-all-errors \
+            --proto '=https' --tlsv1.2 --max-filesize 1048576 \
             --connect-timeout 10 --max-time 20 --output "$response_file" \
             "$KASEKI_BASE_URL/ready"
           jq -e '.status == "ready"' "$response_file" >/dev/null
 
       - name: Verify gateway connectivity and authentication
         shell: bash
+        env:
+          KASEKI_API_TOKEN: ${{ secrets.KASEKI_API_TOKEN }}
         run: |
           set -euo pipefail
+          : "${KASEKI_API_TOKEN:?Configure KASEKI_API_TOKEN as an environment secret}"
           response_file="$(mktemp)"
           trap 'rm -f "$response_file"' EXIT
           curl --fail-with-body --silent --show-error --retry 3 --retry-all-errors \
+            --proto '=https' --tlsv1.2 --max-filesize 1048576 \
             --connect-timeout 10 --max-time 60 --output "$response_file" \
             --header "Authorization: Bearer $KASEKI_API_TOKEN" \
             "$KASEKI_BASE_URL/api/gateway-test?stage=1"
@@ -91,9 +95,12 @@ jobs:
       - name: Submit ${{ inputs.sweep_name }} sweep
         id: submit
         shell: bash
+        env:
+          KASEKI_API_TOKEN: ${{ secrets.KASEKI_API_TOKEN }}
         run: |
           set -euo pipefail
-          idempotency_key="$(tr '[:upper:]' '[:lower:]' < /proc/sys/kernel/random/uuid)"
+          : "${KASEKI_API_TOKEN:?Configure KASEKI_API_TOKEN as an environment secret}"
+          idempotency_key="$(node scripts/kaseki-idempotency-key.mjs)"
           if [[ ! "$idempotency_key" =~ ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$ ]]; then
             echo "::error title=Invalid UUID generation::Failed to generate valid idempotency key"
             exit 1
@@ -111,6 +118,7 @@ jobs:
                 repoUrl: $repoUrl,
                 ref: $ref,
                 taskMode: "patch",
+                publishMode: "pr",
                 timeoutSeconds: 10800,
                 idempotencyKey: $idempotencyKey,
                 changedFilesAllowlist: ($allowlist | split(",") | map(gsub("^\\s+|\\s+$"; "")) | map(select(length > 0))),
@@ -122,7 +130,8 @@ jobs:
           response_file="$(mktemp)"
           trap 'rm -f "$response_file"' EXIT
           http_status="$(
-            curl --silent --show-error --retry 3 --retry-all-errors --max-time 60 \
+            curl --silent --show-error --retry 3 --retry-all-errors \
+              --proto '=https' --tlsv1.2 --max-filesize 1048576 --max-time 60 \
               --output "$response_file" --write-out '%{http_code}' --request POST \
               "$KASEKI_BASE_URL/api/runs" \
               --header "Authorization: Bearer $KASEKI_API_TOKEN" \
@@ -144,6 +153,7 @@ jobs:
         id: wait
         shell: bash
         env:
+          KASEKI_API_TOKEN: ${{ secrets.KASEKI_API_TOKEN }}
           RUN_ID: ${{ steps.submit.outputs.run_id }}
         run: |
           set -euo pipefail
@@ -152,16 +162,27 @@ jobs:
           deadline=$((SECONDS + POLLING_BUDGET_SECONDS))
           while (( SECONDS < deadline )); do
             curl --fail-with-body --silent --show-error --retry 3 --retry-all-errors \
+              --proto '=https' --tlsv1.2 --max-filesize 1048576 \
               --connect-timeout 10 --max-time 60 --output "$response_file" \
               --header "Authorization: Bearer $KASEKI_API_TOKEN" \
               "$KASEKI_BASE_URL/api/runs/$RUN_ID/status"
-            status="$(jq -er '.status' "$response_file")"
+            if ! status="$(jq -er '.status | strings' "$response_file" 2>/dev/null)"; then
+              echo "::warning title=Invalid Kaseki status response::Controller returned an invalid status response; retrying"
+              sleep 60
+              continue
+            fi
             case "$status" in
               completed)
+                exit_code="$(jq -er '.exitCode // 0 | numbers' "$response_file")"
+                if [[ "$exit_code" != "0" ]]; then
+                  echo "status=failed (exit code $exit_code)" >> "$GITHUB_OUTPUT"
+                  echo "::error::Kaseki run completed with exit code $exit_code"
+                  exit 1
+                fi
                 echo "status=$status" >> "$GITHUB_OUTPUT"
                 exit 0
                 ;;
-              failed)
+              failed|cancelled)
                 echo "status=$status" >> "$GITHUB_OUTPUT"
                 exit 1
                 ;;
@@ -194,6 +215,7 @@ jobs:
             echo "| Ref | \`$REF\` |"
             echo "| Allowed paths | \`$ALLOWLIST\` |"
             echo "| Validation | \`$VALIDATION_COMMAND\` |"
+            echo "| Publish mode | \`pr\` |"
             echo "| Kaseki run | \`$RUN_ID\` |"
             echo "| Final status | \`$FINAL_STATUS\` |"
           } >> "$GITHUB_STEP_SUMMARY"
