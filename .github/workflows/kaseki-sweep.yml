@@ -166,7 +166,11 @@ jobs:
               --connect-timeout 10 --max-time 60 --output "$response_file" \
               --header "Authorization: Bearer $KASEKI_API_TOKEN" \
               "$KASEKI_BASE_URL/api/runs/$RUN_ID/status"
-            status="$(jq -er '.status' "$response_file")"
+            if ! status="$(jq -er '.status | strings' "$response_file" 2>/dev/null)"; then
+              echo "::warning title=Invalid Kaseki status response::Controller returned an invalid status response; retrying"
+              sleep 60
+              continue
+            fi
             case "$status" in
               completed)
                 exit_code="$(jq -er '.exitCode // 0 | numbers' "$response_file")"
