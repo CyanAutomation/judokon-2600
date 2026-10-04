@@ -13,7 +13,7 @@ import { outcomeBeep } from "../audio";
 import { clearSavedMatch, persistPreferences, saveGameState, type GameState, type SetupStep } from "../state";
 import { weights, lengths } from "../ui/constants";
 import { getSoundEnabled, setSoundEnabledPersisted } from "../ui/helpers/soundStorage";
-import { extractTacticalFeatures, type TacticalAssessment } from "./tacticalAssessment";
+import { extractTacticalFeatures, type TacticalAssessmentResult } from "./tacticalAssessment";
 
 const DRAW_BUFFER_SIZE = 6;
 export const MATCH_RESOLUTION_DELAY_MS = 650;
@@ -45,7 +45,7 @@ export interface OrchestratorDeps {
   client: BudokonClient;
   render: () => void;
   onMatchReady?: () => void;
-  assessTactics?: (features: ReturnType<typeof extractTacticalFeatures>) => Promise<TacticalAssessment | null>;
+  assessTactics?: (features: ReturnType<typeof extractTacticalFeatures>) => Promise<TacticalAssessmentResult>;
 }
 
 /**
@@ -116,6 +116,9 @@ function buildDrawErrorMessage(error: unknown): string {
     return `${error.message}. Choose Absolute or another division.`;
   }
   if (error instanceof Error) {
+    if (/^(Budokon API|Unable to connect to the Budokon API|Too many draw requests)/.test(error.message)) {
+      return error.message;
+    }
     return `${error.message}. Check your connection and try again.`;
   }
   return "Unable to draw judoka. Please try again.";
@@ -216,10 +219,7 @@ export async function next(state: GameState, match: Match, deps: OrchestratorDep
     state.drawBuffer = drawBuffer;
     saveGameState(state);
   } catch (e) {
-    state.errorMessage =
-      e instanceof Error
-        ? `${e.message}. Try the next match again.`
-        : "Unable to draw judoka. Please try again.";
+    state.errorMessage = buildDrawErrorMessage(e);
     saveGameState(state);
   } finally {
     state.busy = false;
@@ -260,10 +260,19 @@ export function resolve(state: GameState, _match: Match, stat: StatKey, deps: Or
       // Do not await optional network work: deterministic resolution and UI are complete.
       try {
         void deps.assessTactics(features)
-          .then((assessment) => {
-            if (!assessment || state.match !== completedMatch) return;
+          .then((result) => {
+            if (state.match !== completedMatch) return;
             if (!isCurrentOperation(state, operationId)) return;
-            state.tacticalAssessment = assessment;
+            state.tacticalAssessment = result.assessment;
+            if (!result.assessment && result.issue) {
+              state.errorMessage = result.issue === "not_configured"
+                ? "Optional tactical insight is not configured. Your match summary is still available."
+                : result.issue === "invalid_api_key"
+                  ? "The tactical insight service rejected its API key. Your match summary is still available."
+                  : result.issue === "rate_limited"
+                    ? "Tactical insight is temporarily busy. Your match summary is still available."
+                    : "The tactical insight service could not be reached. Your match summary is still available.";
+            }
             deps.render();
           })
           .catch(() => {
