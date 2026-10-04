@@ -5,6 +5,12 @@ import type { MatchHistoryItem, Outcome } from "./game";
 export type TacticalSignal = "overReliance" | "adaptation" | "missedOpportunity" | "momentumResponse";
 export type TacticalAssessment = Partial<Record<TacticalSignal, true>>;
 export type TacticalOutcome = "win" | "loss" | "draw";
+export type TacticalAssessmentIssue = "not_configured" | "invalid_api_key" | "rate_limited" | "unavailable";
+
+export interface TacticalAssessmentResult {
+  assessment: TacticalAssessment | null;
+  issue?: TacticalAssessmentIssue;
+}
 
 export interface TacticalStatRecord {
   selected: number;

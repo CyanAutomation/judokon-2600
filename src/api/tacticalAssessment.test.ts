@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { checkRateLimit } from "@vercel/firewall";
 import { createTacticalAssessmentHandler } from "../../api/tactical-assessment";
+import { JevProviderError } from "../jev/openRouterClient";
 import type { JevDecisionResult } from "../jev/types";
 import type { MatchHistoryItem } from "../game/game";
 import { extractTacticalFeatures } from "../game/tacticalAssessment";
@@ -41,7 +42,7 @@ describe("tactical assessment API route", () => {
     const incoming = request({ features });
     const response = await handler(incoming);
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ assessment: null });
+    expect(await response.json()).toEqual({ assessment: null, issue: "not_configured" });
     expect(isRateLimited).toHaveBeenCalledWith(incoming);
     expect(client.decide).not.toHaveBeenCalled();
   });
@@ -57,8 +58,23 @@ describe("tactical assessment API route", () => {
     const response = await handler(request({ features }));
 
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ assessment: null });
+    expect(await response.json()).toEqual({ assessment: null, issue: "not_configured" });
     expect(createClient).not.toHaveBeenCalled();
+  });
+
+  it("returns a safe reason when the provider rejects an expired API key", async () => {
+    const handler = createTacticalAssessmentHandler({
+      getApiKey: () => "expired-secret",
+      isRateLimited: async () => false,
+      client: { decide: vi.fn(async () => { throw new JevProviderError("JEV provider returned HTTP 401", 401); }) }
+    });
+
+    const response = await handler(request({ features }));
+    const body = await response.json();
+
+    expect(response.status).toBe(503);
+    expect(body).toEqual({ assessment: null, issue: "invalid_api_key" });
+    expect(JSON.stringify(body)).not.toContain("expired-secret");
   });
 
   it("rate-limits requests even when the provider API key is missing", async () => {
@@ -69,7 +85,7 @@ describe("tactical assessment API route", () => {
     const response = await handler(request({ features }));
 
     expect(response.status).toBe(429);
-    expect(await response.json()).toEqual({ assessment: null });
+    expect(await response.json()).toEqual({ assessment: null, issue: "rate_limited" });
     expect(isRateLimited).toHaveBeenCalledOnce();
     expect(client.decide).not.toHaveBeenCalled();
   });
@@ -110,7 +126,7 @@ describe("tactical assessment API route", () => {
     const response = await handler(incoming);
 
     expect(response.status).toBe(429);
-    expect(await response.json()).toEqual({ assessment: null });
+    expect(await response.json()).toEqual({ assessment: null, issue: "rate_limited" });
     expect(isRateLimited).toHaveBeenCalledWith(incoming);
     expect(client.decide).not.toHaveBeenCalled();
   });
@@ -195,7 +211,9 @@ describe("tactical assessment API route", () => {
       isRateLimited: async () => false,
       client: { decide: vi.fn(async () => { throw new Error("provider timeout"); }) }
     });
-    expect((await failed(request({ features }))).status).toBe(503);
+    const failedResponse = await failed(request({ features }));
+    expect(failedResponse.status).toBe(503);
+    expect(await failedResponse.json()).toEqual({ assessment: null, issue: "unavailable" });
   });
 
   it("rejects malformed provider answers and invalid request shapes", async () => {
@@ -216,16 +234,27 @@ describe("tactical assessment API route", () => {
 });
 
 describe("browser assessment client", () => {
-  it("sends only compact features and treats route failure as no insight", async () => {
+  it("sends only compact features and returns a user-safe issue for route failures", async () => {
     const fetcher = vi.fn<typeof fetch>().mockResolvedValue(Response.json({ assessment: { missedOpportunity: true } }));
     const assessment = await requestTacticalAssessment(features, fetcher);
-    expect(assessment).toEqual({ missedOpportunity: true });
+    expect(assessment).toEqual({ assessment: { missedOpportunity: true } });
 
     const body = JSON.parse(String(fetcher.mock.calls[0]?.[1]?.body)) as Record<string, unknown>;
     expect(body).toEqual({ features });
     expect(JSON.stringify(body)).not.toMatch(/replaySeed|opponentValue|opponent\.stats|power.*999/);
 
-    await expect(requestTacticalAssessment(features, vi.fn<typeof fetch>().mockResolvedValue(new Response("", { status: 503 })))).resolves.toBeNull();
-    await expect(requestTacticalAssessment(features, vi.fn<typeof fetch>().mockRejectedValue(new Error("offline")))).resolves.toBeNull();
+    await expect(requestTacticalAssessment(features, vi.fn<typeof fetch>().mockResolvedValue(Response.json({ assessment: null, issue: "not_configured" }))))
+      .resolves.toEqual({ assessment: null, issue: "not_configured" });
+    await expect(requestTacticalAssessment(features, vi.fn<typeof fetch>().mockResolvedValue(Response.json({ assessment: null, issue: "rate_limited" }, { status: 429 }))))
+      .resolves.toEqual({ assessment: null, issue: "rate_limited" });
+    await expect(requestTacticalAssessment(features, vi.fn<typeof fetch>().mockResolvedValue(new Response("", { status: 503 }))))
+      .resolves.toEqual({ assessment: null, issue: "unavailable" });
+    await expect(requestTacticalAssessment(features, vi.fn<typeof fetch>().mockRejectedValue(new TypeError("offline"))))
+      .resolves.toEqual({ assessment: null, issue: "unavailable" });
+    await expect(requestTacticalAssessment(features, vi.fn<typeof fetch>().mockResolvedValue(new Response("not found", {
+      status: 404,
+      headers: { "Content-Type": "text/plain" }
+    }))))
+      .resolves.toEqual({ assessment: null, issue: "unavailable" });
   });
 });

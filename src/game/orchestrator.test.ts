@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Judoka } from "../api/types";
 import { createGameState } from "../state";
 import { clearAndExit, draw, next, resolve, MATCH_RESOLUTION_DELAY_MS, handleSetupStepClick, handleOpenSeedModal, handleCloseSeedModal, handleSaveReplaySeed, handleToggleSound, handleKeyboardMoveCursor, handleKeyboardCloseSeedModal, type OrchestratorDeps } from "./orchestrator";
-import type { TacticalAssessment } from "./tacticalAssessment";
+import type { TacticalAssessmentResult } from "./tacticalAssessment";
 import type { TacticalFeatures } from "./tacticalAssessment";
 
 afterEach(() => vi.useRealTimers());
@@ -246,7 +246,7 @@ describe("optional post-match assessment", () => {
     };
     const state = createGameState();
     state.match = match;
-    const pending = deferred<TacticalAssessment | null>();
+    const pending = deferred<TacticalAssessmentResult>();
     let assessedFeatures: TacticalFeatures | undefined;
     const assessTactics = vi.fn((features: TacticalFeatures) => {
       assessedFeatures = features;
@@ -270,7 +270,7 @@ describe("optional post-match assessment", () => {
       selections: { power: { selected: 1, wins: 1 } }
     });
 
-    pending.resolve({ adaptation: true });
+    pending.resolve({ assessment: { adaptation: true } });
     await Promise.resolve();
     await Promise.resolve();
     expect(state.tacticalAssessment).toEqual({ adaptation: true });
@@ -290,7 +290,7 @@ describe("optional post-match assessment", () => {
       phase: "selecting",
       winner: null
     };
-    const assessment = deferred<TacticalAssessment | null>();
+    const assessment = deferred<TacticalAssessmentResult>();
     const nextDraw = deferred<Judoka[]>();
     const deps = {
       client: { drawBatch: vi.fn(() => nextDraw.promise) },
@@ -303,13 +303,45 @@ describe("optional post-match assessment", () => {
     await Promise.resolve();
     const pendingDraw = draw(state, deps);
 
-    assessment.resolve({ adaptation: true });
+    assessment.resolve({ assessment: { adaptation: true } });
     await Promise.resolve();
     await Promise.resolve();
 
     expect(state.tacticalAssessment).toBeNull();
     nextDraw.resolve(Array.from({ length: 6 }, (_, index) => judoka(`next-${index}`)));
     await pendingDraw;
+  });
+
+  it("shows a useful optional-service message when tactical insight is not configured", async () => {
+    const player = judoka("player");
+    const opponent = { ...judoka("opponent"), stats: { ...judoka("opponent").stats, power: 0 } };
+    const state = createGameState();
+    state.match = {
+      player,
+      opponent,
+      target: 1,
+      matchNumber: 1,
+      scores: { player: 0, opponent: 0 },
+      mode: "classic",
+      phase: "selecting",
+      winner: null
+    };
+    const render = vi.fn();
+    const deps = {
+      client: {},
+      render,
+      assessTactics: vi.fn(async () => ({ assessment: null, issue: "not_configured" as const }))
+    } as unknown as OrchestratorDeps;
+
+    resolve(state, state.match, "power", deps);
+    vi.advanceTimersByTime(MATCH_RESOLUTION_DELAY_MS);
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(state.match?.phase).toBe("matchOver");
+    expect(state.result?.outcome).toBe("player");
+    expect(state.errorMessage).toBe("Optional tactical insight is not configured. Your match summary is still available.");
+    expect(render).toHaveBeenCalled();
   });
 });
 

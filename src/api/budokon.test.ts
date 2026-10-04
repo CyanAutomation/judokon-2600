@@ -120,7 +120,7 @@ describe("BudokonClient", () => {
       const request = new BudokonClient(fetcher).drawBatch("known-seed", 2);
 
       if (outcome === "rejected") {
-        await expect(request).rejects.toThrow("invalid judoka draw");
+        await expect(request).rejects.toThrow("Budokon API returned an invalid response");
         return;
       }
 
@@ -152,9 +152,17 @@ describe("BudokonClient", () => {
     expect(body.exclude).toEqual(expect.arrayContaining([championId, lastOpponentId]));
   });
   describe("HTTP status handling", () => {
-    it("reports the Budokon status code for a non-success HTTP status", async () => {
+    it("explains when the Budokon service is temporarily unavailable", async () => {
       const client = new BudokonClient(vi.fn().mockResolvedValue(new Response("nope", { status: 503 })));
-      await expect(client.drawBatch("seed", 2)).rejects.toThrow("Budokon draw failed (503)");
+      await expect(client.drawBatch("seed", 2)).rejects.toThrow("Budokon API is temporarily unavailable (HTTP 503)");
+    });
+
+    it("explains when Budokon rejects access or its endpoint is missing", async () => {
+      const denied = new BudokonClient(vi.fn().mockResolvedValue(new Response("nope", { status: 403 })));
+      const missing = new BudokonClient(vi.fn().mockResolvedValue(new Response("nope", { status: 404 })));
+
+      await expect(denied.drawBatch("denied", 2)).rejects.toThrow("Budokon API access was denied (HTTP 403)");
+      await expect(missing.drawBatch("missing", 2)).rejects.toThrow("Budokon API endpoint is unavailable");
     });
 
     it("explains when a selected division has no compatible pair", async () => {
@@ -164,13 +172,13 @@ describe("BudokonClient", () => {
 
     it("reports a generic conflict for an unfiltered draw", async () => {
       const client = new BudokonClient(vi.fn().mockResolvedValue(new Response("nope", { status: 409 })));
-      await expect(client.drawBatch("seed", 2)).rejects.toThrow("Budokon draw failed (409)");
+      await expect(client.drawBatch("seed", 2)).rejects.toThrow("Budokon API could not complete this draw (HTTP 409)");
     });
   });
   it("rejects a response that omits a battle stat", async () => {
     const incomplete = { id: "a", slug: "a", firstname: "A", surname: "A", country: "Japan", countryCode: "JP", weightClass: "-60", stats: { power: 1 } };
     const client = new BudokonClient(vi.fn().mockResolvedValue(new Response(JSON.stringify({ judoka: [incomplete, incomplete] }), { status: 200 })));
-    await expect(client.drawBatch("seed", 2)).rejects.toThrow("invalid judoka draw");
+    await expect(client.drawBatch("seed", 2)).rejects.toThrow("Budokon API returned an invalid response");
   });
   it("times out an unresponsive draw request", async () => {
     vi.useFakeTimers();
@@ -178,9 +186,15 @@ describe("BudokonClient", () => {
       options.signal?.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")));
     })) as unknown as typeof fetch;
     const request = new BudokonClient(fetcher, 1).drawBatch("seed", 2);
-    const expectation = expect(request).rejects.toThrow("Judoka draw timed out");
+    const expectation = expect(request).rejects.toThrow("Budokon API request timed out");
     await vi.advanceTimersByTimeAsync(1);
     await expectation;
     vi.useRealTimers();
+  });
+
+  it("explains when the Budokon endpoint cannot be reached", async () => {
+    const fetcher = vi.fn<typeof fetch>().mockRejectedValue(new TypeError("fetch failed"));
+    await expect(new BudokonClient(fetcher).drawBatch("offline", 2))
+      .rejects.toThrow("Unable to connect to the Budokon API. Check your internet connection and try again.");
   });
 });
