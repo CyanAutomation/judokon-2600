@@ -20,7 +20,7 @@ export class BudokonResponseValidator {
       drawn.length !== expectedCount ||
       !drawn.every(isJudoka)
     ) {
-      throw new Error("Budokon returned an invalid judoka draw");
+      throw new Error("Budokon API returned an invalid response. Try again later.");
     }
 
     return Object.freeze([...drawn]) as Judoka[];
@@ -36,6 +36,21 @@ export class BudokonResponseValidator {
         `No compatible ${weightClass} kg pair is available in the current Budokon dataset`
       );
     }
-    throw new Error(`Budokon draw failed (${status})`);
+    if (status === 401 || status === 403) {
+      throw new Error(`Budokon API access was denied (HTTP ${status}). Try again later.`);
+    }
+    if (status === 404) {
+      throw new Error("Budokon API endpoint is unavailable. Try again later.");
+    }
+    if (status === 429) {
+      throw new Error("Too many draw requests. Wait a moment and try again.");
+    }
+    if (status === 409) {
+      throw new Error("Budokon API could not complete this draw (HTTP 409). Try another draw or division.");
+    }
+    if (status >= 500) {
+      throw new Error(`Budokon API is temporarily unavailable (HTTP ${status}). Try again shortly.`);
+    }
+    throw new Error(`Budokon draw failed (HTTP ${status}). Try again later.`);
   }
 }

@@ -1,5 +1,5 @@
 import { checkRateLimit } from "@vercel/firewall";
-import { OpenRouterJevClient } from "../src/jev/openRouterClient";
+import { JevProviderError, OpenRouterJevClient } from "../src/jev/openRouterClient";
 import type { JevDecisionClient } from "../src/jev/types";
 import {
   assessmentFromJev,
@@ -91,7 +91,7 @@ export function createTacticalAssessmentHandler(options: TacticalAssessmentHandl
     const apiKey = (options.getApiKey ?? (() => process.env.OPENROUTER_API_KEY))()?.trim();
     try {
       const isRateLimited = await (options.isRateLimited ?? checkVercelRateLimit)(request);
-      if (isRateLimited) return json({ assessment: null }, 429);
+      if (isRateLimited) return json({ assessment: null, issue: "rate_limited" }, 429);
     } catch {
       // A missing or unavailable firewall rule must never make the public route fail open.
       return json({ assessment: null }, 503);
@@ -106,7 +106,7 @@ export function createTacticalAssessmentHandler(options: TacticalAssessmentHandl
     const features = sanitizeTacticalFeatures(candidate);
     if (!features) return json({ assessment: null }, 400);
 
-    if (!apiKey || apiKey.length === 0) return json({ assessment: null });
+    if (!apiKey || apiKey.length === 0) return json({ assessment: null, issue: "not_configured" });
 
     const model = (options.getModel ?? (() => process.env.JEV_MODEL))()?.trim() || "~typesafe/jev-latest";
     const client = options.client ?? (options.createClient ?? ((key, selectedModel) => new OpenRouterJevClient(key, selectedModel)))(apiKey, model);
@@ -115,9 +115,12 @@ export function createTacticalAssessmentHandler(options: TacticalAssessmentHandl
       const result = await client.decide(features, TACTICAL_QUESTIONS);
       if (!parseTacticalJudgment(result)) return json({ assessment: null }, 502);
       return json({ assessment: assessmentFromJev(result) });
-    } catch {
+    } catch (error) {
       // JEV is optional; never forward provider details or affect game state.
-      return json({ assessment: null }, 503);
+      const issue = error instanceof JevProviderError && (error.status === 401 || error.status === 403)
+        ? "invalid_api_key"
+        : "unavailable";
+      return json({ assessment: null, issue }, 503);
     }
   };
 }

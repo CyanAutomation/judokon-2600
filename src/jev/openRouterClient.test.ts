@@ -30,4 +30,21 @@ describe("OpenRouterJevClient", () => {
     const timed = new OpenRouterJevClient("key", "model", stalledFetcher, 1);
     await expect(timed.decide({}, {})).rejects.toThrow("timed out");
   });
+
+  it("identifies a rejected API key and does not leak it in the error", async () => {
+    const client = new OpenRouterJevClient("expired-secret", "model", vi.fn<typeof fetch>().mockResolvedValue(new Response("unauthorized", { status: 401 })));
+
+    const error = await client.decide({}, {}).catch((reason: unknown) => reason);
+
+    expect(error).toMatchObject({ name: "JevProviderError", status: 401 });
+    expect(error).toBeInstanceOf(Error);
+    expect((error as Error).message).toContain("HTTP 401");
+    expect((error as Error).message).not.toContain("expired-secret");
+  });
+
+  it("propagates endpoint disconnectivity for the route to degrade safely", async () => {
+    const client = new OpenRouterJevClient("server-key", "model", vi.fn<typeof fetch>().mockRejectedValue(new TypeError("fetch failed")));
+
+    await expect(client.decide({}, {})).rejects.toThrow("fetch failed");
+  });
 });

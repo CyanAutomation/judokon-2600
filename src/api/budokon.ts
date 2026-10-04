@@ -56,6 +56,10 @@ export class BudokonClient {
     );
   }
 
+  private static isInvalidResponseError(error: unknown): boolean {
+    return error instanceof SyntaxError;
+  }
+
   private async performDraw(parameters: DrawParameters): Promise<Judoka[]> {
     const { count, weightClass } = parameters;
     const controller = new AbortController();
@@ -76,7 +80,13 @@ export class BudokonClient {
       return this.validator.validateJudokaArray(body, count);
     } catch (error) {
       if (BudokonClient.isTimeoutError(error)) {
-        throw new Error("Judoka draw timed out");
+        throw new Error("Budokon API request timed out. Check your connection and try again.");
+      }
+      if (error instanceof TypeError) {
+        throw new Error("Unable to connect to the Budokon API. Check your internet connection and try again.");
+      }
+      if (BudokonClient.isInvalidResponseError(error)) {
+        throw new Error("Budokon API returned an invalid response. Try again later.");
       }
       throw error;
     } finally {

@@ -6,6 +6,13 @@ const DEFAULT_TIMEOUT_MS = 3_500;
 
 type Fetcher = typeof fetch;
 
+export class JevProviderError extends Error {
+  constructor(message: string, readonly status: number) {
+    super(message);
+    this.name = "JevProviderError";
+  }
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -36,7 +43,7 @@ export class OpenRouterJevClient implements JevDecisionClient {
 
       if (!response.ok) {
         const requestId = response.headers.get("x-request-id");
-        throw new Error(`JEV provider returned HTTP ${response.status}${requestId ? ` (request ${requestId})` : ""}`);
+        throw new JevProviderError(`JEV provider returned HTTP ${response.status}${requestId ? ` (request ${requestId})` : ""}`, response.status);
       }
 
       const body: unknown = await response.json();
