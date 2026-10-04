@@ -58,7 +58,7 @@ describe("State Management", () => {
     it("loads persisted game mode preference from localStorage", () => {
       localStorage.setItem("judokon.gameMode", "champion");
       const state = createGameState();
-      expect(state.mode).toBe("champion");
+      expect(state).toMatchObject({ mode: "champion", setupCursor: 1 });
     });
 
     it("loads persisted weight class preference from localStorage", () => {

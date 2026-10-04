@@ -56,7 +56,7 @@ const deps: OrchestratorDeps = {
  */
 function createClickHandlers() {
   return {
-    start: () => { start(state, deps); },
+    start: (seed?: string) => { void start(state, deps, state.target, seed); },
     copyReplaySeed: () => copyReplaySeed(state, deps),
     next: (m: Match) => next(state, m, deps),
     resolve: (stat: StatKey) => resolve(state, state.match!, stat, deps),

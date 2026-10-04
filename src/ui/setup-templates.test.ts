@@ -47,6 +47,16 @@ describe("setup templates", () => {
     expect(markup).not.toContain('class="choice-grid"');
   });
 
+  it("marks the saved mode and division as selected in setup", () => {
+    const modeMarkup = intro(state({ mode: "champion", setupStep: "mode", setupCursor: 1 }));
+    const divisionMarkup = intro({ ...state({ division: "weight", setupStep: "division", setupCursor: 1 }) });
+
+    expect(modeMarkup).toContain('class="choice-card is-selected is-active" for="mode-champion"');
+    expect(modeMarkup).toContain('id="mode-champion" name="game-mode" type="radio" data-intro-mode="champion" checked');
+    expect(divisionMarkup).toContain('class="choice-card is-selected is-active" for="division-weight"');
+    expect(divisionMarkup).toContain('id="division-weight" name="division" type="radio" data-division="weight" checked');
+  });
+
   it("shows a compact mode summary before the division selection", () => {
     const current = state({ setupStep: "division", mode: "champion" });
     const markup = intro(current);
@@ -79,6 +89,7 @@ describe("setup templates", () => {
     expect(markup).toContain('id="seed-button"');
     expect(markup).toContain("Seed: dojo-42");
     expect(markup).toContain('id="sound-enabled"');
+    expect(markup).toContain('class="footer-utilities" role="group" aria-label="Match utilities"');
     expect(markup).not.toContain("<details");
   });
 

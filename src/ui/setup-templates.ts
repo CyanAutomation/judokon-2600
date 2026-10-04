@@ -13,7 +13,7 @@ import { escapeHtml as esc } from "./utils/escapeHtml";
 export function footerUtilities(state: GameState): string {
   const soundEnabled = getSoundEnabled();
   const seedLabel = state.replaySeed ? `Seed: ${state.replaySeed}` : "Seed: Random";
-  return `<div class="footer-utilities" aria-label="Match utilities">${utilityButton("seed-button", seedLabel)}${utilityButton("sound-enabled", `Sound: ${soundEnabled ? "On" : "Off"}`, soundEnabled)}</div>`;
+  return `<div class="footer-utilities" role="group" aria-label="Match utilities">${utilityButton("seed-button", seedLabel)}${utilityButton("sound-enabled", `Sound: ${soundEnabled ? "On" : "Off"}`, soundEnabled)}</div>`;
 }
 
 export function seedDialog(state: GameState): string {
@@ -37,10 +37,10 @@ export function intro(state: GameState): string {
   const helpers = createHelpers(state);
   const step = state.setupStep ?? "mode";
   const cursor = state.setupCursor ?? 0;
-  const divisionOptions = radioChoice({ id: "division-absolute", name: "division", label: "Absolute", description: "Open weight", shortcut: "A", checked: false, active: step === "division" && cursor === 0, data: { "data-division": "absolute" } })
-    + radioChoice({ id: "division-weight", name: "division", label: "Weight class", compactLabel: "Weight", description: "Comparable division", shortcut: "W", checked: false, active: step === "division" && cursor === 1, data: { "data-division": "weight" } });
-  const modeOptions = radioChoice({ id: "mode-classic", name: "game-mode", label: "Classic Battle", compactLabel: "Classic", description: "Fresh matchups", shortcut: "C", checked: false, active: step === "mode" && cursor === 0, data: { "data-intro-mode": "classic" } })
-    + radioChoice({ id: "mode-champion", name: "game-mode", label: "Champion", description: "Build a streak", shortcut: "H", checked: false, active: step === "mode" && cursor === 1, data: { "data-intro-mode": "champion" } });
+  const divisionOptions = radioChoice({ id: "division-absolute", name: "division", label: "Absolute", description: "Open weight", shortcut: "A", checked: state.division === "absolute", active: step === "division" && cursor === 0, data: { "data-division": "absolute" } })
+    + radioChoice({ id: "division-weight", name: "division", label: "Weight class", compactLabel: "Weight", description: "Comparable division", shortcut: "W", checked: state.division === "weight", active: step === "division" && cursor === 1, data: { "data-division": "weight" } });
+  const modeOptions = radioChoice({ id: "mode-classic", name: "game-mode", label: "Classic Battle", compactLabel: "Classic", description: "Fresh matchups", shortcut: "C", checked: state.mode === "classic", active: step === "mode" && cursor === 0, data: { "data-intro-mode": "classic" } })
+    + radioChoice({ id: "mode-champion", name: "game-mode", label: "Champion", description: "Build a streak", shortcut: "H", checked: state.mode === "champion", active: step === "mode" && cursor === 1, data: { "data-intro-mode": "champion" } });
   const select = lengths.map((n, i) => radioChoice({ id: `length-${n}`, name: "match-length", label: ["Quick", "Medium", "Long"][i]!, description: `First to ${n}`, shortcut: String(i + 1), checked: state.lengthIndex === i, active: step === "length" && cursor === i, disabled: state.busy, data: { "data-length": String(n) } })).join("");
   const options = [`<option value="random" ${state.weight === "random" ? "selected" : ""}>Random weight class</option>`, ...weights.map((n) => `<option value="${n}" ${state.weight === n ? "selected" : ""}>${n} kg</option>`)].join("");
   const summary = (label: string, value: string, target: "mode" | "division") => `<div class="setup-summary"><span>${esc(label)}: <strong>${esc(value)}</strong></span><button class="quiet setup-change" data-setup-step="${target}">Change</button></div>`;

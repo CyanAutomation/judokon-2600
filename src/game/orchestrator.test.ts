@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Judoka } from "../api/types";
 import { createGameState } from "../state";
-import { draw, next, resolve, MATCH_RESOLUTION_DELAY_MS, handleSetupStepClick, handleOpenSeedModal, handleCloseSeedModal, handleSaveReplaySeed, handleToggleSound, handleKeyboardMoveCursor, handleKeyboardCloseSeedModal, type OrchestratorDeps } from "./orchestrator";
+import { clearAndExit, draw, next, resolve, MATCH_RESOLUTION_DELAY_MS, handleSetupStepClick, handleOpenSeedModal, handleCloseSeedModal, handleSaveReplaySeed, handleToggleSound, handleKeyboardMoveCursor, handleKeyboardCloseSeedModal, type OrchestratorDeps } from "./orchestrator";
 import type { TacticalAssessment } from "./tacticalAssessment";
 import type { TacticalFeatures } from "./tacticalAssessment";
 
@@ -326,6 +326,49 @@ describe("event handlers", () => {
     expect(state.setupStep).toBe("length");
     expect(state.setupCursor).toBe(state.lengthIndex);
     expect(render).toHaveBeenCalledOnce();
+  });
+
+  it("returns to settings with the saved game mode highlighted", () => {
+    const state = createGameState();
+    state.mode = "champion";
+    const render = vi.fn();
+    const deps = { client: {}, render } as unknown as OrchestratorDeps;
+
+    clearAndExit(state, deps);
+
+    expect(state.setupStep).toBe("mode");
+    expect(state.setupCursor).toBe(1);
+    expect(render).toHaveBeenCalledOnce();
+  });
+
+  it("opens a setup step with its currently saved choice highlighted", () => {
+    const state = createGameState();
+    state.mode = "champion";
+    document.body.innerHTML = '<input id="mode-classic"><input id="mode-champion">';
+    const render = vi.fn();
+    const deps = { client: {}, render } as unknown as OrchestratorDeps;
+
+    handleSetupStepClick(state, "mode", deps);
+
+    expect(state.setupCursor).toBe(1);
+    expect(document.activeElement).toBe(document.querySelector("#mode-champion"));
+    document.body.innerHTML = "";
+  });
+
+  it("focuses the saved division and match length when reopening those steps", () => {
+    const state = createGameState();
+    state.division = "weight";
+    state.lengthIndex = 1;
+    document.body.innerHTML = '<input id="division-absolute"><input id="division-weight"><input id="length-5">';
+    const render = vi.fn();
+    const deps = { client: {}, render } as unknown as OrchestratorDeps;
+
+    handleSetupStepClick(state, "division", deps);
+    expect(document.activeElement).toBe(document.querySelector("#division-weight"));
+
+    handleSetupStepClick(state, "length", deps);
+    expect(document.activeElement).toBe(document.querySelector("#length-5"));
+    document.body.innerHTML = "";
   });
 
   it("handleOpenSeedModal sets modal state and draft", () => {

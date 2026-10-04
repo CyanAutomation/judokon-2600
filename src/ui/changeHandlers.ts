@@ -19,6 +19,7 @@ function handleDivisionChange(
 ): void {
   state.division = input.dataset.division === "weight" ? "weight" : "absolute";
   state.setupStep = state.division === "weight" ? "weight" : "length";
+  if (state.setupStep === "length") state.setupCursor = state.lengthIndex;
   onUpdate.persistPreferences();
   onUpdate.render();
   root.querySelector<HTMLElement>(state.division === "weight" ? "#weight-class" : "#length-3")?.focus();
@@ -35,6 +36,7 @@ function handleModeChange(
 ): void {
   state.mode = input.dataset.introMode === "champion" ? "champion" : "classic";
   state.setupStep = "division";
+  state.setupCursor = state.division === "weight" ? 1 : 0;
   onUpdate.persistPreferences();
   onUpdate.render();
   root.querySelector<HTMLInputElement>("#division-absolute")?.focus();

@@ -174,6 +174,42 @@ footer { color: var(--color-muted); }
   .intro-status { margin: .7rem 0; }
 }
 
+@media (max-width: 560px) {
+  .footer-toolbar { flex-wrap: wrap; overflow: visible; }
+  .footer-hint { max-width: 100%; white-space: normal; }
+  .footer-toolbar .footer-utilities {
+    display: grid;
+    flex: 1 1 100%;
+    grid-template-columns: minmax(0, 1fr) max-content;
+    width: 100%;
+    min-width: 0;
+    margin-left: 0;
+  }
+  .footer-utilities .utility-button {
+    width: auto;
+    min-width: 0;
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .footer-utilities #seed-button,
+  .footer-utilities #sound-enabled { justify-content: flex-start; }
+  .footer-utilities #sound-enabled { white-space: nowrap; }
+}
+
+.match-history ol:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 3px; }
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 /* Design-system primitives: every interactive element and information block
    shares the same terminal states, while variants communicate hierarchy. */
 .panel {
@@ -272,4 +308,23 @@ footer { color: var(--color-muted); }
 @media (max-width: 560px) {
   .match-history { min-width: 0; overflow: hidden; }
   .match-history ol { flex-wrap: nowrap; overflow-x: auto; overscroll-behavior-x: contain; padding-bottom: .35rem; scrollbar-width: thin; }
+}
+
+/* Narrow-screen rules must follow the desktop grid placement rules above. */
+@media (max-width: 700px) {
+  .battle-layout { grid-template-columns: minmax(0, 1fr); }
+  .battle-layout > .fighter-card.player,
+  .battle-layout > .fighter-card.opponent,
+  .battle-layout > .result-panel,
+  .battle-layout > .match-summary,
+  .battle-layout > .tactical-insight,
+  .battle-layout > .match-history,
+  .battle-layout > .champion-progress,
+  .battle-layout > .scout-report,
+  .battle-layout > .decision-guide,
+  .battle-layout > .stats,
+  .battle-layout > .commitment,
+  .battle-layout > .game-actions { grid-column: 1 / -1; }
+  .fighter-card { min-width: 0; }
+  .fighter-card .eyebrow { padding-right: 5rem; }
 }
