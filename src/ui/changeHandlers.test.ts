@@ -85,7 +85,31 @@ describe("handleChangeEvent", () => {
     expect(handlers.render).toHaveBeenCalled();
   });
 
-  it("updates sound enabled state in localStorage", () => {
+  it("[REQ-UI-010] keeps seed dialog edits in the draft until they are saved", () => {
+    const state = createMockGameState({
+      replaySeed: "old-seed",
+      seedModalOpen: true,
+      seedDraft: "old-seed"
+    });
+    const input = document.createElement("input");
+    input.id = "replay-seed";
+    input.value = "new-seed";
+    const handlers = {
+      render: vi.fn(),
+      persistPreferences: vi.fn(),
+      setSoundEnabled: vi.fn()
+    };
+
+    handleChangeEvent(createChangeEvent(input), state, document.createElement("div"), handlers);
+
+    expect(state.seedDraft).toBe("new-seed");
+    expect(state.replaySeed).toBe("old-seed");
+    expect(handlers.render).not.toHaveBeenCalled();
+    expect(handlers.persistPreferences).not.toHaveBeenCalled();
+  });
+
+  it("forwards a sound toggle and stores the preference", () => {
+    const previousPreference = localStorage.getItem("judokon.soundEnabled");
     const state = createMockGameState();
     const input = document.createElement("input");
     input.type = "checkbox";
@@ -99,8 +123,14 @@ describe("handleChangeEvent", () => {
       setSoundEnabled: vi.fn()
     };
 
-    handleChangeEvent(createChangeEvent(input), state, root, handlers);
+    try {
+      handleChangeEvent(createChangeEvent(input), state, root, handlers);
 
-    expect(handlers.setSoundEnabled).toHaveBeenCalledWith(true);
+      expect(handlers.setSoundEnabled).toHaveBeenCalledWith(true);
+      expect(localStorage.getItem("judokon.soundEnabled")).toBe("true");
+    } finally {
+      if (previousPreference === null) localStorage.removeItem("judokon.soundEnabled");
+      else localStorage.setItem("judokon.soundEnabled", previousPreference);
+    }
   });
 });

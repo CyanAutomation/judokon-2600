@@ -3,6 +3,7 @@ import { shortcutHint } from "./controls";
 import { footerUtilities, intro, seedDialog } from "./setup-templates";
 import { game } from "./game-templates";
 import { createHelpers, headerContext, status } from "./helpers";
+import { escapeHtml as esc } from "./utils/escapeHtml";
 
 /**
  * Generate keyboard shortcut hint based on current game state
@@ -47,7 +48,7 @@ export function renderApp(root: HTMLElement, state: GameState): void {
   const hint = generateHint(state);
   const content = !state.match
     ? intro(state)
-    : `<h1 id="game-title" class="visually-hidden">Round ${state.match.matchNumber} match</h1><p id="status" class="active-command" role="status" aria-live="polite">${status(state)} <span class="block-cursor" aria-hidden="true">█</span></p>${game(state.match, state, helpers)}`;
+    : `<h1 id="game-title" class="visually-hidden">Round ${state.match.matchNumber} match</h1><p id="status" class="active-command" role="status" aria-live="polite">${esc(status(state))} <span class="block-cursor" aria-hidden="true">█</span></p>${game(state.match, state, helpers)}`;
 
   const settings = generateSettings(state);
   const dialog = !state.match ? seedDialog(state) : "";
