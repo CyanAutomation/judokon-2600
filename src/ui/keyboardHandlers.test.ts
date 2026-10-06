@@ -4,24 +4,31 @@ import type { StatKey } from "../api/types";
 import { createMockMatch, createMockGameState, createKeyboardEvent } from "../test/mocks";
 
 describe("handleIntroKeyboard", () => {
-  it("chooses length when numeric key 1-3 is pressed", () => {
+  it.each([
+    ["1", 3],
+    ["2", 5],
+    ["3", 10]
+  ])("[REQ-KEYBOARD-008] maps length shortcut %s to first-to-%i", (key, target) => {
     const state = createMockGameState({ setupStep: "length" });
     const handlers = { choose: vi.fn(), start: vi.fn(), keyboardTick: vi.fn() };
-    const root = document.createElement("div");
 
-    handleIntroKeyboard(createKeyboardEvent("1"), state, root, handlers);
+    handleIntroKeyboard(createKeyboardEvent(key), state, document.createElement("div"), handlers);
 
-    expect(handlers.choose).toHaveBeenCalledWith(3);
+    expect(handlers.choose).toHaveBeenCalledWith(target);
   });
 
-  it("cycles through length choices with arrow keys", () => {
-    const state = createMockGameState({ setupStep: "length", lengthIndex: 0 });
+  it.each([
+    ["ArrowLeft", 0, 10],
+    ["ArrowRight", 0, 5],
+    ["ArrowLeft", 1, 3],
+    ["ArrowRight", 2, 3]
+  ])("[REQ-KEYBOARD-008] moves length selection with %s from index %i to its configured value", (key, lengthIndex, target) => {
+    const state = createMockGameState({ setupStep: "length", lengthIndex });
     const handlers = { choose: vi.fn(), start: vi.fn(), keyboardTick: vi.fn() };
-    const root = document.createElement("div");
 
-    handleIntroKeyboard(createKeyboardEvent("ArrowRight"), state, root, handlers);
+    handleIntroKeyboard(createKeyboardEvent(key), state, document.createElement("div"), handlers);
 
-    expect(handlers.choose).toHaveBeenCalledWith(5); // Next length
+    expect(handlers.choose).toHaveBeenCalledWith(target);
   });
 
   describe("cursor-based step handlers (mode/division)", () => {
@@ -95,18 +102,31 @@ describe("handleIntroKeyboard", () => {
 
     expect(handlers.start).toHaveBeenCalled();
   });
+
+  it("[REQ-KEYBOARD-008] does not start another match from Enter while a draw is in progress", () => {
+    const handlers = { choose: vi.fn(), start: vi.fn(), keyboardTick: vi.fn() };
+    const state = createMockGameState({ setupStep: "length", busy: true });
+
+    handleIntroKeyboard(createKeyboardEvent("Enter"), state, document.createElement("div"), handlers);
+
+    expect(handlers.start).not.toHaveBeenCalled();
+  });
 });
 
 describe("handleMatchKeyboard", () => {
-  it("resolves stat when number key 1-5 is pressed during selecting phase", () => {
-    const match = createMockMatch({ phase: "selecting" });
-    const state = createMockGameState({ match });
-    const handlers = { resolve: vi.fn<(s: StatKey) => void>(), keyboardTick: vi.fn() };
-    const root = document.createElement("div");
+  it.each<[string, StatKey]>([
+    ["1", "power"],
+    ["2", "speed"],
+    ["3", "technique"],
+    ["4", "kumikata"],
+    ["5", "newaza"]
+  ])("[REQ-KEYBOARD-008] maps stat shortcut %s to %s during selection", (key, stat) => {
+    const state = createMockGameState({ match: createMockMatch({ phase: "selecting" }) });
+    const handlers = { resolve: vi.fn<(selectedStat: StatKey) => void>(), keyboardTick: vi.fn() };
 
-    handleMatchKeyboard(createKeyboardEvent("1"), state, root, handlers);
+    handleMatchKeyboard(createKeyboardEvent(key), state, document.createElement("div"), handlers);
 
-    expect(handlers.resolve).toHaveBeenCalledWith("power" satisfies StatKey);
+    expect(handlers.resolve).toHaveBeenCalledWith(stat);
   });
 
   it("ignores stat keys when not in selecting phase", () => {
@@ -128,38 +148,45 @@ describe("handleMatchKeyboard", () => {
     const button = document.createElement("button");
     button.id = "next";
     root.appendChild(button);
+    const click = vi.spyOn(button, "click");
+    const event = createKeyboardEvent("Enter", { cancelable: true });
 
-    handleMatchKeyboard(createKeyboardEvent("Enter"), state, root, handlers);
+    handleMatchKeyboard(event, state, root, handlers);
 
-    // Button would be clicked (tested via DOM event listener)
+    expect(click).toHaveBeenCalledOnce();
+    expect(event.defaultPrevented).toBe(true);
   });
 
-  it("exits match with Escape key", () => {
-    const match = createMockMatch();
-    const state = createMockGameState({ match });
-    const handlers = { resolve: vi.fn(), keyboardTick: vi.fn() };
+  it("[REQ-KEYBOARD-008] does not advance to the next round while a draw is in progress", () => {
+    const state = createMockGameState({ busy: true, match: createMockMatch({ phase: "awaitingNext" }) });
+    const root = document.createElement("div");
+    const button = document.createElement("button");
+    button.id = "next";
+    root.appendChild(button);
+    const click = vi.spyOn(button, "click");
+
+    handleMatchKeyboard(createKeyboardEvent("Enter"), state, root, {
+      resolve: vi.fn(),
+      keyboardTick: vi.fn()
+    });
+
+    expect(click).not.toHaveBeenCalled();
+  });
+
+  it.each(["Escape", "q", "Q"])("[REQ-GAME-007] quits the match when %s is pressed", (key) => {
+    const state = createMockGameState({ match: createMockMatch() });
     const root = document.createElement("div");
     const button = document.createElement("button");
     button.id = "quit";
     root.appendChild(button);
+    const click = vi.spyOn(button, "click");
 
-    handleMatchKeyboard(createKeyboardEvent("Escape"), state, root, handlers);
+    handleMatchKeyboard(createKeyboardEvent(key), state, root, {
+      resolve: vi.fn(),
+      keyboardTick: vi.fn()
+    });
 
-    // Button would be clicked
-  });
-
-  it("exits match with Q key", () => {
-    const match = createMockMatch();
-    const state = createMockGameState({ match });
-    const handlers = { resolve: vi.fn(), keyboardTick: vi.fn() };
-    const root = document.createElement("div");
-    const button = document.createElement("button");
-    button.id = "quit";
-    root.appendChild(button);
-
-    handleMatchKeyboard(createKeyboardEvent("q"), state, root, handlers);
-
-    // Button would be clicked
+    expect(click).toHaveBeenCalledOnce();
   });
 
   it("does nothing when no match is active", () => {

@@ -35,6 +35,9 @@ export function advanced(state: GameState): string {
  */
 export function intro(state: GameState): string {
   const helpers = createHelpers(state);
+  const statusMessage = state.busy
+    ? "Drawing judoka…"
+    : state.errorMessage || "System ready. Configure your match";
   const step = state.setupStep ?? "mode";
   const cursor = state.setupCursor ?? 0;
   const divisionOptions = radioChoice({ id: "division-absolute", name: "division", label: "Absolute", description: "Open weight", shortcut: "A", checked: state.division === "absolute", active: step === "division" && cursor === 0, data: { "data-division": "absolute" } })
@@ -51,5 +54,5 @@ export function intro(state: GameState): string {
       : step === "weight"
         ? `${summary("Game mode", helpers.modeLabel(), "mode")}${summary("Division", "Weight class", "division")}<fieldset class="setup-group setup-stage"><legend>Choose weight class</legend><label class="weight-picker" for="weight-class"><span>Match competitors by weight</span><select id="weight-class">${options}</select></label>${primaryButton("confirm-weight", "Continue", "Enter")}</fieldset>`
         : `${summary("Game mode", helpers.modeLabel(), "mode")}${summary("Division", helpers.divisionLabel(), "division")}<fieldset class="setup-group setup-stage"><legend>Choose match length</legend>${terminalMenu(select)}</fieldset><p class="setup-rule"><strong>Higher stat wins the point.</strong> Draws score no points.</p><p class="start-context">First to ${state.target} points</p>${primaryButton("start", "Start match", "Enter", state.busy)}`;
-  return `<section class="intro" aria-labelledby="intro-title"><div class="intro-copy"><p class="eyebrow">Budokon terminal · 2600</p><h1 id="intro-title">Enter the<br/>judoka circuit.</h1><p class="intro-lede">Choose your format, then read the opponent and build a run one point at a time.</p><p class="intro-status" role="status">System ready. Configure your match<span class="block-cursor" aria-hidden="true">█</span></p></div><section class="intro-mode-panel panel" aria-label="Match setup">${helpers.eyebrow("Match setup")}${panel}</section><p class="intro-footnote">Setup unfolds one choice at a time.</p></section>`;
+  return `<section class="intro" aria-labelledby="intro-title"><div class="intro-copy"><p class="eyebrow">Budokon terminal · 2600</p><h1 id="intro-title">Enter the<br/>judoka circuit.</h1><p class="intro-lede">Choose your format, then read the opponent and build a run one point at a time.</p><p class="intro-status" role="status">${esc(statusMessage)}<span class="block-cursor" aria-hidden="true">█</span></p></div><section class="intro-mode-panel panel" aria-label="Match setup">${helpers.eyebrow("Match setup")}${panel}</section><p class="intro-footnote">Setup unfolds one choice at a time.</p></section>`;
 }
