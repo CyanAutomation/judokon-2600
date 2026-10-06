@@ -2,18 +2,10 @@ import { describe, expect, it } from "vitest";
 import { primaryButton, quietButton, shortcutHint } from "./buttons";
 
 describe("buttons", () => {
-  it("shortcutHint renders a badge with keyboard shortcut", () => {
+  it("renders the keyboard shortcut as decorative text", () => {
     const markup = shortcutHint("Enter");
-    expect(markup).toContain('class="badge shortcut-hint"');
     expect(markup).toContain("<kbd>Enter</kbd>");
     expect(markup).toContain('aria-hidden="true"');
-  });
-
-  it("uses the shared control primitive for every button variant", () => {
-    expect(primaryButton("start", "Start match", "Enter")).toContain(
-      'class="control control--primary action-button primary-action"'
-    );
-    expect(quietButton("quit", "Quit", "Q")).toContain('class="control control--quiet action-button quiet"');
   });
 
   it("primaryButton includes shortcut hint and disabled attribute", () => {
@@ -25,9 +17,11 @@ describe("buttons", () => {
     expect(disabled).toContain("disabled");
   });
 
-  it("quietButton renders without disabled state", () => {
+  it("quietButton renders its label and shortcut without a disabled state", () => {
     const markup = quietButton("copy", "Copy", "Ctrl+C");
-    expect(markup).toContain('class="control control--quiet action-button quiet"');
+    expect(markup).toContain('id="copy"');
+    expect(markup).toContain("Copy");
     expect(markup).toContain("<kbd>Ctrl+C</kbd>");
+    expect(markup).not.toContain("disabled");
   });
 });

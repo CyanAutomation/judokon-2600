@@ -8,132 +8,8 @@ import { handleClickEvent } from "./ui/eventHandlers";
 import { renderApp } from "./ui/render";
 import { createMockJudoka, createMockMatch, createMockMatchResult, createMockGameState } from "./test/mocks";
 
-// Note: These tests are designed to test the logic that WILL be extracted from main.ts
-// during Phase 2-3. For now, we test the core functions that would be extracted.
-// We import the types and test helper logic that would be part of orchestrator.ts
-
 describe("Main Module - Render Functions", () => {
-  describe("Helper utilities", () => {
-    it("computes hash from seed string correctly", () => {
-      const seed1 = "test-seed";
-      const seed2 = "different-seed";
-
-      let hash1 = 0;
-      for (const c of seed1) hash1 = (hash1 * 31 + c.charCodeAt(0)) >>> 0;
-
-      let hash2 = 0;
-      for (const c of seed2) hash2 = (hash2 * 31 + c.charCodeAt(0)) >>> 0;
-
-      expect(hash1).not.toBe(hash2);
-      expect(hash1).toBeGreaterThanOrEqual(0);
-      expect(hash2).toBeGreaterThanOrEqual(0);
-    });
-
-    it("produces consistent hash for same seed", () => {
-      const seed = "consistent-seed";
-
-      let hash1 = 0;
-      for (const c of seed) hash1 = (hash1 * 31 + c.charCodeAt(0)) >>> 0;
-
-      let hash2 = 0;
-      for (const c of seed) hash2 = (hash2 * 31 + c.charCodeAt(0)) >>> 0;
-
-      expect(hash1).toBe(hash2);
-    });
-
-  });
-
-  describe("Status message generation", () => {
-    it("returns busy message when state.busy is true", () => {
-      const state = createMockGameState({ busy: true });
-
-      const statusMessage = (() => {
-        if (state.busy) return ">> Drawing judoka…";
-        return "";
-      })();
-
-      expect(statusMessage).toBe(">> Drawing judoka…");
-    });
-
-    it("returns error message when state.errorMessage is set", () => {
-      const state = createMockGameState({ errorMessage: "Network error" });
-
-      const statusMessage = (() => {
-        if (state.errorMessage) return `>> ${state.errorMessage}`;
-        return "";
-      })();
-
-      expect(statusMessage).toBe(">> Network error");
-    });
-
-    it("returns configuration prompt when no match exists", () => {
-      const state = createMockGameState({ match: null });
-
-      const statusMessage = (() => {
-        if (!state.match) return ">> Configure a division and select a match length.";
-        return "";
-      })();
-
-      expect(statusMessage).toContain("Configure");
-    });
-
-    it("returns opponent committing message when pendingStat is set", () => {
-      const state = createMockGameState({
-        match: createMockMatch(),
-        pendingStat: "power"
-      });
-
-      const statusMessage = (() => {
-        if (state.pendingStat) return ">> Opponent commits…";
-        return "";
-      })();
-
-      expect(statusMessage).toBe(">> Opponent commits…");
-    });
-
-    it("returns selecting prompt during match selection phase", () => {
-      const state = createMockGameState({
-        match: createMockMatch({ phase: "selecting" })
-      });
-
-      const statusMessage = (() => {
-        if (state.match?.phase === "selecting") return ">> Choose your stat:";
-        return "";
-      })();
-
-      expect(statusMessage).toBe(">> Choose your stat:");
-    });
-
-    it("returns win/loss/draw message when match is over", () => {
-      const state = createMockGameState({
-        match: createMockMatch({ phase: "matchOver", winner: "player" })
-      });
-
-      const statusMessage = (() => {
-        if (state.match?.phase === "matchOver") {
-          return state.match.winner === "draw"
-            ? ">> Match drawn."
-            : state.match.winner === "player"
-              ? ">> You win the match!"
-              : ">> Opponent wins the match.";
-        }
-        return "";
-      })();
-
-      expect(statusMessage).toContain("You win");
-    });
-  });
-
   describe("Fighter card generation", () => {
-    it("generates fighter card HTML with player label", () => {
-      const judoka = createMockJudoka("player1");
-
-      const fighterHTML = `${judoka.firstname} ${judoka.surname}`;
-
-      expect(fighterHTML).toContain("Test Fighter");
-      expect(fighterHTML).toContain("Test");
-    });
-
     it("reveals the selected stat and both values only after the round resolves", () => {
       const player = createMockJudoka("player", {
         stats: { power: 17, speed: 16, technique: 15, kumikata: 14, newaza: 13 }
@@ -167,6 +43,19 @@ describe("Main Module - Render Functions", () => {
       expect(resultPanel?.textContent).toContain("You used 17 in Power. Rival Fighter had 3.");
     });
 
+    it("[REQ-UI-011] identifies both judoka by name once the round has resolved", () => {
+      const player = createMockJudoka("player", { firstname: "Aiko", surname: "Tanaka" });
+      const opponent = createMockJudoka("opponent", { firstname: "Mina", surname: "Sato" });
+      const match = createMockMatch({ player, opponent, phase: "awaitingNext" });
+      const result = { ...createMockMatchResult(), match };
+      const root = document.createElement("div");
+
+      renderApp(root, createMockGameState({ match, result }));
+
+      expect(root.querySelector('[aria-label="Your judoka: Aiko Tanaka"]')?.textContent).toContain("Aiko Tanaka");
+      expect(root.querySelector('[aria-label="Opponent: Mina Sato"]')?.textContent).toContain("Mina Sato");
+    });
+
     it.each([
       { rarity: "Elite", expectedLabel: "Elite" },
       { rarity: undefined, expectedLabel: "Unclassified" }
@@ -183,29 +72,6 @@ describe("Main Module - Render Functions", () => {
       const rarityBadge = playerCard?.querySelector(".rarity");
       expect(playerCard).not.toBeNull();
       expect(rarityBadge?.textContent).toBe(expectedLabel);
-    });
-  });
-
-  describe("Header context generation", () => {
-    it("generates full context when match is active", () => {
-      const state = createMockGameState({
-        match: createMockMatch({ matchNumber: 5 })
-      });
-
-      const divisions = ["Absolute", "Weight class"];
-      const modes = ["Classic Battle", "Champion"];
-
-      expect(state.match?.matchNumber).toBe(5);
-      expect(divisions.length).toBe(2);
-      expect(modes.length).toBe(2);
-    });
-
-    it("generates setup context when no match exists", () => {
-      const state = createMockGameState({ match: null, mode: "champion" });
-
-      const modeLabel = state.mode === "champion" ? "Champion" : "Classic Battle";
-
-      expect(modeLabel).toBe("Champion");
     });
   });
 });
@@ -306,18 +172,24 @@ describe("Main Module - State Orchestration Functions", () => {
       expect(render).toHaveBeenCalledTimes(2);
     });
 
-    it("sets active weight for weight division with specific class", () => {
+    it("[REQ-GAME-008] sends the selected weight class with the initial draw", async () => {
       const state = createMockGameState({
         division: "weight",
-        weight: "-73"
+        weight: "-73",
+        replaySeed: "weight-class-seed"
       });
+      const client = new BudokonClient();
+      const drawBatch = vi.spyOn(client, "drawBatch").mockResolvedValue(
+        Array.from({ length: 6 }, (_, index) => createMockJudoka(`weight-judoka-${index}`))
+      );
 
-      const selectedWeight = state.weight === "random" ? selectWeightForSeed("test-seed") : state.weight;
+      await start(state, { client, render: vi.fn() });
 
-      expect(selectedWeight).toBe("-73");
+      expect(state.activeWeight).toBe("-73");
+      expect(drawBatch).toHaveBeenCalledWith("weight-class-seed", 6, "-73", undefined);
     });
 
-    it("selects an exact, repeatable weight from a replay seed", () => {
+    it("[REQ-GAME-009] selects the same weight class from the same replay seed", () => {
       const seed = "deterministic-seed";
 
       expect(selectWeightForSeed(seed)).toBe("-70");
@@ -329,40 +201,37 @@ describe("Main Module - State Orchestration Functions", () => {
       ["boundary-2", "+100"], // final modulo bucket
       ["boundary-3", "-48"], // modulo rollover to the first bucket
       ["boundary-4", "-52"] // bucket immediately after rollover
-    ])("maps boundary seed %j to %s", (seed, expectedWeight) => {
+    ])("[REQ-GAME-009] maps boundary seed %j to %s", (seed, expectedWeight) => {
       expect(selectWeightForSeed(seed)).toBe(expectedWeight);
     });
   });
 
   describe("Draw error handling", () => {
-    it("handles no compatible judoka error with fallback message", () => {
-      const error = new Error("No compatible judoka found");
-      const message = error.message.startsWith("No compatible")
-        ? `${error.message}. Choose Absolute or another division.`
-        : `${error.message}. Check your connection and try again.`;
+    it.each([
+      ["incompatible judoka", new Error("No compatible judoka found"), "No compatible judoka found. Choose Absolute or another division."],
+      ["network failure", new Error("Network failed"), "Network failed. Check your connection and try again."],
+      ["non-Error rejection", "string error", "Unable to draw judoka. Please try again."]
+    ])("[REQ-UI-009] shows an actionable setup message after a %s", async (_scenario, failure, expectedMessage) => {
+      const root = document.createElement("div");
+      const state = createMockGameState({ replaySeed: "failed-draw-seed" });
+      const client = new class extends BudokonClient {
+        override async drawBatch(): Promise<Judoka[]> {
+          throw failure;
+        }
+      }();
+      const visibleMessages: string[] = [];
+      const render = vi.fn(() => {
+        renderApp(root, state);
+        visibleMessages.push(root.querySelector<HTMLElement>('[role="status"]')?.textContent?.trim() ?? "");
+      });
 
-      expect(message).toContain("No compatible");
-      expect(message).toContain("Choose Absolute");
-    });
+      await start(state, { client, render });
 
-    it("handles generic network error", () => {
-      const error = new Error("Network failed");
-      const message = error.message.startsWith("No compatible")
-        ? `${error.message}. Choose Absolute or another division.`
-        : `${error.message}. Check your connection and try again.`;
-
-      expect(message).toContain("Network failed");
-      expect(message).toContain("Check your connection");
-    });
-
-    it("handles non-Error object throws", () => {
-      const error: unknown = "string error";
-      const message =
-        error instanceof Error
-          ? `${error.message}. Check your connection and try again.`
-          : "Unable to draw judoka. Please try again.";
-
-      expect(message).toContain("Unable to draw");
+      expect(state.errorMessage).toBe(expectedMessage);
+      expect(state.busy).toBe(false);
+      expect(state.match).toBeNull();
+      expect(visibleMessages[0]).toContain("Drawing judoka");
+      expect(root.querySelector<HTMLElement>('[role="status"]')?.textContent).toContain(expectedMessage);
     });
   });
 
@@ -694,7 +563,7 @@ describe("Main Module - Render Integration", () => {
       expect(report?.textContent).not.toContain("10");
     });
 
-    it("[REQ-UI-005] shows run progress for Champion matches", () => {
+    it("[REQ-CHAMPION-005] shows run progress for Champion matches", () => {
       const root = document.createElement("div");
       const match = createMockMatch({ mode: "champion", matchNumber: 5 });
       const history = [
@@ -710,7 +579,7 @@ describe("Main Module - Render Integration", () => {
       expect(progress?.textContent).toContain("5");
     });
 
-    it("[REQ-UI-005] omits Champion run progress for Classic matches", () => {
+    it("[REQ-CHAMPION-005] omits Champion run progress for Classic matches", () => {
       const root = document.createElement("div");
       renderApp(root, createMockGameState({ match: createMockMatch({ mode: "classic" }) }));
 

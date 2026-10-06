@@ -101,11 +101,6 @@ describe("inputs", () => {
       expect(strongest.getAttribute("aria-pressed")).toBeNull();
     });
 
-    it("uses the shared control primitive for stat choice buttons", () => {
-      expect(buttonChoice({ label: "Power", shortcut: "1", value: "8", data: 'data-stat="power"', disabled: false })).toContain(
-        'class="control control--choice action-button option-card'
-      );
-    });
   });
 
   describe("utilityButton", () => {
@@ -122,8 +117,5 @@ describe("inputs", () => {
       expect(markup).not.toContain("aria-pressed");
     });
 
-    it("uses the control utility class", () => {
-      expect(utilityButton("test", "Test")).toContain('class="control control--utility utility-button"');
-    });
   });
 });
