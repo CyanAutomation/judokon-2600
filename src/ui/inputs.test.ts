@@ -21,7 +21,7 @@ describe("inputs", () => {
       expect(markup).toContain("<kbd>H</kbd>");
     });
 
-    it("supports compact labels for responsive display", () => {
+    it("renders both full and compact label variants", () => {
       const markup = radioChoice({
         id: "test",
         name: "test",
@@ -31,11 +31,11 @@ describe("inputs", () => {
         shortcut: "T",
         checked: false,
       });
+      const container = document.createElement("div");
+      container.innerHTML = markup;
 
-      expect(markup).toContain("choice-label-full");
-      expect(markup).toContain("Full Label");
-      expect(markup).toContain("choice-label-compact");
-      expect(markup).toContain("Short");
+      expect(container.querySelector(".choice-label-full")?.textContent).toBe("Full Label");
+      expect(container.querySelector(".choice-label-compact")?.textContent).toBe("Short");
     });
 
     it("supports active and disabled states", () => {

@@ -14,7 +14,10 @@ These IDs give the UI and game tests a stable link to observable product behavio
 | REQ-GAME-008 | A selected weight class constrains the initial catalogue draw to that class. | [Gameplay flow](../README.md#gameplay) |
 | REQ-GAME-009 | The same replay seed selects the same random weight class while the supported weight list is unchanged. | [Gameplay flow](../README.md#gameplay) |
 | REQ-KEYBOARD-008 | Setup and match keyboard controls follow the documented shortcuts, and busy draws cannot start or advance another operation. | [Keyboard controls](../README.md#gameplay) |
+| REQ-GAME-010 | Reloading the same tab restores valid saved session data; only stable match state is persisted, without pending stat selections or optional tactical assessments. | [Gameplay flow](../README.md#gameplay) |
+| REQ-GAME-011 | Setup offers the documented first-to-3, first-to-5, and first-to-10 match lengths. | [Gameplay flow](../README.md#gameplay) |
 | REQ-UI-008 | Setup header context reflects the chosen format and target; active-match context reflects the current round, score, and target. | [Gameplay flow](../README.md#gameplay) |
 | REQ-UI-009 | The status region shows draw progress, actionable draw failures, and the current round state. | [Gameplay flow](../README.md#gameplay) |
 | REQ-UI-010 | Editing the replay seed in its dialog changes the draft; the active preference changes only when the draft is saved. | [Gameplay flow](../README.md#gameplay) |
 | REQ-UI-011 | Fighter cards identify the player and reveal the opponent by name after a round resolves. | [Stat comparison](../README.md#gameplay) |
+| REQ-UI-012 | Stat choices use the documented display labels Power, Speed, Technique, Kumi-kata, and Ne-waza. | [Keyboard controls](../README.md#gameplay) |
