@@ -1,0 +1,4 @@
+# Route automation and workflow changes to the repository owner for review.
+/.github/CODEOWNERS @cyanautomation
+/.github/dependabot.yml @cyanautomation
+/.github/workflows/ @cyanautomation
