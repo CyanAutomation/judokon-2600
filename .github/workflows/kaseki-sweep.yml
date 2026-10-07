@@ -22,6 +22,11 @@ permissions:
 jobs:
   sweep:
     name: Run Kaseki ${{ inputs.sweep_name }} sweep
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') &&
+      (github.workflow_ref == format('{0}/.github/workflows/kaseki-docs.yaml@refs/heads/main', github.repository) ||
+       github.workflow_ref == format('{0}/.github/workflows/kaseki-dry.yaml@refs/heads/main', github.repository))
     runs-on: ubuntu-latest
     # Leave enough time for setup and result publication around the 185-minute poll.
     timeout-minutes: 220
@@ -33,6 +38,7 @@ jobs:
       TASK_DESCRIPTION: ${{ inputs.task_description }}
       ALLOWLIST: ${{ inputs.allowlist }}
       TASK_PROMPT: ${{ inputs.task_prompt }}
+      SWEEP_NAME: ${{ inputs.sweep_name }}
       VALIDATION_COMMAND: npm run check
       POLLING_BUDGET_SECONDS: 11100
     steps:
@@ -51,6 +57,14 @@ jobs:
             echo "::error title=Invalid Kaseki controller URL::Use the approved HTTPS controller URL."
             exit 1
           fi
+          case "$SWEEP_NAME:$ALLOWLIST" in
+            'documentation:README.md,docs/**/*.md'|'DRY:src/**/*,api/**/*,scripts/**/*,test/**/*,tests/**/*')
+              ;;
+            *)
+              echo "::error title=Invalid Kaseki sweep configuration::Only the approved main-branch sweep profiles are allowed."
+              exit 1
+              ;;
+          esac
 
       - name: Verify controller health
         uses: CyanAutomation/kaseki-agent/.github/actions/verify-controller-health@30db5d15e117b8d8de13eb66766d48cf6b7d618b
@@ -154,11 +168,29 @@ jobs:
           trap 'rm -f "$response_file"' EXIT
           deadline=$((SECONDS + POLLING_BUDGET_SECONDS))
           while (( SECONDS < deadline )); do
-            curl --fail-with-body --silent --show-error --retry 3 --retry-all-errors \
+            if http_status="$(curl --fail-with-body --silent --show-error --retry 3 --retry-connrefused \
               --proto '=https' --tlsv1.2 --max-filesize 1048576 \
               --connect-timeout 10 --max-time 60 --output "$response_file" \
+              --write-out '%{http_code}' \
               --header "Authorization: Bearer $KASEKI_API_TOKEN" \
-              "$KASEKI_BASE_URL/api/runs/$RUN_ID/status"
+              "$KASEKI_BASE_URL/api/runs/$RUN_ID/status")"; then
+              :
+            else
+              curl_exit_code=$?
+              if [[ "$http_status" =~ ^4[0-9]{2}$ && "$http_status" != 408 && "$http_status" != 425 && "$http_status" != 429 ]]; then
+                echo "status=failed" >> "$GITHUB_OUTPUT"
+                echo "::error title=Kaseki status request rejected::Controller returned HTTP $http_status"
+                exit 1
+              fi
+              echo "::warning title=Kaseki status poll failed::curl exited with status $curl_exit_code (HTTP ${http_status:-unknown}); retrying status poll"
+              sleep 60
+              continue
+            fi
+            if [[ ! "$http_status" =~ ^2[0-9]{2}$ ]]; then
+              echo "status=failed" >> "$GITHUB_OUTPUT"
+              echo "::error title=Unexpected Kaseki HTTP status::Controller returned HTTP $http_status"
+              exit 1
+            fi
             if ! status="$(jq -er '.status | strings' "$response_file" 2>/dev/null)"; then
               echo "::warning title=Invalid Kaseki status response::Controller returned an invalid status response; retrying"
               sleep 60
@@ -200,7 +232,7 @@ jobs:
           FINAL_STATUS: ${{ steps.wait.outputs.status || 'not completed' }}
         run: |
           {
-            echo "## Kaseki ${{ inputs.sweep_name }} sweep"
+            printf '## Kaseki %s sweep\n' "$SWEEP_NAME"
             echo
             echo "| Setting | Value |"
             echo "|---|---|"
