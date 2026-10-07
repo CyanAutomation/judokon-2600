@@ -6,6 +6,7 @@ import {
   saveGameState,
   loadSavedGameState
 } from "./state";
+import type { GameState } from "./state";
 import { createMockJudoka, createMockMatch, createMockMatchResult } from "./test/mocks";
 
 // jsdom provides localStorage and sessionStorage automatically
@@ -129,25 +130,45 @@ describe("State Management", () => {
       expect(sessionStorage.getItem("judokon.activeMatch.v1")).toBeNull();
     });
 
-    it("does not throw error if no saved match exists", () => {
-      expect(() => clearSavedMatch()).not.toThrow();
-    });
   });
 
   describe("saveGameState", () => {
-    it("saves game state to sessionStorage when match exists", () => {
+    it.each([
+      { scenario: "before the first round", hasResult: false, history: [] },
+      {
+        scenario: "after a resolved round",
+        hasResult: true,
+        history: [{ outcome: "player", stat: "power", roundNumber: 1 }]
+      }
+    ])("[REQ-GAME-010] restores an active match $scenario", ({ hasResult, history }) => {
+      const match = createMockMatch({
+        phase: hasResult ? "awaitingNext" : "selecting",
+        player: createMockJudoka("player", {
+          stats: { power: 8, speed: 5, technique: 5, kumikata: 5, newaza: 5 }
+        }),
+        opponent: createMockJudoka("opponent")
+      });
+      const result = hasResult
+        ? { ...createMockMatchResult(), match, playerValue: 8, opponentValue: 5 }
+        : null;
       const state = createGameState();
-      state.match = createMockMatch();
-      state.result = createMockMatchResult();
-      state.history = [
-        { outcome: "player", stat: "power", roundNumber: 1 }
-      ];
-      state.activeSeed = "test-seed";
-      state.drawBuffer = [createMockJudoka("buffer-1")];
+      state.match = match;
+      state.result = result;
+      state.history = history as GameState["history"];
+      state.activeSeed = "replay-seed";
+      state.activeWeight = "-73";
+      state.drawBuffer = Array.from({ length: 4 }, (_, index) => createMockJudoka(`buffer-${index}`));
 
       saveGameState(state);
 
-      expect(sessionStorage.getItem("judokon.activeMatch.v1")).not.toBeNull();
+      expect(loadSavedGameState()).toStrictEqual({
+        match,
+        result,
+        history,
+        activeSeed: "replay-seed",
+        activeWeight: "-73",
+        drawBuffer: state.drawBuffer
+      });
     });
 
     it("does not save when match is null", () => {
@@ -159,7 +180,7 @@ describe("State Management", () => {
       expect(sessionStorage.getItem("judokon.activeMatch.v1")).toBeNull();
     });
 
-    it("does not save when pendingStat is set (match in progress)", () => {
+    it("[REQ-GAME-010] does not save an in-progress stat selection", () => {
       const state = createGameState();
       state.match = createMockMatch();
       state.pendingStat = "power";
@@ -169,31 +190,7 @@ describe("State Management", () => {
       expect(sessionStorage.getItem("judokon.activeMatch.v1")).toBeNull();
     });
 
-    it("saves match with empty history", () => {
-      const state = createGameState();
-      state.match = createMockMatch();
-      state.history = [];
-
-      saveGameState(state);
-
-      expect(sessionStorage.getItem("judokon.activeMatch.v1")).not.toBeNull();
-    });
-
-    it("saves match with completed result", () => {
-      const state = createGameState();
-      state.match = createMockMatch();
-      state.result = createMockMatchResult();
-      state.history = [
-        { outcome: "player", stat: "power", roundNumber: 1 },
-        { outcome: "opponent", stat: "technique", roundNumber: 2 }
-      ];
-
-      saveGameState(state);
-
-      expect(sessionStorage.getItem("judokon.activeMatch.v1")).not.toBeNull();
-    });
-
-    it("does not persist optional tactical assessment with replay state", () => {
+    it("[REQ-GAME-010] does not persist optional tactical assessment with replay state", () => {
       const state = createGameState();
       state.match = createMockMatch();
       state.tacticalAssessment = { overReliance: true };
@@ -225,31 +222,7 @@ describe("State Management", () => {
       expect(loaded).toBeNull();
     });
 
-    it("loads saved game state with complete data", () => {
-      // Create and save a state
-      const state = createGameState();
-      state.match = createMockMatch();
-      state.result = createMockMatchResult();
-      state.history = [
-        { outcome: "player", stat: "power", roundNumber: 1 }
-      ];
-      state.activeSeed = "test-seed-123";
-      state.activeWeight = "-73";
-      state.drawBuffer = [createMockJudoka("buffer-1"), createMockJudoka("buffer-2")];
-
-      saveGameState(state);
-
-      // Load and verify
-      const loaded = loadSavedGameState();
-      expect(loaded).not.toBeNull();
-      expect(loaded?.match).toBeDefined();
-      expect(loaded?.result).toBeDefined();
-      expect(loaded?.activeSeed).toBe("test-seed-123");
-      expect(loaded?.activeWeight).toBe("-73");
-      expect(loaded?.drawBuffer).toHaveLength(2);
-    });
-
-    it("returns partial state with null match when match not saved", () => {
+    it("[REQ-GAME-010] restores a valid saved setup state with no active match", () => {
       const saved = {
         version: 1,
         match: null,
@@ -260,30 +233,14 @@ describe("State Management", () => {
         drawBuffer: []
       };
       sessionStorage.setItem("judokon.activeMatch.v1", JSON.stringify(saved));
-      const loaded = loadSavedGameState();
-      expect(loaded?.match).toBeNull();
-    });
-
-    it("performs round-trip save and load with match data", () => {
-      // Setup initial state
-      const originalState = createGameState();
-      originalState.match = createMockMatch();
-      originalState.activeSeed = "round-trip-seed";
-      originalState.history = [
-        { outcome: "player", stat: "power", roundNumber: 1 },
-        { outcome: "draw", stat: "speed", roundNumber: 2 }
-      ];
-
-      // Save
-      saveGameState(originalState);
-
-      // Load
-      const loaded = loadSavedGameState();
-
-      // Verify
-      expect(loaded?.activeSeed).toBe("round-trip-seed");
-      expect(loaded?.history).toHaveLength(2);
-      expect(loaded?.history?.[0]).toEqual({ outcome: "player", stat: "power", roundNumber: 1 });
+      expect(loadSavedGameState()).toStrictEqual({
+        match: null,
+        result: null,
+        history: [],
+        activeSeed: "seed",
+        activeWeight: undefined,
+        drawBuffer: []
+      });
     });
   });
 
@@ -300,18 +257,7 @@ describe("State Management", () => {
       expect(loaded?.activeSeed).toBe(longSeed);
     });
 
-    it("handles large draw buffers", () => {
-      const state = createGameState();
-      state.match = createMockMatch();
-      state.drawBuffer = Array.from({ length: 50 }, (_, i) => createMockJudoka(`buffer-${i}`));
-
-      saveGameState(state);
-      const loaded = loadSavedGameState();
-
-      expect(loaded?.drawBuffer).toHaveLength(50);
-    });
-
-    it("handles special characters in fighter names during serialization", () => {
+    it("[REQ-GAME-010] restores fighter names exactly after saving a match", () => {
       const state = createGameState();
       const judoka = createMockJudoka("special");
       judoka.firstname = "Test \"Quote\" & <Tag>";
@@ -321,7 +267,10 @@ describe("State Management", () => {
       saveGameState(state);
       const loaded = loadSavedGameState();
 
-      expect(loaded?.match?.player.firstname).toContain("Quote");
+      expect(loaded?.match?.player).toMatchObject({
+        firstname: 'Test "Quote" & <Tag>',
+        surname: "O'Brien"
+      });
     });
   });
 });

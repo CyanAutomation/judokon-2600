@@ -559,6 +559,8 @@ describe("Main Module - Render Integration", () => {
       renderApp(root, createMockGameState({ match, result: null }));
 
       const report = root.querySelector('[aria-label="Scout report"]');
+      expect(report?.tagName).toBe("ASIDE");
+      expect(report?.getAttribute("aria-label")).toBe("Scout report");
       expect(report?.textContent).toContain("Technique");
       expect(report?.textContent).not.toContain("10");
     });

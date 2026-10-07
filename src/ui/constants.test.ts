@@ -4,21 +4,16 @@ import type { StatKey } from "../api/types";
 
 describe("constants", () => {
   describe("labels", () => {
-    it("exports stat labels for all stat keys", () => {
-      const statKeys: StatKey[] = ["power", "speed", "technique", "kumikata", "newaza"];
+    it("[REQ-UI-012] uses the documented display label for each stat key", () => {
+      const expectedLabels: Record<StatKey, string> = {
+        power: "Power",
+        speed: "Speed",
+        technique: "Technique",
+        kumikata: "Kumi-kata",
+        newaza: "Ne-waza"
+      };
 
-      for (const stat of statKeys) {
-        expect(labels[stat]).toBeDefined();
-        expect(typeof labels[stat]).toBe("string");
-      }
-    });
-
-    it("has specific label values", () => {
-      expect(labels.power).toBe("Power");
-      expect(labels.speed).toBe("Speed");
-      expect(labels.technique).toBe("Technique");
-      expect(labels.kumikata).toBe("Kumi-kata");
-      expect(labels.newaza).toBe("Ne-waza");
+      expect(labels).toEqual(expectedLabels);
     });
   });
 
@@ -37,15 +32,8 @@ describe("constants", () => {
   });
 
   describe("lengths", () => {
-    it("exports match length options", () => {
+    it("[REQ-GAME-011] offers the documented match length options", () => {
       expect(lengths).toEqual([3, 5, 10]);
-    });
-
-    it("has numeric length values", () => {
-      for (const length of lengths) {
-        expect(typeof length).toBe("number");
-        expect(length > 0).toBe(true);
-      }
     });
   });
 });
