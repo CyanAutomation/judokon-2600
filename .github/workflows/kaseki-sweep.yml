@@ -92,11 +92,11 @@ jobs:
           : "${KASEKI_API_TOKEN:?Configure KASEKI_API_TOKEN as an environment secret}"
           response_file="$(mktemp)"
           trap 'rm -f "$response_file"' EXIT
-          curl --fail-with-body --silent --show-error --retry 3 --retry-all-errors \
+          curl --fail-with-body --silent --show-error --retry 3 \
             --proto '=https' --tlsv1.2 --max-filesize 1048576 \
             --connect-timeout 10 --max-time 60 --output "$response_file" \
             --header "Authorization: Bearer $KASEKI_API_TOKEN" \
-            "$KASEKI_BASE_URL/api/gateway-test?stage=1"
+            "$KASEKI_BASE_URL/api/v1/gateway-test?stage=1"
           jq -e '.status == "ok"' "$response_file" >/dev/null
 
       - name: Submit ${{ inputs.sweep_name }} sweep
@@ -140,7 +140,7 @@ jobs:
             curl --silent --show-error --retry 3 --retry-all-errors \
               --proto '=https' --tlsv1.2 --max-filesize 1048576 --max-time 60 \
               --output "$response_file" --write-out '%{http_code}' --request POST \
-              "$KASEKI_BASE_URL/api/runs" \
+              "$KASEKI_BASE_URL/api/v1/runs" \
               --header "Authorization: Bearer $KASEKI_API_TOKEN" \
               --header "Content-Type: application/json" --data "$payload"
           )"
@@ -173,7 +173,7 @@ jobs:
               --connect-timeout 10 --max-time 60 --output "$response_file" \
               --write-out '%{http_code}' \
               --header "Authorization: Bearer $KASEKI_API_TOKEN" \
-              "$KASEKI_BASE_URL/api/runs/$RUN_ID/status")"; then
+              "$KASEKI_BASE_URL/api/v1/runs/$RUN_ID/status")"; then
               :
             else
               curl_exit_code=$?
