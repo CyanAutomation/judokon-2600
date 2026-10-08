@@ -15,6 +15,10 @@ on:
       task_prompt:
         required: true
         type: string
+    secrets:
+      KASEKI_API_TOKEN:
+        description: Token used to authenticate with the Kaseki controller.
+        required: true
 
 permissions:
   contents: read
