@@ -46,6 +46,25 @@ describe("Kaseki workflow boundaries", () => {
     );
   });
 
+  it("requires and explicitly passes the Kaseki token through both callers", () => {
+    expect(sweepWorkflow).toMatch(
+      /workflow_call:[\s\S]*?secrets:\s+KASEKI_API_TOKEN:[\s\S]*?required: true/,
+    );
+
+    for (const caller of ["kaseki-docs.yaml", "kaseki-dry.yaml"]) {
+      const workflow = readWorkflow(caller);
+      expect(workflow).toMatch(
+        /secrets:\s+KASEKI_API_TOKEN:\s+\$\{\{ secrets\.KASEKI_API_TOKEN \}\}/,
+      );
+      expect(workflow).not.toContain("secrets: inherit");
+    }
+  });
+
+  it("always submits sweeps as normal pull requests", () => {
+    expect(sweepWorkflow).toContain('publishMode: "pr"');
+    expect(sweepWorkflow).not.toMatch(/publishMode:\s*["']draft/i);
+  });
+
   it("assigns workflow and Dependabot changes to the repository owner", () => {
     const codeowners = readFileSync(
       resolve(process.cwd(), ".github/CODEOWNERS"),
