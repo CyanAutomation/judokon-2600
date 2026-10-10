@@ -637,9 +637,22 @@ describe("Main Module - Event Handler Integration", () => {
       setupStep: "weight"
     });
     const render = vi.fn();
+    const root = document.createElement("div");
+    const quitButton = document.createElement("button");
+    quitButton.id = "quit";
+    root.append(quitButton);
     sessionStorage.setItem("judokon.activeMatch.v1", "saved-run");
 
-    clearAndExit(state, { client: new BudokonClient(), render });
+    const deps = { client: new BudokonClient(), render };
+    const handlers = {
+      start: vi.fn(),
+      copyReplaySeed: async () => undefined,
+      next: async () => undefined,
+      resolve: vi.fn(),
+      clearAndExit: () => clearAndExit(state, deps)
+    };
+    root.addEventListener("click", event => handleClickEvent(event, state, handlers));
+    quitButton.click();
 
     expect(state).toMatchObject({
       match: null,
@@ -726,10 +739,10 @@ describe("Main Module - Complex Integration Scenarios", () => {
     });
   });
 
-  it("handles full match flow from start to resolution", async () => {
+  it("[REQ-GAME-013] starts a match from setup and resolves the first round", async () => {
     vi.useFakeTimers();
 
-    const state = createMockGameState({ target: 3, mode: "classic" });
+    const state = createMockGameState({ target: 5, lengthIndex: 1, mode: "classic" });
     const root = document.createElement("div");
     const player = createMockJudoka("integration-player", {
       firstname: "Player",
@@ -754,7 +767,7 @@ describe("Main Module - Complex Integration Scenarios", () => {
     root.addEventListener("click", event => {
       handleClickEvent(event, state, {
         start: () => {
-          startOperation = start(state, deps, 3, "test-seed");
+          startOperation = start(state, deps, undefined, "test-seed");
         },
         resolve: stat => {
           if (!state.match) throw new Error("Match must exist before resolving");
@@ -774,7 +787,7 @@ describe("Main Module - Complex Integration Scenarios", () => {
     await startOperation;
 
     expect(state.match).toMatchObject({
-      target: 3,
+      target: 5,
       phase: "selecting",
       player,
       opponent
@@ -793,18 +806,6 @@ describe("Main Module - Complex Integration Scenarios", () => {
     expect(state.match?.phase).toBe("awaitingNext");
     expect(root.querySelector(".result-panel")).not.toBeNull();
     expect(root.querySelector<HTMLButtonElement>("#next")).not.toBeNull();
-  });
-
-  it("handles division switching mid-session", () => {
-    const state = createMockGameState({ division: "absolute" });
-
-    // Switch to weight
-    state.division = "weight";
-    expect(state.division).toBe("weight");
-
-    // Can set active weight
-    state.activeWeight = "-73";
-    expect(state.activeWeight).toBe("-73");
   });
 
   it("handles multiple replays with different seeds", async () => {

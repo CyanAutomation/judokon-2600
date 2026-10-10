@@ -4,7 +4,7 @@ A terminal-style, text-first TypeScript implementation of JU-DO-KON! Classic Bat
 
 ## Gameplay
 
-Setup unfolds in four steps: choose your mode (**Classic** or **Champion**), pick your division (**Absolute** open-weight or **Weight** class — choose one of 14 specific weight classes from −48 to +100), set the match length (**Quick** = first-to-3, **Medium** = first-to-5, **Long** = first-to-10), then play. Your selected stat is compared with the opponent's hidden value; the higher value earns a point. A match ends when a side reaches its target, or after 25 rounds.
+Setup unfolds in four steps: choose your mode (**Classic** or **Champion**), pick your division (**Absolute** open-weight or **Weight** class — choose one of the 14 catalogue classes `-48`, `-52`, `-57`, `-60`, `-63`, `-66`, `-70`, `-73`, `-78`, `-81`, `-90`, `-100`, `+78`, or `+100`), set the match length (**Quick** = first-to-3, **Medium** = first-to-5, **Long** = first-to-10), then play. With no saved preferences, setup starts at Classic, Absolute, Random weight class, and Quick (first-to-3). Your selected stat is compared with the opponent's hidden value; the higher value earns a point. A match ends when a side reaches its target, or after 25 rounds.
 
 Keyboard controls: choose game mode with `C` (**Classic**) / `H` (**Champion**); choose division with `A` (**Absolute**) / `W` (**Weight**); cycle match length with arrow keys or `1`–`3`; confirm weight-class choice with `Enter`; start the match by confirming length with `Enter` or `Space`. During a match, pick a stat with `1`–`5` (`power`, `speed`, `technique`, `kumikata`, `newaza`), press `Enter` or `Space` to advance or replay, and quit with `Esc` or `Q`.
 

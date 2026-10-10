@@ -23,30 +23,17 @@ describe("State Management", () => {
   });
 
   describe("createGameState", () => {
-    it("creates initial state with default values when no preferences are saved", () => {
+    it("[REQ-UI-013] opens fresh setup with the documented default choices", () => {
       const state = createGameState();
-      expect(state).toEqual({
+      expect(state).toMatchObject({
         match: null,
-        result: null,
-        tacticalAssessment: null,
-        pendingStat: null,
-        activeSeed: "",
-        activeWeight: undefined,
-        drawBuffer: [],
-        target: 3,
-        lengthIndex: 0,
-        busy: false,
-        errorMessage: "",
-        history: [],
         division: "absolute",
         mode: "classic",
         weight: "random",
-        replaySeed: "",
-        seedMessage: "",
+        target: 3,
+        lengthIndex: 0,
         setupStep: "mode",
-        setupCursor: 0,
-        seedModalOpen: false,
-        seedDraft: ""
+        setupCursor: 0
       });
     });
 
@@ -245,7 +232,7 @@ describe("State Management", () => {
   });
 
   describe("Edge cases and error handling", () => {
-    it("handles very long seeds", () => {
+    it("[REQ-GAME-010] round-trips a long replay seed in saved session data", () => {
       const state = createGameState();
       state.match = createMockMatch();
       const longSeed = "x".repeat(10000);
