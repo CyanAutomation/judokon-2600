@@ -99,6 +99,61 @@ describe("game templates", () => {
     expect(markup).not.toContain("JEV says");
   });
 
+  it("renders only evidence-backed adaptation and momentum messages", () => {
+    const match: Match = {
+      player: judoka,
+      opponent: { ...judoka, id: "opponent", slug: "opponent" },
+      target: 3,
+      matchNumber: 7,
+      scores: { player: 3, opponent: 2 },
+      mode: "classic",
+      phase: "matchOver",
+      winner: "player"
+    };
+    const current = state({
+      match,
+      result: { match, outcome: "player", stat: "speed", playerValue: 8, opponentValue: 7 },
+      tacticalAssessment: { adaptation: true, momentumResponse: true },
+      history: [
+        { stat: "power", outcome: "opponent", roundNumber: 1 },
+        { stat: "technique", outcome: "player", roundNumber: 2 },
+        { stat: "technique", outcome: "player", roundNumber: 3 },
+        { stat: "power", outcome: "opponent", roundNumber: 4 },
+        { stat: "speed", outcome: "player", roundNumber: 5 }
+      ]
+    });
+
+    const markup = game(match, current, createHelpers(current));
+
+    expect(markup).toContain("You changed stats after 2 of 2 choices following a loss.");
+    expect(markup).toContain("You switched stats after 1 of 1 choices made following runs of wins or losses.");
+    expect(markup).not.toContain("missed opportunity");
+  });
+
+  it("omits an insight when the claimed signal has no supporting transitions", () => {
+    const match: Match = {
+      player: judoka,
+      opponent: { ...judoka, id: "opponent", slug: "opponent" },
+      target: 3,
+      matchNumber: 8,
+      scores: { player: 1, opponent: 1 },
+      mode: "classic",
+      phase: "matchOver",
+      winner: null
+    };
+    const current = state({
+      match,
+      result: { match, outcome: "draw", stat: "power", playerValue: 8, opponentValue: 8 },
+      tacticalAssessment: { adaptation: true },
+      history: [
+        { stat: "power", outcome: "player", roundNumber: 1 },
+        { stat: "power", outcome: "opponent", roundNumber: 2 }
+      ]
+    });
+
+    expect(game(match, current, createHelpers(current))).not.toContain('class="surface panel tactical-insight"');
+  });
+
   it("keeps the result, both judoka, and round history together before the decision controls", () => {
     const match: Match = {
       player: judoka,

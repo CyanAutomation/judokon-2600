@@ -2,10 +2,11 @@ import { checkRateLimit } from "@vercel/firewall";
 import { JevProviderError, OpenRouterJevClient } from "../src/jev/openRouterClient";
 import type { JevDecisionClient } from "../src/jev/types";
 import {
-  assessmentFromJev,
+  applyTacticalConfidencePolicy,
   parseTacticalJudgment,
   sanitizeTacticalFeatures,
-  TACTICAL_QUESTIONS
+  TACTICAL_QUESTIONS,
+  type TacticalFeatures
 } from "../src/game/tacticalAssessment";
 
 export interface TacticalAssessmentHandlerOptions {
@@ -29,17 +30,20 @@ type ParsedBody =
   | { ok: true; value: unknown }
   | { ok: false; status: 400 | 413 };
 
-async function parseJsonBody(request: Request): Promise<ParsedBody> {
-  const contentLengthHeader = request.headers.get("content-length");
-  if (contentLengthHeader !== null) {
-    if (!/^\d+$/.test(contentLengthHeader)) return { ok: false, status: 400 };
-    const contentLength = Number(contentLengthHeader);
-    if (!Number.isSafeInteger(contentLength) || contentLength < 0) return { ok: false, status: 400 };
-    if (contentLength > MAX_REQUEST_BODY_BYTES) return { ok: false, status: 413 };
-  }
+type BodyBytes =
+  | { ok: true; bytes: Uint8Array }
+  | { ok: false; status: 400 | 413 };
 
+function contentLengthError(header: string | null): 400 | 413 | null {
+  if (header === null) return null;
+  if (!/^\d+$/.test(header)) return 400;
+  const contentLength = Number(header);
+  if (!Number.isSafeInteger(contentLength)) return 400;
+  return contentLength > MAX_REQUEST_BODY_BYTES ? 413 : null;
+}
+
+async function readBoundedBody(request: Request): Promise<BodyBytes> {
   if (!request.body) return { ok: false, status: 400 };
-
   const reader = request.body.getReader();
   const chunks: Uint8Array[] = [];
   let totalBytes = 0;
@@ -66,9 +70,17 @@ async function parseJsonBody(request: Request): Promise<ParsedBody> {
     bytes.set(chunk, offset);
     offset += chunk.byteLength;
   }
+  return { ok: true, bytes };
+}
 
+async function parseJsonBody(request: Request): Promise<ParsedBody> {
+  const lengthError = contentLengthError(request.headers.get("content-length"));
+  if (lengthError) return { ok: false, status: lengthError };
+  const body = await readBoundedBody(request);
+  if (!body.ok) return body;
   try {
-    return { ok: true, value: JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes)) };
+    const value = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(body.bytes));
+    return { ok: true, value };
   } catch {
     return { ok: false, status: 400 };
   }
@@ -83,45 +95,68 @@ async function checkVercelRateLimit(request: Request): Promise<boolean> {
   return result.rateLimited;
 }
 
+async function rateLimitResponse(
+  request: Request,
+  options: TacticalAssessmentHandlerOptions
+): Promise<Response | null> {
+  try {
+    const isRateLimited = await (options.isRateLimited ?? checkVercelRateLimit)(request);
+    return isRateLimited ? json({ assessment: null, issue: "rate_limited" }, 429) : null;
+  } catch {
+    // A missing or unavailable firewall rule must never make the public route fail open.
+    return json({ assessment: null }, 503);
+  }
+}
+
+async function readTacticalFeatures(request: Request): Promise<
+  | { ok: true; features: TacticalFeatures }
+  | { ok: false; status: 400 | 413 }
+> {
+  const parsedBody = await parseJsonBody(request);
+  if (!parsedBody.ok) return parsedBody;
+  const candidate = typeof parsedBody.value === "object" && parsedBody.value !== null && !Array.isArray(parsedBody.value)
+    ? (parsedBody.value as Record<string, unknown>).features
+    : null;
+  const features = sanitizeTacticalFeatures(candidate);
+  return features ? { ok: true, features } : { ok: false, status: 400 };
+}
+
+async function runAssessment(
+  features: TacticalFeatures,
+  apiKey: string,
+  options: TacticalAssessmentHandlerOptions
+): Promise<Response> {
+  const model = (options.getModel ?? (() => process.env.JEV_MODEL))()?.trim() || "~typesafe/jev-latest";
+  const client = options.client ?? (options.createClient ?? ((key, selectedModel) => new OpenRouterJevClient(key, selectedModel)))(apiKey, model);
+
+  try {
+    const result = await client.decide(features, TACTICAL_QUESTIONS);
+    const judgment = parseTacticalJudgment(result);
+    if (!judgment) return json({ assessment: null }, 502);
+    return json({ assessment: applyTacticalConfidencePolicy(judgment) });
+  } catch (error) {
+    // JEV is optional; never forward provider details or affect game state.
+    const issue = error instanceof JevProviderError && (error.status === 401 || error.status === 403)
+      ? "invalid_api_key"
+      : "unavailable";
+    return json({ assessment: null, issue }, 503);
+  }
+}
+
 /** Create the Vercel route handler with injectable provider configuration for tests. */
 export function createTacticalAssessmentHandler(options: TacticalAssessmentHandlerOptions = {}) {
   return async function handleTacticalAssessment(request: Request): Promise<Response> {
     if (request.method !== "POST") return json({ assessment: null }, 405);
 
     const apiKey = (options.getApiKey ?? (() => process.env.OPENROUTER_API_KEY))()?.trim();
-    try {
-      const isRateLimited = await (options.isRateLimited ?? checkVercelRateLimit)(request);
-      if (isRateLimited) return json({ assessment: null, issue: "rate_limited" }, 429);
-    } catch {
-      // A missing or unavailable firewall rule must never make the public route fail open.
-      return json({ assessment: null }, 503);
-    }
+    const limitResponse = await rateLimitResponse(request, options);
+    if (limitResponse) return limitResponse;
 
-    const parsedBody = await parseJsonBody(request);
-    if (!parsedBody.ok) return json({ assessment: null }, parsedBody.status);
-
-    const candidate = typeof parsedBody.value === "object" && parsedBody.value !== null && !Array.isArray(parsedBody.value)
-      ? (parsedBody.value as Record<string, unknown>).features
-      : null;
-    const features = sanitizeTacticalFeatures(candidate);
-    if (!features) return json({ assessment: null }, 400);
+    const featureResult = await readTacticalFeatures(request);
+    if (!featureResult.ok) return json({ assessment: null }, featureResult.status);
 
     if (!apiKey || apiKey.length === 0) return json({ assessment: null, issue: "not_configured" });
-
-    const model = (options.getModel ?? (() => process.env.JEV_MODEL))()?.trim() || "~typesafe/jev-latest";
-    const client = options.client ?? (options.createClient ?? ((key, selectedModel) => new OpenRouterJevClient(key, selectedModel)))(apiKey, model);
-
-    try {
-      const result = await client.decide(features, TACTICAL_QUESTIONS);
-      if (!parseTacticalJudgment(result)) return json({ assessment: null }, 502);
-      return json({ assessment: assessmentFromJev(result) });
-    } catch (error) {
-      // JEV is optional; never forward provider details or affect game state.
-      const issue = error instanceof JevProviderError && (error.status === 401 || error.status === 403)
-        ? "invalid_api_key"
-        : "unavailable";
-      return json({ assessment: null, issue }, 503);
-    }
+    return runAssessment(featureResult.features, apiKey, options);
   };
 }
 

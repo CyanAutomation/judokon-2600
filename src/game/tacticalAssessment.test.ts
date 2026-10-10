@@ -70,6 +70,28 @@ describe("tactical feature extraction", () => {
     });
   });
 
+  it("tracks switches and repeated choices after single outcomes and outcome runs", () => {
+    const rounds = history([
+      ["power", "player"],
+      ["power", "player"],
+      ["speed", "player"],
+      ["speed", "opponent"],
+      ["power", "opponent"],
+      ["power", "opponent"],
+      ["power", "draw"]
+    ]);
+
+    const features = extractTacticalFeatures(scoreFor(rounds), rounds);
+
+    expect(features.statSwitches).toBe(2);
+    expect(features.longestRepeatedStatSequence).toBe(3);
+    expect(features.repeatedFailedSelections).toBe(2);
+    expect(features.choicesAfterLosses).toEqual({ decisions: 3, switches: 1 });
+    expect(features.choicesAfterWins).toEqual({ decisions: 3, switches: 1 });
+    expect(features.choicesAfterWinRuns).toEqual({ decisions: 2, switches: 1 });
+    expect(features.choicesAfterLossRuns).toEqual({ decisions: 2, switches: 0 });
+  });
+
   it("labels broad exploration as variety and leaves mixed evidence ambiguous", () => {
     const balanced = history([
       ["power", "player"],
@@ -156,5 +178,50 @@ describe("server-boundary feature allow-list", () => {
     const rounds = history([["power", "player"], ["speed", "opponent"]]);
     const features = extractTacticalFeatures(scoreFor(rounds), rounds);
     expect(sanitizeTacticalFeatures({ ...features, rounds: 25 })).toBeNull();
+  });
+
+  it("rejects malformed counts, derived rates, outcomes, and choice transitions", () => {
+    const rounds = history([
+      ["power", "opponent"],
+      ["technique", "player"],
+      ["technique", "player"]
+    ]);
+    const features = extractTacticalFeatures(scoreFor(rounds), rounds);
+
+    expect(sanitizeTacticalFeatures(null)).toBeNull();
+    expect(sanitizeTacticalFeatures({ ...features, rounds: -1 })).toBeNull();
+    expect(sanitizeTacticalFeatures({ ...features, scoreDifferential: 0 })).toBeNull();
+    expect(sanitizeTacticalFeatures({
+      ...features,
+      selections: {
+        ...features.selections,
+        power: { ...features.selections.power, winRate: 0.5 }
+      }
+    })).toBeNull();
+    expect(sanitizeTacticalFeatures({
+      ...features,
+      choicesAfterLosses: { decisions: 0, switches: 1 }
+    })).toBeNull();
+    expect(sanitizeTacticalFeatures({ ...features, recentOutcomes: ["opponent"] })).toBeNull();
+  });
+
+  it("requires a server supplied missed-opportunity candidate to match derived facts", () => {
+    const rounds = history([
+      ["power", "opponent"],
+      ["power", "opponent"],
+      ["power", "player"],
+      ["technique", "player"],
+      ["technique", "player"]
+    ]);
+    const features = extractTacticalFeatures(scoreFor(rounds), rounds);
+    const candidate = features.missedOpportunityCandidate;
+
+    expect(candidate).not.toBeNull();
+    expect(sanitizeTacticalFeatures({ ...features, missedOpportunityCandidate: null })).toBeNull();
+    expect(sanitizeTacticalFeatures({
+      ...features,
+      missedOpportunityCandidate: { ...candidate!, alternativeWinRate: 0.5 }
+    })).toBeNull();
+    expect(sanitizeTacticalFeatures(features)).toEqual(features);
   });
 });
