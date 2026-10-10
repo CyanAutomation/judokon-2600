@@ -28,8 +28,8 @@ function cloneJudokaArray(judoka: Judoka[]): Judoka[] {
   return judoka.map(cloneJudoka);
 }
 
-export const DEFAULT_CACHE_MAX_ENTRIES = 100;
-export const DEFAULT_CACHE_EXPIRATION_MS = 5 * 60 * 1_000;
+const DEFAULT_CACHE_MAX_ENTRIES = 100;
+const DEFAULT_CACHE_EXPIRATION_MS = 5 * 60 * 1_000;
 
 /**
  * Manages memoization of judoka draw results.

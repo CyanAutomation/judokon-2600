@@ -76,6 +76,17 @@ describe("setup templates", () => {
     expect(panel?.querySelector("#start")).toBeNull();
   });
 
+  it("renders the selected weight and continuation control in the weight stage", () => {
+    const root = document.createElement("div");
+    root.innerHTML = intro(state({ division: "weight", weight: "-73", setupStep: "weight" }));
+    const panel = root.querySelector(".intro-mode-panel");
+
+    expect(panel?.querySelector("legend")?.textContent).toBe("Choose weight class");
+    expect(panel?.querySelector<HTMLSelectElement>("#weight-class")?.value).toBe("-73");
+    expect(panel?.querySelector("#confirm-weight")?.textContent).toContain("Continue");
+    expect(panel?.querySelector("#start")).toBeNull();
+  });
+
   it("[REQ-UI-015] shows scoring and target context with Start in the final setup stage", () => {
     const current = state({ setupStep: "length", target: 5, lengthIndex: 1 });
     const root = document.createElement("div");

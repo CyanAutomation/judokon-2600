@@ -9,7 +9,7 @@ import { createGameState, loadSavedGameState, persistPreferences, type GameState
 import { renderApp } from "./ui/render";
 import type { Match } from "./game/game";
 import { start, next, resolve, copyReplaySeed, clearAndExit, chooseLength, handleSetupStepClick, handleOpenSeedModal, handleCloseSeedModal, handleSaveReplaySeed, handleToggleSound, handleKeyboardMoveCursor, handleKeyboardCloseSeedModal, type OrchestratorDeps } from "./game/orchestrator";
-import { isSeedModalEscape, shouldHandleKeyboardEvent, shouldPlayKeyboardTick } from "./ui/keyboardGuards";
+import { handleGlobalKeyboardEvent } from "./ui/keyboardEventDispatcher";
 import { getSoundEnabled } from "./ui/helpers/soundStorage";
 import { requestTacticalAssessment } from "./api/tacticalAssessment";
 
@@ -106,37 +106,15 @@ function createMatchKeyboardHandlers() {
   };
 }
 /**
- * Handle escape key press in seed modal
- */
-function handleSeedModalEscape(e: KeyboardEvent): void {
-  e.preventDefault();
-  handleKeyboardCloseSeedModal(state, deps);
-}
-
-/**
  * Handle keyboard events with branching logic
  */
 function handleKeyboardEvent(e: KeyboardEvent): void {
-  // Handle escape in seed modal
-  if (isSeedModalEscape(e, state)) {
-    handleSeedModalEscape(e);
-    return;
-  }
-
-  // Let editable inputs handle their own keys
-  if (!shouldHandleKeyboardEvent(e)) return;
-
-  // Play keyboard tick for navigation keys
-  if (shouldPlayKeyboardTick(e.key)) keyboardTick();
-
-  // Dispatch to appropriate handler
-  if (state.match) {
-    const handlers = createMatchKeyboardHandlers();
-    handleMatchKeyboard(e, state, root, handlers);
-  } else {
-    const handlers = createIntroKeyboardHandlers();
-    handleIntroKeyboard(e, state, root, handlers);
-  }
+  handleGlobalKeyboardEvent(e, state, {
+    closeSeedModal: () => handleKeyboardCloseSeedModal(state, deps),
+    keyboardTick,
+    handleMatch: (event) => handleMatchKeyboard(event, state, root, createMatchKeyboardHandlers()),
+    handleIntro: (event) => handleIntroKeyboard(event, state, root, createIntroKeyboardHandlers())
+  });
 }
 
 // Event listeners
