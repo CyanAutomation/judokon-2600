@@ -88,6 +88,47 @@ function summary(m: Match, state: GameState): string {
   return sectionPanel("match-summary", "Match summary", content);
 }
 
+function overRelianceMessage(
+  enabled: boolean | undefined,
+  decisiveStat: StatKey | null,
+  features: ReturnType<typeof extractTacticalFeatures>
+): string | null {
+  if (!enabled || !decisiveStat || features.repeatedFailedSelections === 0) return null;
+  const record = features.selections[decisiveStat];
+  if (record.selected < 3 || record.losses <= record.wins) return null;
+  return `${labels[decisiveStat]} was your most-used stat; it lost ${record.losses} of ${record.selected} selections.`;
+}
+
+function adaptationMessage(
+  enabled: boolean | undefined,
+  features: ReturnType<typeof extractTacticalFeatures>
+): string | null {
+  const { decisions, switches } = features.choicesAfterLosses;
+  if (!enabled || switches === 0) return null;
+  return `You changed stats after ${switches} of ${decisions} choices following a loss.`;
+}
+
+function missedOpportunityMessage(
+  enabled: boolean | undefined,
+  features: ReturnType<typeof extractTacticalFeatures>
+): string | null {
+  const candidate = features.missedOpportunityCandidate;
+  if (!enabled || !candidate) return null;
+  const favored = features.selections[candidate.favoredStat];
+  const alternative = features.selections[candidate.alternativeStat];
+  return `${labels[candidate.alternativeStat]} won ${alternative.wins}/${alternative.selected} selections while ${labels[candidate.favoredStat]}, your most-used stat, won ${favored.wins}/${favored.selected}.`;
+}
+
+function momentumResponseMessage(
+  enabled: boolean | undefined,
+  features: ReturnType<typeof extractTacticalFeatures>
+): string | null {
+  const decisions = features.choicesAfterWinRuns.decisions + features.choicesAfterLossRuns.decisions;
+  const switches = features.choicesAfterWinRuns.switches + features.choicesAfterLossRuns.switches;
+  if (!enabled || decisions === 0 || switches === 0) return null;
+  return `You switched stats after ${switches} of ${decisions} choices made following runs of wins or losses.`;
+}
+
 /** Render code-authored feedback only for high-confidence JEV signals with matching facts. */
 function tacticalInsight(m: Match, state: GameState): string {
   const assessment = state.tacticalAssessment;
@@ -95,34 +136,12 @@ function tacticalInsight(m: Match, state: GameState): string {
 
   const features = extractTacticalFeatures(m.scores, state.history);
   const details = matchSummary(m, state.history);
-  const messages: string[] = [];
-
-  if (assessment.overReliance && details.decisiveStat && features.repeatedFailedSelections > 0) {
-    const record = features.selections[details.decisiveStat];
-    if (record.selected >= 3 && record.losses > record.wins) {
-      messages.push(`${labels[details.decisiveStat]} was your most-used stat; it lost ${record.losses} of ${record.selected} selections.`);
-    }
-  }
-
-  if (assessment.adaptation && features.choicesAfterLosses.switches > 0) {
-    messages.push(`You changed stats after ${features.choicesAfterLosses.switches} of ${features.choicesAfterLosses.decisions} choices following a loss.`);
-  }
-
-  if (assessment.missedOpportunity && features.missedOpportunityCandidate) {
-    const candidate = features.missedOpportunityCandidate;
-    const favored = features.selections[candidate.favoredStat];
-    const alternative = features.selections[candidate.alternativeStat];
-    messages.push(`${labels[candidate.alternativeStat]} won ${alternative.wins}/${alternative.selected} selections while ${labels[candidate.favoredStat]}, your most-used stat, won ${favored.wins}/${favored.selected}.`);
-  }
-
-  if (assessment.momentumResponse) {
-    const decisions = features.choicesAfterWinRuns.decisions + features.choicesAfterLossRuns.decisions;
-    const switches = features.choicesAfterWinRuns.switches + features.choicesAfterLossRuns.switches;
-    if (decisions > 0 && switches > 0) {
-      messages.push(`You switched stats after ${switches} of ${decisions} choices made following runs of wins or losses.`);
-    }
-  }
-
+  const messages = [
+    overRelianceMessage(assessment.overReliance, details.decisiveStat, features),
+    adaptationMessage(assessment.adaptation, features),
+    missedOpportunityMessage(assessment.missedOpportunity, features),
+    momentumResponseMessage(assessment.momentumResponse, features)
+  ].filter((message): message is string => message !== null);
   if (!messages.length) return "";
   const content = `<p class="eyebrow">Optional tactical insight</p>${messages.map((message) => `<p>${esc(message)}</p>`).join("")}`;
   return sectionPanel("tactical-insight", "Tactical insight", content);

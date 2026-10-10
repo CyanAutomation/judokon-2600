@@ -7,7 +7,7 @@ import type { GameState } from "../state";
 /**
  * Check if keyboard event target is an editable input
  */
-export function isEditableInput(target: EventTarget | null): boolean {
+function isEditableInput(target: EventTarget | null): boolean {
   return (target as HTMLElement)?.matches("input:not(.choice-input), select") ?? false;
 }
 
