@@ -30,9 +30,27 @@ These local status tests had the same original score, **1/1/0/2/0 = 4**, and are
 
 The tied generic network-error fallback is covered by the rejected-draw integration cases in [`main.test.ts`](../src/main.test.ts). Each replacement scores **2/2/2/2/1 = 9 — Keep** under the same static assessment.
 
+## Follow-up review of the ten reported low performers
+
+The follow-up scores use the same dimension order. Removed mock-only tests are scored through their retained integration coverage.
+
+| Reported case | Change and current coverage | Current score |
+| --- | --- | ---: |
+| main.test.ts: “handles division switching mid-session” | Removed the fixture-only assignments. The real Weight selection handler now checks the division, next setup step, persistence, and render behavior in src/ui/changeHandlers.test.ts, linked to REQ-UI-014. | 2/2/2/2/1 = **9 — Keep** |
+| containers.test.ts: “includes help text with keyboard shortcuts” | Merged into one DOM-based menu contract test that checks the group, actual instructions, and decorative arrow, linked to REQ-KEYBOARD-008. | 2/2/2/2/1 = **9 — Keep** |
+| clickHandlers.test.ts: Start callback dispatch | Removed the mock-only case. The click-driven start and first-round flow remains covered in src/main.test.ts, linked to REQ-GAME-013. | 2/2/2/2/1 = **9 — Keep** |
+| clickHandlers.test.ts: Quit callback dispatch | Replaced the mock-only case with a real Quit-button click that verifies run cleanup and setup return in src/main.test.ts, linked to REQ-GAME-007. | 2/2/2/2/1 = **9 — Keep** |
+| setup-templates.test.ts: final CTA and rules | The DOM-based assertion checks the scoring rule, selected target, and Start action together in the setup panel, linked to REQ-UI-015. | 2/2/2/2/1 = **9 — Keep** |
+| setup-templates.test.ts: staged terminal menu | Replaced the unverified “vertical” layout claim with checks for one active native radio group, and linked stage and summary behavior to REQ-UI-014. | 2/2/2/2/1 = **9 — Keep** |
+| constants.test.ts: weight classes | Replaced partial examples with the full documented ordered list, linked to REQ-GAME-012. | 2/2/2/2/1 = **9 — Keep** |
+| inputs.test.ts: active and disabled radio choices | DOM assertions now inspect the native disabled property and the active cursor indicator. It remains unlinked to a product-specific contract. | 2/1/2/2/1 = **8 — Keep** |
+| state.test.ts: initial defaults | Replaced the full internal state snapshot with user-facing setup defaults and linked them to REQ-UI-013. | 2/2/2/2/1 = **9 — Keep** |
+| cache.test.ts: invalid entry limit | Documented the positive safe-integer option and expanded coverage to zero, negative, fractional, non-finite, and unsafe values, plus a valid limit. | 2/1/2/2/1 = **8 — Keep** |
+
 ## Verification and limits
 
 - `npm test` passed twice after remediation: 23 files and 280 cases each run. Total runtime was 15–18 seconds, including jsdom startup.
 - `npm run lint` passed.
 - `npm run build` passed.
+- Follow-up `npm run check` passed: lint, 24 test files and 281 cases, and production build.
 - Mutation coverage was not measured: neither Stryker nor a Vitest coverage provider is installed. The cost/coverage score is therefore provisional, not a measured mutation score.

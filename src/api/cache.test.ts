@@ -14,10 +14,17 @@ const result = (id: string): Judoka[] => [{
 }];
 
 describe("BudokonCache", () => {
-  it("rejects a zero entry limit", () => {
-    expect(() => new BudokonCache({ maxEntries: 0 })).toThrow(
-      "cache maxEntries must be a positive integer"
-    );
+  it.each([0, -1, 1.5, Number.NaN, Number.POSITIVE_INFINITY, Number.MAX_SAFE_INTEGER + 1])(
+    "rejects invalid entry limit %s",
+    maxEntries => {
+      expect(() => new BudokonCache({ maxEntries })).toThrow(
+        "cache maxEntries must be a positive integer"
+      );
+    }
+  );
+
+  it("accepts a positive safe integer entry limit", () => {
+    expect(() => new BudokonCache({ maxEntries: 1 })).not.toThrow();
   });
 
   it("expires a completed entry after the configured lifetime", async () => {

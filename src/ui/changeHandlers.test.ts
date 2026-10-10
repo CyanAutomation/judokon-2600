@@ -3,8 +3,8 @@ import { handleChangeEvent } from "./changeHandlers";
 import { createMockGameState, createChangeEvent } from "../test/mocks";
 
 describe("handleChangeEvent", () => {
-  it("updates state.division when division radio changes to weight", () => {
-    const state = createMockGameState({ division: "absolute" });
+  it("[REQ-UI-014] advances to weight selection when the Weight division is chosen", () => {
+    const state = createMockGameState({ division: "absolute", setupStep: "division" });
     const input = document.createElement("input");
     input.type = "radio";
     input.dataset.division = "weight";
@@ -20,8 +20,9 @@ describe("handleChangeEvent", () => {
     handleChangeEvent(createChangeEvent(input), state, root, handlers);
 
     expect(state.division).toBe("weight");
-    expect(handlers.persistPreferences).toHaveBeenCalled();
-    expect(handlers.render).toHaveBeenCalled();
+    expect(state.setupStep).toBe("weight");
+    expect(handlers.persistPreferences).toHaveBeenCalledOnce();
+    expect(handlers.render).toHaveBeenCalledOnce();
   });
 
   it("updates state.mode when mode radio changes to champion", () => {
@@ -44,25 +45,6 @@ describe("handleChangeEvent", () => {
     expect(handlers.persistPreferences).toHaveBeenCalled();
     expect(handlers.render).toHaveBeenCalled();
     expect(state.setupStep).toBe("division");
-  });
-
-  it("requires a weight choice after Weight class is selected", () => {
-    const state = createMockGameState({ setupStep: "division" });
-    const input = document.createElement("input");
-    input.type = "radio";
-    input.dataset.division = "weight";
-    input.checked = true;
-    const root = document.createElement("div");
-
-    const handlers = {
-      render: vi.fn(),
-      persistPreferences: vi.fn(),
-      setSoundEnabled: vi.fn()
-    };
-
-    handleChangeEvent(createChangeEvent(input), state, root, handlers);
-
-    expect(state.setupStep).toBe("weight");
   });
 
   it("updates weight class when weight-class input changes", () => {
