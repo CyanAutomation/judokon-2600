@@ -25,20 +25,16 @@ describe("containers", () => {
   });
 
   describe("terminalMenu", () => {
-    it("renders menu shell with navigation instructions", () => {
-      const markup = terminalMenu("<label>Option</label>");
-      expect(markup).toContain('class="terminal-menu"');
-      expect(markup).toContain('role="radiogroup"');
-      expect(markup).toContain("<label>Option</label>");
-      expect(markup).toContain("↑ ↓");
-      expect(markup).toContain("move");
-      expect(markup).toContain("Enter select");
-    });
+    it("[REQ-KEYBOARD-008] groups choices for assistive technology and describes menu navigation", () => {
+      const root = document.createElement("div");
+      root.innerHTML = terminalMenu('<label for="option">Option</label>');
 
-    it("includes help text with keyboard shortcuts", () => {
-      const markup = terminalMenu("<div>Menu content</div>");
-      expect(markup).toContain('class="menu-help"');
-      expect(markup).toContain("aria-hidden");
+      const group = root.querySelector('[role="radiogroup"]');
+      const help = root.querySelector(".menu-help");
+
+      expect(group?.textContent).toContain("Option");
+      expect(help?.textContent?.replace(/\s+/g, " ").trim()).toBe("↑ ↓ move · Enter select");
+      expect(help?.querySelector('[aria-hidden="true"]')?.textContent).toBe("↑ ↓");
     });
   });
 });

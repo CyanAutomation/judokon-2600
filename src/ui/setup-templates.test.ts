@@ -26,7 +26,7 @@ function state(overrides: Partial<GameState> = {}): GameState {
 }
 
 describe("setup templates", () => {
-  it("starts with game mode as the only prominent setup choice", () => {
+  it("[REQ-UI-014] starts with game mode as the only setup choice", () => {
     const current = state();
     const markup = intro(current);
 
@@ -37,50 +37,68 @@ describe("setup templates", () => {
     expect(markup).not.toContain('id="start"');
   });
 
-  it("uses one vertical terminal menu with a caret for each staged choice", () => {
-    const current = state({ setupStep: "mode" });
-    const markup = intro(current);
+  it("[REQ-UI-014] exposes the active setup choices as one native radio group", () => {
+    const root = document.createElement("div");
+    root.innerHTML = intro(state({ setupStep: "mode" }));
 
-    expect(markup).toContain('class="terminal-menu"');
-    expect(markup).toContain('class="menu-caret"');
-    expect(markup).toContain("↑ ↓</span> move");
-    expect(markup).not.toContain('class="choice-grid"');
+    const panel = root.querySelector(".intro-mode-panel");
+    const groups = panel?.querySelectorAll('[role="radiogroup"]');
+    const choices = panel?.querySelectorAll('input[type="radio"]');
+
+    expect(panel?.querySelectorAll("fieldset")).toHaveLength(1);
+    expect(groups).toHaveLength(1);
+    expect(choices).toHaveLength(2);
+    expect(panel?.querySelector("legend")?.textContent).toBe("Choose game mode");
   });
 
-  it("marks the saved mode and division as selected in setup", () => {
-    const modeMarkup = intro(state({ mode: "champion", setupStep: "mode", setupCursor: 1 }));
-    const divisionMarkup = intro({ ...state({ division: "weight", setupStep: "division", setupCursor: 1 }) });
+  it("[REQ-UI-014] marks the saved mode and division as selected in setup", () => {
+    const modeRoot = document.createElement("div");
+    modeRoot.innerHTML = intro(state({ mode: "champion", setupStep: "mode", setupCursor: 1 }));
+    const divisionRoot = document.createElement("div");
+    divisionRoot.innerHTML = intro(state({ division: "weight", setupStep: "division", setupCursor: 1 }));
 
-    expect(modeMarkup).toContain('class="choice-card is-selected is-active" for="mode-champion"');
-    expect(modeMarkup).toContain('id="mode-champion" name="game-mode" type="radio" data-intro-mode="champion" checked');
-    expect(divisionMarkup).toContain('class="choice-card is-selected is-active" for="division-weight"');
-    expect(divisionMarkup).toContain('id="division-weight" name="division" type="radio" data-division="weight" checked');
+    expect(modeRoot.querySelector<HTMLInputElement>("#mode-champion")?.checked).toBe(true);
+    expect(modeRoot.querySelector('label[for="mode-champion"]')?.classList.contains("is-active")).toBe(true);
+    expect(divisionRoot.querySelector<HTMLInputElement>("#division-weight")?.checked).toBe(true);
+    expect(divisionRoot.querySelector('label[for="division-weight"]')?.classList.contains("is-active")).toBe(true);
   });
 
-  it("shows a compact mode summary before the division selection", () => {
+  it("[REQ-UI-014] shows the saved mode before presenting the division choice", () => {
     const current = state({ setupStep: "division", mode: "champion" });
-    const markup = intro(current);
+    const root = document.createElement("div");
+    root.innerHTML = intro(current);
+    const panel = root.querySelector(".intro-mode-panel");
 
-    expect(markup).toContain("Game mode: <strong>Champion</strong>");
-    expect(markup).toContain('data-setup-step="mode"');
-    expect(markup).toContain("Choose division");
-    expect(markup).not.toContain('id="start"');
+    expect(panel?.querySelector(".setup-summary")?.textContent).toContain("Game mode: Champion");
+    expect(panel?.querySelector('[data-setup-step="mode"]')).not.toBeNull();
+    expect(panel?.querySelector("legend")?.textContent).toBe("Choose division");
+    expect(panel?.querySelectorAll("fieldset")).toHaveLength(1);
+    expect(panel?.querySelector("#start")).toBeNull();
   });
 
-  it("puts the rules beside the final CTA and keeps settings out of the setup panel", () => {
-    const current = state({ setupStep: "length" });
-    const markup = intro(current);
+  it("[REQ-UI-015] shows scoring and target context with Start in the final setup stage", () => {
+    const current = state({ setupStep: "length", target: 5, lengthIndex: 1 });
+    const root = document.createElement("div");
+    root.innerHTML = `${intro(current)}${advanced(current)}`;
+    const setupPanel = root.querySelector(".intro-mode-panel");
 
-    expect(markup).toContain("Higher stat wins the point.");
-    expect(markup).toContain('id="start"');
-    expect(markup).not.toContain("Advanced options");
+    expect(setupPanel?.querySelector(".setup-rule")?.textContent).toBe("Higher stat wins the point. Draws score no points.");
+    expect(setupPanel?.querySelector(".start-context")?.textContent).toBe("First to 5 points");
+    expect(setupPanel?.querySelector("#start")?.textContent).toContain("Start match");
+    expect(root.querySelector("#seed-button")?.closest(".intro-mode-panel")).toBeNull();
   });
 
   it("puts the match length on the full clickable choice card", () => {
-    const markup = intro(state({ setupStep: "length" }));
-    const card = markup.match(/<label class="choice-card is-selected is-active" for="length-3">([\s\S]*?)<\/label>/)?.[1];
+    const root = document.createElement("div");
+    root.innerHTML = intro(state({ setupStep: "length" }));
+    const input = root.querySelector<HTMLInputElement>("#length-3");
+    const card = input?.closest("label");
 
-    expect(card).toContain('input class="choice-input" id="length-3" name="match-length" type="radio" data-length="3"');
+    expect(input?.type).toBe("radio");
+    expect(input?.name).toBe("match-length");
+    expect(input?.dataset.length).toBe("3");
+    expect(input?.checked).toBe(true);
+    expect(card?.htmlFor).toBe("length-3");
   });
 
   it("renders seed and sound as direct footer utilities, not a disclosure", () => {
