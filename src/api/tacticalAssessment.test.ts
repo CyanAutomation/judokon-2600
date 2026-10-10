@@ -182,6 +182,31 @@ describe("tactical assessment API route", () => {
     }
   });
 
+  it("continues to the provider when the configured Vercel Firewall rule allows the request", async () => {
+    vi.stubEnv("JEV_ASSESSMENT_RATE_LIMIT_ID", "assessment-rule");
+    vi.mocked(checkRateLimit).mockResolvedValue({ rateLimited: false });
+    const client = { decide: vi.fn(async () => providerResult()) };
+    const incoming = request({ features });
+    const handler = createTacticalAssessmentHandler({ getApiKey: () => "test-key", client });
+
+    try {
+      const response = await handler(incoming);
+
+      expect(response.status).toBe(200);
+      expect(await response.json()).toEqual({ assessment: {
+        overReliance: true,
+        adaptation: true,
+        missedOpportunity: true,
+        momentumResponse: true
+      } });
+      expect(checkRateLimit).toHaveBeenCalledWith("assessment-rule", { request: incoming });
+      expect(client.decide).toHaveBeenCalledOnce();
+    } finally {
+      vi.mocked(checkRateLimit).mockReset();
+      vi.unstubAllEnvs();
+    }
+  });
+
   it("rejects oversized request bodies before calling the provider", async () => {
     const client = { decide: vi.fn() };
     const handler = createTacticalAssessmentHandler({
@@ -195,6 +220,57 @@ describe("tactical assessment API route", () => {
     expect(response.status).toBe(413);
     expect(await response.json()).toEqual({ assessment: null });
     expect(client.decide).not.toHaveBeenCalled();
+  });
+
+  it("rejects malformed JSON, absent bodies, and invalid or oversized content lengths", async () => {
+    const handler = createTacticalAssessmentHandler({
+      getApiKey: () => "test-key",
+      isRateLimited: async () => false,
+      client: { decide: vi.fn() }
+    });
+    const url = "https://judokon.example/api/tactical-assessment";
+    const cases: Array<[string, Request, number]> = [
+      ["malformed JSON", new Request(url, { method: "POST", body: "{" }), 400],
+      ["missing body", new Request(url, { method: "POST" }), 400],
+      ["invalid content length", new Request(url, {
+        method: "POST",
+        headers: { "Content-Length": "not-a-number" },
+        body: "{}"
+      }), 400],
+      ["declared oversized body", new Request(url, {
+        method: "POST",
+        headers: { "Content-Length": "8193" },
+        body: "{}"
+      }), 413]
+    ];
+
+    for (const [description, incoming, expectedStatus] of cases) {
+      const response = await handler(incoming);
+      expect(response.status, description).toBe(expectedStatus);
+    }
+  });
+
+  it("returns a bad-request response when reading the request body fails", async () => {
+    const handler = createTacticalAssessmentHandler({
+      getApiKey: () => "test-key",
+      isRateLimited: async () => false,
+      client: { decide: vi.fn() }
+    });
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.error(new Error("body read failed"));
+      }
+    });
+    const incoming = new Request("https://judokon.example/api/tactical-assessment", {
+      method: "POST",
+      body,
+      duplex: "half"
+    } as RequestInit);
+
+    const response = await handler(incoming);
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ assessment: null });
   });
 
   it("returns no insight for low confidence and degrades provider errors", async () => {

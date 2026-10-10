@@ -49,48 +49,69 @@ export function handleClickEvent(
 ): void {
   const target = e.target as Element;
 
+  if (confirmCurrentSetupChoice(target, state, handlers)) return;
+  if (startFromLengthChoice(target, e, state, handlers)) return;
+  dispatchButtonAction(target, state, handlers);
+}
+
+function confirmCurrentSetupChoice(
+  target: Element,
+  state: GameState,
+  handlers: ButtonHandlers
+): boolean {
   const setupChoice = target.closest<HTMLInputElement>("input[data-intro-mode], input[data-division]")
     ?? target.closest<HTMLLabelElement>(".choice-card")?.querySelector<HTMLInputElement>("input[data-intro-mode], input[data-division]");
   if (!state.match && !state.busy && setupChoice?.checked) {
     if (state.setupStep === "mode" && setupChoice.dataset.introMode === state.mode) {
       handlers.setSetupStep?.("division");
-      return;
+      return true;
     }
     if (state.setupStep === "division" && setupChoice.dataset.division === state.division) {
       handlers.setSetupStep?.(setupChoice.dataset.division === "weight" ? "weight" : "length");
-      return;
+      return true;
     }
   }
+  return false;
+}
 
+function startFromLengthChoice(
+  target: Element,
+  event: MouseEvent,
+  state: GameState,
+  handlers: ButtonHandlers
+): boolean {
   const lengthChoice = target.closest<HTMLInputElement>("input[data-length]")
     ?? target.closest<HTMLElement>(".choice-card")?.querySelector<HTMLInputElement>("input[data-length]");
   if (lengthChoice && !state.match && !state.busy && handlers.startWithLength) {
     const points = Number(lengthChoice.dataset.length);
     if (Number.isInteger(points) && points > 0) {
-      e.preventDefault();
+      event.preventDefault();
       handlers.startWithLength(points);
-      return;
+      return true;
     }
   }
+  return false;
+}
 
-  const b = target.closest<HTMLButtonElement>("button");
-  if (!b || b.disabled) return;
+function dispatchButtonAction(target: Element, state: GameState, handlers: ButtonHandlers): void {
+  const button = target.closest<HTMLButtonElement>("button");
+  if (!button || button.disabled) return;
 
   // Check for direct ID match
-  const buttonHandler = buttonHandlers.get(b.id);
+  const buttonHandler = buttonHandlers.get(button.id);
   if (buttonHandler) {
-    buttonHandler(b, state, handlers);
+    buttonHandler(button, state, handlers);
     return;
   }
 
   // Check for setup step button
-  if (b.dataset.setupStep) {
-    handlers.setSetupStep?.(b.dataset.setupStep as SetupStep);
+  if (button.dataset.setupStep) {
+    handlers.setSetupStep?.(button.dataset.setupStep as SetupStep);
     return;
   }
 
   // Check for stat selection button
-  if (b.dataset.stat) {
-    handlers.resolve(b.dataset.stat as StatKey);
+  if (button.dataset.stat) {
+    handlers.resolve(button.dataset.stat as StatKey);
   }
 }

@@ -57,6 +57,15 @@ npm run check
 
 This runs lint, test, and build in sequence (the build step compiles with `tsc -p tsconfig.app.json` then produces the bundle with `vite build`).
 
+Generate coverage-backed health metrics with:
+
+```sh
+npm run test:coverage
+npx fallow
+```
+
+Fallow reads the generated Istanbul report for exact CRAP scores and treats `api/**/*.ts` as Vercel function entry points.
+
 The behavior IDs used by UI and game tests are documented in [Test behavior contracts](docs/test-contracts.md).
 
 ## Vercel deployment
