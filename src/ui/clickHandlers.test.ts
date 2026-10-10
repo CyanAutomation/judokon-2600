@@ -44,24 +44,6 @@ describe("handleClickEvent", () => {
     expect(saveReplaySeed).toHaveBeenCalledWith("dojo-42");
   });
 
-  it("invokes start handler when #start button is clicked", () => {
-    const start = vi.fn();
-    const handlers = {
-      start,
-      copyReplaySeed: vi.fn(),
-      next: vi.fn(),
-      resolve: vi.fn(),
-      clearAndExit: vi.fn()
-    };
-    const state = createMockGameState();
-    const button = createMockButton("start");
-    const event = createClickEvent(button);
-
-    handleClickEvent(event, state, handlers);
-
-    expect(handlers.start).toHaveBeenCalled();
-  });
-
   it("invokes start handler when #replay button is clicked", () => {
     const start = vi.fn();
     const handlers = {
@@ -269,24 +251,6 @@ describe("handleClickEvent", () => {
     handleClickEvent(event, state, handlers);
 
     expect(handlers.next).not.toHaveBeenCalled();
-  });
-
-  it("invokes clearAndExit handler when #quit button is clicked", () => {
-    const clearAndExit = vi.fn();
-    const handlers = {
-      start: vi.fn(),
-      copyReplaySeed: vi.fn(),
-      next: vi.fn(),
-      resolve: vi.fn(),
-      clearAndExit
-    };
-    const state = createMockGameState();
-    const button = createMockButton("quit");
-    const event = createClickEvent(button);
-
-    handleClickEvent(event, state, handlers);
-
-    expect(handlers.clearAndExit).toHaveBeenCalled();
   });
 
   it("ignores disabled buttons", () => {

@@ -38,8 +38,9 @@ describe("inputs", () => {
       expect(container.querySelector(".choice-label-compact")?.textContent).toBe("Short");
     });
 
-    it("supports active and disabled states", () => {
-      const active = radioChoice({
+    it("shows the active cursor and disables an unavailable native choice", () => {
+      const root = document.createElement("div");
+      root.innerHTML = radioChoice({
         id: "test-active",
         name: "test",
         label: "Active",
@@ -47,21 +48,24 @@ describe("inputs", () => {
         shortcut: "A",
         checked: false,
         active: true,
-      });
-      expect(active).toContain("is-active");
-      expect(active).toContain("menu-caret");
-      expect(active).toContain(">");
-
-      const disabled = radioChoice({
+      }) + radioChoice({
         id: "test-disabled",
         name: "test",
-        label: "Disabled",
-        description: "Is disabled",
+        label: "Unavailable",
+        description: "Not available during a draw",
         shortcut: "D",
         checked: false,
         disabled: true,
       });
-      expect(disabled).toContain("disabled");
+
+      const activeInput = root.querySelector<HTMLInputElement>("#test-active");
+      const activeCard = root.querySelector<HTMLLabelElement>('label[for="test-active"]');
+      const disabledInput = root.querySelector<HTMLInputElement>("#test-disabled");
+
+      expect(activeInput?.disabled).toBe(false);
+      expect(activeCard?.classList.contains("is-active")).toBe(true);
+      expect(activeCard?.querySelector(".menu-caret")?.textContent).toBe(">");
+      expect(disabledInput?.disabled).toBe(true);
     });
   });
 

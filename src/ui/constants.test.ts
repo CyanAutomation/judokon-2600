@@ -18,16 +18,23 @@ describe("constants", () => {
   });
 
   describe("weights", () => {
-    it("exports weight classes", () => {
-      expect(weights).toHaveLength(14);
-      expect(weights[0]).toBe("-48");
-      expect(weights[weights.length - 1]).toBe("+100");
-    });
-
-    it("includes all standard weight classes", () => {
-      expect(weights).toContain("-73");
-      expect(weights).toContain("-90");
-      expect(weights).toContain("+78");
+    it("[REQ-GAME-012] offers the documented weight classes in catalogue order", () => {
+      expect(weights).toEqual([
+        "-48",
+        "-52",
+        "-57",
+        "-60",
+        "-63",
+        "-66",
+        "-70",
+        "-73",
+        "-78",
+        "-81",
+        "-90",
+        "-100",
+        "+78",
+        "+100"
+      ]);
     });
   });
 

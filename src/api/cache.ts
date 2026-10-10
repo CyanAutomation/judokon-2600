@@ -2,7 +2,7 @@ import type { Judoka } from "./types";
 import type { DrawParameters } from "./drawParameters";
 
 export interface BudokonCacheOptions {
-  /** Maximum number of entries retained. In-flight entries are never evicted. */
+  /** Maximum number of entries retained; must be a positive safe integer. In-flight entries are never evicted. */
   maxEntries?: number;
   /** Time for which a completed entry remains reusable, measured from creation. */
   expirationMs?: number;
