@@ -76,380 +76,378 @@ describe("Main Module - Render Functions", () => {
   });
 });
 
-describe("Main Module - State Orchestration Functions", () => {
-  afterEach(() => {
-    vi.useRealTimers();
-    vi.restoreAllMocks();
+afterEach(() => {
+  vi.useRealTimers();
+  vi.restoreAllMocks();
+});
+
+describe("Main Module - Match Initialization", () => {
+  it.each([
+    [3, 0],
+    [5, 1],
+    [10, 2]
+  ])("chooses match length %i at index %i through the orchestrator", (target, expectedIndex) => {
+    const state = createMockGameState({ target: 0, lengthIndex: -1 });
+    const root = document.createElement("div");
+    document.body.append(root);
+    const render = vi.fn(() => renderApp(root, state));
+
+    chooseLength(state, target, { client: new BudokonClient(), render });
+
+    const selectedLength = root.querySelector<HTMLInputElement>(`[data-length="${target}"]`);
+
+    expect(state).toMatchObject({ target, lengthIndex: expectedIndex });
+    expect(render).toHaveBeenCalledOnce();
+    expect(selectedLength?.checked).toBe(true);
+    expect(document.activeElement).toBe(selectedLength);
+
+    root.remove();
   });
 
-  describe("Match initialization (start function logic)", () => {
-    it.each([
-      [3, 0],
-      [5, 1],
-      [10, 2]
-    ])("chooses match length %i at index %i through the orchestrator", (target, expectedIndex) => {
-      const state = createMockGameState({ target: 0, lengthIndex: -1 });
-      const root = document.createElement("div");
-      document.body.append(root);
-      const render = vi.fn(() => renderApp(root, state));
+  it("generates an active seed for an empty replay seed and uses it for the initial draw", async () => {
+    const generatedSeed = "123e4567-e89b-42d3-a456-426614174000";
+    const state = createMockGameState({ replaySeed: "" });
+    const client = new BudokonClient();
+    const drawBatch = vi.spyOn(client, "drawBatch").mockResolvedValue(
+      Array.from({ length: 6 }, (_, index) => createMockJudoka(`judoka-${index}`))
+    );
+    const randomUUID = vi.spyOn(crypto, "randomUUID").mockReturnValue(generatedSeed);
 
-      chooseLength(state, target, { client: new BudokonClient(), render });
+    await start(state, { client, render: vi.fn() });
 
-      const selectedLength = root.querySelector<HTMLInputElement>(`[data-length="${target}"]`);
+    expect(randomUUID).toHaveBeenCalledOnce();
+    expect(state.activeSeed).toBe(generatedSeed);
+    expect(drawBatch).toHaveBeenCalledWith(generatedSeed, 6, undefined, undefined);
+  });
 
-      expect(state).toMatchObject({ target, lengthIndex: expectedIndex });
+  it("uses a non-empty replay seed without generating a UUID", async () => {
+    const providedSeed = "custom-seed-123";
+    const state = createMockGameState({ replaySeed: providedSeed });
+    const client = new BudokonClient();
+    const drawBatch = vi.spyOn(client, "drawBatch").mockResolvedValue(
+      Array.from({ length: 6 }, (_, index) => createMockJudoka(`judoka-${index}`))
+    );
+    const randomUUID = vi.spyOn(crypto, "randomUUID");
+
+    await start(state, { client, render: vi.fn() });
+
+    expect(randomUUID).not.toHaveBeenCalled();
+    expect(state.activeSeed).toBe(providedSeed);
+    expect(drawBatch).toHaveBeenCalledWith(providedSeed, 6, undefined, undefined);
+  });
+
+  it("clears game state on start and installs the newly drawn match", async () => {
+    const staleBuffer = [createMockJudoka("stale-buffer")];
+    const drawn = Array.from({ length: 6 }, (_, index) => createMockJudoka(`new-judoka-${index}`));
+    const state = createMockGameState({
+      match: createMockMatch(),
+      result: createMockMatchResult(),
+      history: [{ outcome: "player", stat: "power", roundNumber: 1 }],
+      pendingStat: "power",
+      errorMessage: "Previous draw failed",
+      drawBuffer: staleBuffer
+    });
+    const client = new class extends BudokonClient {
+      override async drawBatch(): Promise<Judoka[]> {
+        return drawn;
+      }
+    }();
+    const render = vi.fn();
+
+    await start(state, { client, render }, state.target, "new-seed");
+
+    expect(state.match).toMatchObject({
+      player: drawn[0],
+      opponent: drawn[1],
+      phase: "selecting",
+      matchNumber: 1
+    });
+    expect(state.result).toBeNull();
+    expect(state.history).toEqual([]);
+    expect(state.pendingStat).toBeNull();
+    expect(state.errorMessage).toBe("");
+    expect(state.drawBuffer).toEqual(drawn.slice(2));
+    expect(state.drawBuffer).not.toContain(staleBuffer[0]);
+    expect(render).toHaveBeenCalledTimes(2);
+  });
+
+  it("[REQ-GAME-008] sends the selected weight class with the initial draw", async () => {
+    const state = createMockGameState({
+      division: "weight",
+      weight: "-73",
+      replaySeed: "weight-class-seed"
+    });
+    const client = new BudokonClient();
+    const drawBatch = vi.spyOn(client, "drawBatch").mockResolvedValue(
+      Array.from({ length: 6 }, (_, index) => createMockJudoka(`weight-judoka-${index}`))
+    );
+
+    await start(state, { client, render: vi.fn() });
+
+    expect(state.activeWeight).toBe("-73");
+    expect(drawBatch).toHaveBeenCalledWith("weight-class-seed", 6, "-73", undefined);
+  });
+
+  it("[REQ-GAME-009] selects the same weight class from the same replay seed", () => {
+    const seed = "deterministic-seed";
+
+    expect(selectWeightForSeed(seed)).toBe("-70");
+    expect(Array.from({ length: 3 }, () => selectWeightForSeed(seed))).toEqual(["-70", "-70", "-70"]);
+  });
+
+  it.each([
+    ["", "-48"], // zero hash selects the first supported weight
+    ["boundary-2", "+100"], // final modulo bucket
+    ["boundary-3", "-48"], // modulo rollover to the first bucket
+    ["boundary-4", "-52"] // bucket immediately after rollover
+  ])("[REQ-GAME-009] maps boundary seed %j to %s", (seed, expectedWeight) => {
+    expect(selectWeightForSeed(seed)).toBe(expectedWeight);
+  });
+});
+
+describe("Main Module - Draw Error Handling", () => {
+  it.each([
+    ["incompatible judoka", new Error("No compatible judoka found"), "No compatible judoka found. Choose Absolute or another division."],
+    ["network failure", new Error("Network failed"), "Network failed. Check your connection and try again."],
+    ["non-Error rejection", "string error", "Unable to draw judoka. Please try again."]
+  ])("[REQ-UI-009] shows an actionable setup message after a %s", async (_scenario, failure, expectedMessage) => {
+    const root = document.createElement("div");
+    const state = createMockGameState({ replaySeed: "failed-draw-seed" });
+    const client = new class extends BudokonClient {
+      override async drawBatch(): Promise<Judoka[]> {
+        throw failure;
+      }
+    }();
+    const visibleMessages: string[] = [];
+    const render = vi.fn(() => {
+      renderApp(root, state);
+      visibleMessages.push(root.querySelector<HTMLElement>('[role="status"]')?.textContent?.trim() ?? "");
+    });
+
+    await start(state, { client, render });
+
+    expect(state.errorMessage).toBe(expectedMessage);
+    expect(state.busy).toBe(false);
+    expect(state.match).toBeNull();
+    expect(visibleMessages[0]).toContain("Drawing judoka");
+    expect(root.querySelector<HTMLElement>('[role="status"]')?.textContent).toContain(expectedMessage);
+  });
+});
+
+describe("Main Module - Match Resolution", () => {
+  it.each([
+    { name: "match is null", match: null, pendingStat: null },
+    { name: "phase is not selecting", match: createMockMatch({ phase: "awaitingNext" }), pendingStat: null },
+    { name: "a selection is already pending", match: createMockMatch(), pendingStat: "power" as const }
+  ])("rejects resolution when $name without state changes or side effects", ({ match, pendingStat }) => {
+    vi.useFakeTimers();
+    const state = createMockGameState({ match, pendingStat });
+    const stateBeforeResolution = structuredClone(state);
+    const client = new BudokonClient();
+    const drawBatch = vi.spyOn(client, "drawBatch");
+    const render = vi.fn();
+    const onMatchReady = vi.fn();
+    const save = vi.spyOn(Storage.prototype, "setItem");
+    const playOutcome = vi.spyOn(audio, "outcomeBeep");
+
+    resolve(state, match as Match, "speed", { client, render, onMatchReady });
+
+    expect(state).toEqual(stateBeforeResolution);
+    expect(render).not.toHaveBeenCalled();
+    expect(onMatchReady).not.toHaveBeenCalled();
+    expect(drawBatch).not.toHaveBeenCalled();
+    expect(save).not.toHaveBeenCalled();
+    expect(playOutcome).not.toHaveBeenCalled();
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("resolves a selecting match after the configured delay", () => {
+    vi.useFakeTimers();
+    const match = createMockMatch({
+      phase: "selecting",
+      scores: { player: 1, opponent: 1 },
+      player: createMockJudoka("player", {
+        stats: { power: 9, speed: 5, technique: 6, kumikata: 7, newaza: 6 }
+      }),
+      opponent: createMockJudoka("opponent", {
+        stats: { power: 4, speed: 5, technique: 6, kumikata: 7, newaza: 6 }
+      })
+    });
+    const state = createMockGameState({ match, pendingStat: null });
+    const render = vi.fn();
+    const deps: OrchestratorDeps = { client: new BudokonClient(), render };
+    const saveSpy = vi.spyOn(Storage.prototype, "setItem");
+
+    resolve(state, match, "power", deps);
+
+    expect(state.pendingStat).toBe("power");
+    expect(state.result).toBeNull();
+    expect(state.history).toEqual([]);
+    expect(render).toHaveBeenCalledTimes(1);
+
+    vi.advanceTimersByTime(MATCH_RESOLUTION_DELAY_MS - 1);
+
+    expect(state.pendingStat).toBe("power");
+    expect(state.result).toBeNull();
+    expect(state.history).toEqual([]);
+
+    vi.advanceTimersByTime(1);
+
+    expect(state.pendingStat).toBeNull();
+    expect(state.result).toMatchObject({
+      outcome: "player",
+      stat: "power",
+      playerValue: 9,
+      opponentValue: 4
+    });
+    expect(state.match?.phase).toBe("awaitingNext");
+    expect(state.match?.scores).toEqual({ player: 2, opponent: 1 });
+    expect(state.history).toHaveLength(1);
+    expect(state.history[0]).toEqual({ outcome: "player", stat: "power", roundNumber: 1 });
+    expect(saveSpy).toHaveBeenCalledOnce();
+    expect(saveSpy).toHaveBeenCalledWith(
+      "judokon.activeMatch.v1",
+      expect.stringContaining('"stat":"power"')
+    );
+    expect(render).toHaveBeenCalledTimes(2);
+
+    const secondMatch = createMockMatch({ matchNumber: 2 });
+    state.match = secondMatch;
+
+    resolve(state, secondMatch, "speed", deps);
+    vi.advanceTimersByTime(MATCH_RESOLUTION_DELAY_MS);
+
+    expect(state.history).toHaveLength(2);
+    expect(state.history[1]).toEqual({ outcome: "draw", stat: "speed", roundNumber: 2 });
+    expect(saveSpy).toHaveBeenCalledTimes(2);
+    expect(render).toHaveBeenCalledTimes(4);
+  });
+});
+
+describe("Main Module - Replay Seed Copying", () => {
+  it("copies the active replay seed and shows confirmation", async () => {
+    const state = createMockGameState({
+      activeSeed: "abc-123-def-456"
+    });
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    const originalClipboard = Object.getOwnPropertyDescriptor(navigator, "clipboard");
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText }
+    });
+
+    try {
+      await copyReplaySeed(state, {
+        client: new BudokonClient(),
+        render: () => undefined
+      });
+
+      expect(writeText).toHaveBeenCalledOnce();
+      expect(writeText).toHaveBeenCalledWith("abc-123-def-456");
+      expect(state.seedMessage).toBe("Replay seed copied.");
+    } finally {
+      if (originalClipboard) {
+        Object.defineProperty(navigator, "clipboard", originalClipboard);
+      } else {
+        delete (navigator as unknown as { clipboard?: Clipboard }).clipboard;
+      }
+    }
+  });
+
+  it("handles clipboard API success", async () => {
+    const state = createMockGameState({ activeSeed: "test-seed" });
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    const render = vi.fn();
+    const originalClipboard = Object.getOwnPropertyDescriptor(navigator, "clipboard");
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText }
+    });
+
+    try {
+      let copyOperation: Promise<void> | undefined;
+      const copyButton = document.createElement("button");
+      copyButton.id = "copy-seed";
+
+      // Dispatch the event from the button so the delegated replay-copy handler runs.
+      copyButton.addEventListener("click", event => {
+        handleClickEvent(event, state, {
+          start: vi.fn(),
+          copyReplaySeed: () => {
+            copyOperation = copyReplaySeed(state, {
+              client: new BudokonClient(),
+              render
+            });
+            return copyOperation;
+          },
+          next: vi.fn(),
+          resolve: vi.fn(),
+          clearAndExit: vi.fn()
+        });
+      });
+      copyButton.click();
+      if (!copyOperation) throw new Error("copyOperation must be defined after click");
+      await copyOperation;
+
+      expect(writeText).toHaveBeenCalledOnce();
+      expect(writeText).toHaveBeenCalledWith(state.activeSeed);
+      expect(state.seedMessage).toBe("Replay seed copied.");
       expect(render).toHaveBeenCalledOnce();
-      expect(selectedLength?.checked).toBe(true);
-      expect(document.activeElement).toBe(selectedLength);
-
-      root.remove();
-    });
-
-    it("generates an active seed for an empty replay seed and uses it for the initial draw", async () => {
-      const generatedSeed = "123e4567-e89b-42d3-a456-426614174000";
-      const state = createMockGameState({ replaySeed: "" });
-      const client = new BudokonClient();
-      const drawBatch = vi.spyOn(client, "drawBatch").mockResolvedValue(
-        Array.from({ length: 6 }, (_, index) => createMockJudoka(`judoka-${index}`))
-      );
-      const randomUUID = vi.spyOn(crypto, "randomUUID").mockReturnValue(generatedSeed);
-
-      await start(state, { client, render: vi.fn() });
-
-      expect(randomUUID).toHaveBeenCalledOnce();
-      expect(state.activeSeed).toBe(generatedSeed);
-      expect(drawBatch).toHaveBeenCalledWith(generatedSeed, 6, undefined, undefined);
-    });
-
-    it("uses a non-empty replay seed without generating a UUID", async () => {
-      const providedSeed = "custom-seed-123";
-      const state = createMockGameState({ replaySeed: providedSeed });
-      const client = new BudokonClient();
-      const drawBatch = vi.spyOn(client, "drawBatch").mockResolvedValue(
-        Array.from({ length: 6 }, (_, index) => createMockJudoka(`judoka-${index}`))
-      );
-      const randomUUID = vi.spyOn(crypto, "randomUUID");
-
-      await start(state, { client, render: vi.fn() });
-
-      expect(randomUUID).not.toHaveBeenCalled();
-      expect(state.activeSeed).toBe(providedSeed);
-      expect(drawBatch).toHaveBeenCalledWith(providedSeed, 6, undefined, undefined);
-    });
-
-    it("clears game state on start and installs the newly drawn match", async () => {
-      const staleBuffer = [createMockJudoka("stale-buffer")];
-      const drawn = Array.from({ length: 6 }, (_, index) => createMockJudoka(`new-judoka-${index}`));
-      const state = createMockGameState({
-        match: createMockMatch(),
-        result: createMockMatchResult(),
-        history: [{ outcome: "player", stat: "power", roundNumber: 1 }],
-        pendingStat: "power",
-        errorMessage: "Previous draw failed",
-        drawBuffer: staleBuffer
-      });
-      const client = new class extends BudokonClient {
-        override async drawBatch(): Promise<Judoka[]> {
-          return drawn;
-        }
-      }();
-      const render = vi.fn();
-
-      await start(state, { client, render }, state.target, "new-seed");
-
-      expect(state.match).toMatchObject({
-        player: drawn[0],
-        opponent: drawn[1],
-        phase: "selecting",
-        matchNumber: 1
-      });
-      expect(state.result).toBeNull();
-      expect(state.history).toEqual([]);
-      expect(state.pendingStat).toBeNull();
-      expect(state.errorMessage).toBe("");
-      expect(state.drawBuffer).toEqual(drawn.slice(2));
-      expect(state.drawBuffer).not.toContain(staleBuffer[0]);
-      expect(render).toHaveBeenCalledTimes(2);
-    });
-
-    it("[REQ-GAME-008] sends the selected weight class with the initial draw", async () => {
-      const state = createMockGameState({
-        division: "weight",
-        weight: "-73",
-        replaySeed: "weight-class-seed"
-      });
-      const client = new BudokonClient();
-      const drawBatch = vi.spyOn(client, "drawBatch").mockResolvedValue(
-        Array.from({ length: 6 }, (_, index) => createMockJudoka(`weight-judoka-${index}`))
-      );
-
-      await start(state, { client, render: vi.fn() });
-
-      expect(state.activeWeight).toBe("-73");
-      expect(drawBatch).toHaveBeenCalledWith("weight-class-seed", 6, "-73", undefined);
-    });
-
-    it("[REQ-GAME-009] selects the same weight class from the same replay seed", () => {
-      const seed = "deterministic-seed";
-
-      expect(selectWeightForSeed(seed)).toBe("-70");
-      expect(Array.from({ length: 3 }, () => selectWeightForSeed(seed))).toEqual(["-70", "-70", "-70"]);
-    });
-
-    it.each([
-      ["", "-48"], // zero hash selects the first supported weight
-      ["boundary-2", "+100"], // final modulo bucket
-      ["boundary-3", "-48"], // modulo rollover to the first bucket
-      ["boundary-4", "-52"] // bucket immediately after rollover
-    ])("[REQ-GAME-009] maps boundary seed %j to %s", (seed, expectedWeight) => {
-      expect(selectWeightForSeed(seed)).toBe(expectedWeight);
-    });
+    } finally {
+      if (originalClipboard) {
+        Object.defineProperty(navigator, "clipboard", originalClipboard);
+      } else {
+        delete (navigator as unknown as { clipboard?: Clipboard }).clipboard;
+      }
+    }
   });
 
-  describe("Draw error handling", () => {
-    it.each([
-      ["incompatible judoka", new Error("No compatible judoka found"), "No compatible judoka found. Choose Absolute or another division."],
-      ["network failure", new Error("Network failed"), "Network failed. Check your connection and try again."],
-      ["non-Error rejection", "string error", "Unable to draw judoka. Please try again."]
-    ])("[REQ-UI-009] shows an actionable setup message after a %s", async (_scenario, failure, expectedMessage) => {
-      const root = document.createElement("div");
-      const state = createMockGameState({ replaySeed: "failed-draw-seed" });
-      const client = new class extends BudokonClient {
-        override async drawBatch(): Promise<Judoka[]> {
-          throw failure;
-        }
-      }();
-      const visibleMessages: string[] = [];
-      const render = vi.fn(() => {
-        renderApp(root, state);
-        visibleMessages.push(root.querySelector<HTMLElement>('[role="status"]')?.textContent?.trim() ?? "");
-      });
-
-      await start(state, { client, render });
-
-      expect(state.errorMessage).toBe(expectedMessage);
-      expect(state.busy).toBe(false);
-      expect(state.match).toBeNull();
-      expect(visibleMessages[0]).toContain("Drawing judoka");
-      expect(root.querySelector<HTMLElement>('[role="status"]')?.textContent).toContain(expectedMessage);
-    });
-  });
-
-  describe("Match resolution (resolve function logic)", () => {
-    it.each([
-      { name: "match is null", match: null, pendingStat: null },
-      { name: "phase is not selecting", match: createMockMatch({ phase: "awaitingNext" }), pendingStat: null },
-      { name: "a selection is already pending", match: createMockMatch(), pendingStat: "power" as const }
-    ])("rejects resolution when $name without state changes or side effects", ({ match, pendingStat }) => {
-      vi.useFakeTimers();
-      const state = createMockGameState({ match, pendingStat });
-      const stateBeforeResolution = structuredClone(state);
-      const client = new BudokonClient();
-      const drawBatch = vi.spyOn(client, "drawBatch");
-      const render = vi.fn();
-      const onMatchReady = vi.fn();
-      const save = vi.spyOn(Storage.prototype, "setItem");
-      const playOutcome = vi.spyOn(audio, "outcomeBeep");
-
-      resolve(state, match as Match, "speed", { client, render, onMatchReady });
-
-      expect(state).toEqual(stateBeforeResolution);
-      expect(render).not.toHaveBeenCalled();
-      expect(onMatchReady).not.toHaveBeenCalled();
-      expect(drawBatch).not.toHaveBeenCalled();
-      expect(save).not.toHaveBeenCalled();
-      expect(playOutcome).not.toHaveBeenCalled();
-      expect(vi.getTimerCount()).toBe(0);
+  it("handles clipboard API failure", async () => {
+    const state = createMockGameState({ activeSeed: "test-seed" });
+    const clipboardError = new Error("Clipboard permission denied");
+    const writeText = vi.fn().mockRejectedValue(clipboardError);
+    const render = vi.fn();
+    const originalClipboard = Object.getOwnPropertyDescriptor(navigator, "clipboard");
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText }
     });
 
-    it("resolves a selecting match after the configured delay", () => {
-      vi.useFakeTimers();
-      const match = createMockMatch({
-        phase: "selecting",
-        scores: { player: 1, opponent: 1 },
-        player: createMockJudoka("player", {
-          stats: { power: 9, speed: 5, technique: 6, kumikata: 7, newaza: 6 }
-        }),
-        opponent: createMockJudoka("opponent", {
-          stats: { power: 4, speed: 5, technique: 6, kumikata: 7, newaza: 6 }
-        })
-      });
-      const state = createMockGameState({ match, pendingStat: null });
-      const render = vi.fn();
-      const deps: OrchestratorDeps = { client: new BudokonClient(), render };
-      const saveSpy = vi.spyOn(Storage.prototype, "setItem");
-
-      resolve(state, match, "power", deps);
-
-      expect(state.pendingStat).toBe("power");
-      expect(state.result).toBeNull();
-      expect(state.history).toEqual([]);
-      expect(render).toHaveBeenCalledTimes(1);
-
-      vi.advanceTimersByTime(MATCH_RESOLUTION_DELAY_MS - 1);
-
-      expect(state.pendingStat).toBe("power");
-      expect(state.result).toBeNull();
-      expect(state.history).toEqual([]);
-
-      vi.advanceTimersByTime(1);
-
-      expect(state.pendingStat).toBeNull();
-      expect(state.result).toMatchObject({
-        outcome: "player",
-        stat: "power",
-        playerValue: 9,
-        opponentValue: 4
-      });
-      expect(state.match?.phase).toBe("awaitingNext");
-      expect(state.match?.scores).toEqual({ player: 2, opponent: 1 });
-      expect(state.history).toHaveLength(1);
-      expect(state.history[0]).toEqual({ outcome: "player", stat: "power", roundNumber: 1 });
-      expect(saveSpy).toHaveBeenCalledOnce();
-      expect(saveSpy).toHaveBeenCalledWith(
-        "judokon.activeMatch.v1",
-        expect.stringContaining('"stat":"power"')
-      );
-      expect(render).toHaveBeenCalledTimes(2);
-
-      const secondMatch = createMockMatch({ matchNumber: 2 });
-      state.match = secondMatch;
-
-      resolve(state, secondMatch, "speed", deps);
-      vi.advanceTimersByTime(MATCH_RESOLUTION_DELAY_MS);
-
-      expect(state.history).toHaveLength(2);
-      expect(state.history[1]).toEqual({ outcome: "draw", stat: "speed", roundNumber: 2 });
-      expect(saveSpy).toHaveBeenCalledTimes(2);
-      expect(render).toHaveBeenCalledTimes(4);
-    });
-  });
-
-  describe("Replay seed copying", () => {
-    it("copies the active replay seed and shows confirmation", async () => {
-      const state = createMockGameState({
-        activeSeed: "abc-123-def-456"
-      });
-      const writeText = vi.fn().mockResolvedValue(undefined);
-      const originalClipboard = Object.getOwnPropertyDescriptor(navigator, "clipboard");
-      Object.defineProperty(navigator, "clipboard", {
-        configurable: true,
-        value: { writeText }
-      });
-
-      try {
-        await copyReplaySeed(state, {
-          client: new BudokonClient(),
-          render: () => undefined
+    try {
+      let copyOperation: Promise<void> | undefined;
+      const copyButton = document.createElement("button");
+      copyButton.id = "copy-seed";
+      copyButton.addEventListener("click", event => {
+        handleClickEvent(event, state, {
+          start: vi.fn(),
+          copyReplaySeed: () => {
+            copyOperation = copyReplaySeed(state, {
+              client: new BudokonClient(),
+              render
+            });
+            return copyOperation;
+          },
+          next: vi.fn(),
+          resolve: vi.fn(),
+          clearAndExit: vi.fn()
         });
-
-        expect(writeText).toHaveBeenCalledOnce();
-        expect(writeText).toHaveBeenCalledWith("abc-123-def-456");
-        expect(state.seedMessage).toBe("Replay seed copied.");
-      } finally {
-        if (originalClipboard) {
-          Object.defineProperty(navigator, "clipboard", originalClipboard);
-        } else {
-          delete (navigator as unknown as { clipboard?: Clipboard }).clipboard;
-        }
-      }
-    });
-
-    it("handles clipboard API success", async () => {
-      const state = createMockGameState({ activeSeed: "test-seed" });
-      const writeText = vi.fn().mockResolvedValue(undefined);
-      const render = vi.fn();
-      const originalClipboard = Object.getOwnPropertyDescriptor(navigator, "clipboard");
-      Object.defineProperty(navigator, "clipboard", {
-        configurable: true,
-        value: { writeText }
       });
 
-      try {
-        let copyOperation: Promise<void> | undefined;
-        const copyButton = document.createElement("button");
-        copyButton.id = "copy-seed";
+      copyButton.click();
+      if (!copyOperation) throw new Error("copyOperation must be defined after click");
 
-        // Dispatch the event from the button so the delegated replay-copy handler runs.
-        copyButton.addEventListener("click", event => {
-          handleClickEvent(event, state, {
-            start: vi.fn(),
-            copyReplaySeed: () => {
-              copyOperation = copyReplaySeed(state, {
-                client: new BudokonClient(),
-                render
-              });
-              return copyOperation;
-            },
-            next: vi.fn(),
-            resolve: vi.fn(),
-            clearAndExit: vi.fn()
-          });
-        });
-        copyButton.click();
-        if (!copyOperation) throw new Error("copyOperation must be defined after click");
-        await copyOperation;
-
-        expect(writeText).toHaveBeenCalledOnce();
-        expect(writeText).toHaveBeenCalledWith(state.activeSeed);
-        expect(state.seedMessage).toBe("Replay seed copied.");
-        expect(render).toHaveBeenCalledOnce();
-      } finally {
-        if (originalClipboard) {
-          Object.defineProperty(navigator, "clipboard", originalClipboard);
-        } else {
-          delete (navigator as unknown as { clipboard?: Clipboard }).clipboard;
-        }
+      await expect(copyOperation).resolves.toBeUndefined();
+      expect(writeText).toHaveBeenCalledOnce();
+      expect(writeText).toHaveBeenCalledWith("test-seed");
+      expect(state.seedMessage).toBe('Could not copy the replay seed "test-seed". Copy manually.');
+      expect(render).toHaveBeenCalledOnce();
+    } finally {
+      if (originalClipboard) {
+        Object.defineProperty(navigator, "clipboard", originalClipboard);
+      } else {
+        delete (navigator as unknown as { clipboard?: Clipboard }).clipboard;
       }
-    });
-
-    it("handles clipboard API failure", async () => {
-      const state = createMockGameState({ activeSeed: "test-seed" });
-      const clipboardError = new Error("Clipboard permission denied");
-      const writeText = vi.fn().mockRejectedValue(clipboardError);
-      const render = vi.fn();
-      const originalClipboard = Object.getOwnPropertyDescriptor(navigator, "clipboard");
-      Object.defineProperty(navigator, "clipboard", {
-        configurable: true,
-        value: { writeText }
-      });
-
-      try {
-        let copyOperation: Promise<void> | undefined;
-        const copyButton = document.createElement("button");
-        copyButton.id = "copy-seed";
-        copyButton.addEventListener("click", event => {
-          handleClickEvent(event, state, {
-            start: vi.fn(),
-            copyReplaySeed: () => {
-              copyOperation = copyReplaySeed(state, {
-                client: new BudokonClient(),
-                render
-              });
-              return copyOperation;
-            },
-            next: vi.fn(),
-            resolve: vi.fn(),
-            clearAndExit: vi.fn()
-          });
-        });
-
-        copyButton.click();
-        if (!copyOperation) throw new Error("copyOperation must be defined after click");
-
-        await expect(copyOperation).resolves.toBeUndefined();
-        expect(writeText).toHaveBeenCalledOnce();
-        expect(writeText).toHaveBeenCalledWith("test-seed");
-        expect(state.seedMessage).toBe('Could not copy the replay seed "test-seed". Copy manually.');
-        expect(render).toHaveBeenCalledOnce();
-      } finally {
-        if (originalClipboard) {
-          Object.defineProperty(navigator, "clipboard", originalClipboard);
-        } else {
-          delete (navigator as unknown as { clipboard?: Clipboard }).clipboard;
-        }
-      }
-    });
+    }
   });
 });
 

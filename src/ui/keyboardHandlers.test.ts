@@ -173,6 +173,33 @@ describe("handleMatchKeyboard", () => {
     expect(click).not.toHaveBeenCalled();
   });
 
+  it.each([
+    { key: "Enter", shouldReplay: true },
+    { key: " ", shouldReplay: true },
+    { key: "x", shouldReplay: false }
+  ])("handles $key during the match-over phase", ({ key, shouldReplay }) => {
+    const state = createMockGameState({ match: createMockMatch({ phase: "matchOver" }) });
+    const root = document.createElement("div");
+    const button = document.createElement("button");
+    button.id = "replay";
+    root.appendChild(button);
+    const click = vi.spyOn(button, "click");
+    const event = createKeyboardEvent(key, { cancelable: true });
+
+    handleMatchKeyboard(event, state, root, {
+      resolve: vi.fn(),
+      keyboardTick: vi.fn()
+    });
+
+    if (shouldReplay) {
+      expect(click).toHaveBeenCalledOnce();
+      expect(event.defaultPrevented).toBe(true);
+    } else {
+      expect(click).not.toHaveBeenCalled();
+      expect(event.defaultPrevented).toBe(false);
+    }
+  });
+
   it.each(["Escape", "q", "Q"])("[REQ-GAME-007] quits the match when %s is pressed", (key) => {
     const state = createMockGameState({ match: createMockMatch() });
     const root = document.createElement("div");
