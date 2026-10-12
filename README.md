@@ -2,7 +2,18 @@
 
 [![CI](https://github.com/CyanAutomation/judokon-2600/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/CyanAutomation/judokon-2600/actions/workflows/ci.yml) [![CodeQL](https://github.com/CyanAutomation/judokon-2600/actions/workflows/codeql.yml/badge.svg)](https://github.com/CyanAutomation/judokon-2600/actions/workflows/codeql.yml)
 
-A terminal-style, text-first TypeScript implementation of JU-DO-KON! Classic Battle.
+A terminal-style, text-first TypeScript implementation of JU-DO-KON! Classic Battle. [Play the game online](https://judokon-2600.vercel.app/).
+
+## Getting started
+
+Requires Node.js `>=22.22.2 <23` (the repository includes an `.nvmrc` file).
+
+```sh
+npm ci
+npm run dev
+```
+
+Open [http://localhost:5173](http://localhost:5173) to play locally. The Vite development server does not run the Vercel tactical-assessment function; gameplay and the deterministic match summary still work. See the [developer guide](docs/index.md) for the repository map and additional setup details.
 
 ## Gameplay
 
@@ -26,30 +37,11 @@ Reloading the same browser tab restores the last valid saved session, including 
 
 While a round is open, a scout report shows the opponent's strongest stat (all tied stats when there is a tie). The opponent's exact values remain hidden until you select a stat.
 
-## Future release: progression-enhanced scouting
+## Roadmap
 
-Today's scout report is free and always visible. A future progression release could turn it into an earned, opt-in reward system that adds strategy without exposing exact opponent values:
+Possible future features and their design constraints are collected in the [project roadmap](docs/roadmap.md). These proposals are not part of the current game.
 
-1. Add a versioned player-profile store, initially backed by `localStorage`, with earned currency, unlocked buffs, and a migration path for a server-backed profile.
-2. Award currency only after a completed match; use a small, fixed reward for participation plus a win bonus to avoid incentivising early quits.
-3. Replace the free report with a **Scout report** buff consumed before a match. Its first level should reveal only the opponent's strongest stat; later levels could reveal a top-two set or a single stat range.
-4. Keep the report hidden by default and present it as a deliberate action with a clear cost and remaining uses. Never reveal an exact opponent value.
-5. Seed and record buff use in the match log so replayed matches remain explainable; add engine tests for reward earning, buff consumption, and the default no-scout experience.
-
-If scouting gains JEV support, deterministic disclosure rules should first produce a short list of safe, pre-approved facts. JEV may rank only those candidates for relevance to the player's recent choices; it must never inspect hidden opponent values or create a new disclosure. Future Budokon playstyle metadata should be consumed as flavour/context when available and must not change stat values.
-
-## Potential future feature: career loop
-
-A light career loop could reward wins with distinctive judoka unlocks, counter-pick and rivalry discovery, and short challenges such as winning three matches using Ne-waza. It should stay optional, preserving the crisp arcade-like match flow.
-
-Future career challenges can follow the same boundary: code constructs valid challenge candidates, then JEV may rank those candidates against a small local play-history profile. Other possible extensions are an opt-in or internal in-match tactical state and matchup classifications based on Budokon playstyle metadata. JEV must not invent challenge rules or rewards, infer undisclosed stats, or predict match winners.
-
-## Development
-
-```sh
-npm install
-npm run dev
-```
+## Development and checks
 
 Run the complete local quality gate with:
 
@@ -57,7 +49,13 @@ Run the complete local quality gate with:
 npm run check
 ```
 
-This runs lint, test, and build in sequence (the build step compiles with `tsc -p tsconfig.app.json` then produces the bundle with `vite build`).
+This runs lint, tests, local Markdown link and style checks, and the production build. The build compiles with `tsc -p tsconfig.app.json` then produces the bundle with `vite build`.
+
+To run the documentation checks on their own:
+
+```sh
+npm run docs:check
+```
 
 Generate coverage-backed health metrics with:
 
@@ -70,6 +68,14 @@ Fallow reads the generated Istanbul report for exact CRAP scores and treats `api
 
 The behavior IDs used by UI and game tests are documented in [Test behavior contracts](docs/test-contracts.md).
 
+## Contributing and support
+
+Report bugs or suggest changes through [GitHub Issues](https://github.com/CyanAutomation/judokon-2600/issues). For larger changes, open an issue first to discuss the approach. Pull requests should include relevant tests; when user-visible behavior changes, update the matching [test behavior contract](docs/test-contracts.md). Run `npm run check` before submitting.
+
+## License
+
+This project is distributed under the GNU General Public License v3.0. See [LICENSE](LICENSE) for the full license text.
+
 ## Vercel deployment
 
-`vercel.json` configures Vercel to run `npm run check` before publishing Vite's `dist` output. This runs lint, tests, and build in the deployment itself, so a failed quality check blocks the deployment. In Vercel, import `CyanAutomation/judokon-2600` and enable its Git integration. Pushes to `main` create production deployments; pull requests create preview deployments. The separate GitHub Actions workflow runs the same gate on every pull request and on pushes to `main`.
+`vercel.json` configures Vercel to run `npm run check` before publishing Vite's `dist` output. This runs lint, tests, local Markdown link and style checks, and the production build in the deployment itself, so a failed quality check blocks the deployment. In Vercel, import `CyanAutomation/judokon-2600` and enable its Git integration. Pushes to `main` create production deployments; pull requests create preview deployments. The separate GitHub Actions workflow runs the same gate on every pull request and on pushes to `main`.
