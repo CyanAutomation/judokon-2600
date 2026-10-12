@@ -70,9 +70,13 @@ export function checkMarkdownLinks(filePath) {
     let targetPath;
     try {
       const decodedPath = decodeURIComponent(pathname);
-      targetPath = pathname.startsWith("/")
-        ? resolve(process.cwd(), `.${decodedPath}`)
-        : resolve(dirname(absoluteFile), decodedPath || absoluteFile);
+      if (!pathname) {
+        targetPath = absoluteFile;
+      } else if (pathname.startsWith("/")) {
+        targetPath = resolve(process.cwd(), `.${decodedPath}`);
+      } else {
+        targetPath = resolve(dirname(absoluteFile), decodedPath);
+      }
     } catch {
       issues.push(`${displayPath(absoluteFile)}: invalid encoded link ${rawDestination}`);
       continue;
