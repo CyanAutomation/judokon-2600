@@ -6,7 +6,7 @@ A terminal-style, text-first TypeScript implementation of JU-DO-KON! Classic Bat
 
 ## Getting started
 
-Requires Node.js `>=22.22.2 <23` (the repository includes an `.nvmrc` file).
+Requires Node.js `>=24.15.0 <25` (the repository includes an `.nvmrc` file).
 
 ```sh
 npm ci
