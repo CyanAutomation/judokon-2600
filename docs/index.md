@@ -6,7 +6,7 @@ judokon-2600 is a terminal-style, text-first battle simulator for JU-DO-KON! Cla
 
 ## Local setup
 
-Prerequisites: Node.js >= 22.12.0 < 23.
+Prerequisites: Node.js >= 22.22.2 < 23.
 
 ```sh
 npm install       # install dependencies
