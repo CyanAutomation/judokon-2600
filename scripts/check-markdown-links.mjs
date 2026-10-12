@@ -21,12 +21,60 @@ function withoutCode(markdown) {
   return lines.join("\n");
 }
 
+function isHtmlTagStartCharacter(character) {
+  if (!character) return false;
+  const code = character.charCodeAt(0);
+  return (code >= 65 && code <= 90)
+    || (code >= 97 && code <= 122)
+    || character === "/"
+    || character === "!"
+    || character === "?";
+}
+
+function findHtmlTagEnd(source, start) {
+  if (source.startsWith("<!--", start)) {
+    const commentEnd = source.indexOf("-->", start + 4);
+    return commentEnd === -1 ? -1 : commentEnd + 2;
+  }
+
+  let quote = null;
+  for (let index = start + 1; index < source.length; index += 1) {
+    const character = source[index];
+    if (quote) {
+      if (character === quote) quote = null;
+    } else if (character === "\"" || character === "'") {
+      quote = character;
+    } else if (character === ">") {
+      return index;
+    }
+  }
+  return -1;
+}
+
+function withoutInlineHtmlTags(source) {
+  const parts = [];
+  let textStart = 0;
+  let index = 0;
+  while (index < source.length) {
+    if (source[index] !== "<" || !isHtmlTagStartCharacter(source[index + 1])) {
+      index += 1;
+      continue;
+    }
+    const tagEnd = findHtmlTagEnd(source, index);
+    if (tagEnd === -1) break;
+    parts.push(source.slice(textStart, index));
+    textStart = tagEnd + 1;
+    index = textStart;
+  }
+  parts.push(source.slice(textStart));
+  return parts.join("");
+}
+
 function headingSlugs(markdown) {
   const slugs = new Set();
   const counts = new Map();
   for (const match of withoutCode(markdown).matchAll(/^\s{0,3}#{1,6}\s+(.+?)\s*#*\s*$/gm)) {
-    const base = match[1]
-      .replace(/<[^>]*>/g, "")
+    const base = withoutInlineHtmlTags(match[1])
       .replace(/[`*_~]/g, "")
       .toLowerCase()
       .replace(/[^\p{L}\p{N}_ -]/gu, "")

@@ -23,6 +23,23 @@ test("accepts existing relative files and GitHub-style heading anchors", () => {
   assert.ok(target);
 });
 
+test("strips inline HTML from slugs without dropping angle-bracket prose", () => {
+  write("docs/guide.md", [
+    "# <em>Styled heading</em>",
+    "# Compare x < y > z",
+    "# <script",
+    "# Intro <!-- note \" > hidden --> End"
+  ].join("\n"));
+  const source = write("README.md", [
+    "[styled](docs/guide.md#styled-heading)",
+    "[comparison](docs/guide.md#compare-x-y-z)",
+    "[partial tag](docs/guide.md#script)",
+    "[comment](docs/guide.md#intro-end)"
+  ].join(" "));
+
+  assert.deepEqual(checkMarkdownLinks(source), []);
+});
+
 test("reports missing local files", () => {
   const source = write("README.md", "[missing](docs/missing.md)");
 
