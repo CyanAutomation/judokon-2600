@@ -2,7 +2,11 @@
 
 [![CI](https://github.com/CyanAutomation/judokon-2600/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/CyanAutomation/judokon-2600/actions/workflows/ci.yml) [![CodeQL](https://github.com/CyanAutomation/judokon-2600/actions/workflows/codeql.yml/badge.svg)](https://github.com/CyanAutomation/judokon-2600/actions/workflows/codeql.yml)
 
-A terminal-style, text-first TypeScript implementation of JU-DO-KON! Classic Battle. [Play the game online](https://judokon-2600.vercel.app/).
+A terminal-style, text-first TypeScript implementation of JU-DO-KON! Classic Battle.
+
+**Players:** [Play the game online](https://judokon-2600.vercel.app/). **Developers and contributors:** follow [Getting started](#getting-started) and the [developer guide](docs/index.md).
+
+![Illustrated preview of the JU-DO-KON! setup screen, with Classic Battle and Champion mode choices](docs/assets/game-setup-preview.svg)
 
 ## Getting started
 
@@ -27,7 +31,7 @@ Optional keyboard ticks and outcome beeps are available in **Advanced options**.
 
 After each match, the match summary recommends your best stat using this ranking contract: most rounds won, then highest win rate, then the first stat in the displayed order (`power`, `speed`, `technique`, `kumikata`, `newaza`). The tiebreak favors whichever stat appears earliest in that list. The recommendation reports both the number of wins and the total number of times that stat was selected; if no stat won a round, no recommendation is shown.
 
-An optional post-match tactical insight can interpret patterns in the player's recorded choices, such as repeated losses with a favoured stat or changes after losing. The deterministic summary remains authoritative: JEV cannot change round outcomes, scores, match length, replay behavior, or the best-stat recommendation. The browser sends only compact counts and outcome patterns to the same-origin `/api/tactical-assessment` Vercel Function. It does not send judoka IDs, stat values, replay seeds, local storage, or hidden opponent values. Insight text is assembled by application code; JEV supplies only typed scores, and low-confidence results are omitted. If the API key is missing or rejected, or the route/provider cannot be reached, a short status message explains why tactical insight is unavailable; the match summary remains available. On Vercel, set `OPENROUTER_API_KEY` and `JEV_ASSESSMENT_RATE_LIMIT_ID`. The latter must match a Vercel Firewall rate-limit rule scoped to `POST /api/tactical-assessment` and keyed by client IP; a starting limit of 20 requests per 10 minutes can be adjusted to expected traffic. The route fails closed without a configured or available rule, so it will not call OpenRouter. Keep the provider key in Production unless Preview deployments need it. `JEV_MODEL` optionally selects another model and defaults to `~typesafe/jev-latest`. Plain `npm run dev` uses Vite's static development server without the Vercel function, so tactical insight is unavailable there and the deterministic summary continues to work.
+An optional post-match tactical insight interprets patterns in the player’s choices. The browser sends only compact counts and outcome patterns to the same-origin `/api/tactical-assessment`; it does not send judoka IDs, stat values, replay seeds, local storage, or hidden opponent values. Application code assembles the insight text and omits low-confidence results; JEV supplies typed scores only. The deterministic summary remains authoritative, and the match remains playable when the optional insight is unavailable. On Vercel, configure `OPENROUTER_API_KEY` and `JEV_ASSESSMENT_RATE_LIMIT_ID`; `JEV_MODEL` optionally overrides the default `~typesafe/jev-latest`. See the [tactical insight deployment guide](docs/tactical-insight-deployment.md) for Firewall setup and verification. Plain `npm run dev` does not run the Vercel Function, so tactical insight is unavailable locally.
 
 In **Champion** mode, you keep the same judoka while opponents rotate. The **Current streak** counts consecutive rounds won at the end of the run: each win extends it, while either a loss or a draw resets it to zero. Earlier wins remain part of the run record but do not count toward the current streak.
 
