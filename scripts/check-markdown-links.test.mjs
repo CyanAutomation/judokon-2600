@@ -36,6 +36,14 @@ test("reports missing heading anchors in local Markdown files", () => {
   assert.match(checkMarkdownLinks(source).join("\n"), /#not-there/);
 });
 
+test("checks fragment-only links against the source document", () => {
+  const source = write("README.md", "# Setup guide\n\n[valid](#setup-guide) [missing](#not-there)");
+
+  const issues = checkMarkdownLinks(source);
+  assert.equal(issues.length, 1);
+  assert.match(issues[0], /#not-there/);
+});
+
 test("ignores links inside fenced and inline code", () => {
   const source = write("README.md", [
     "`[inline](missing-inline.md)`",
