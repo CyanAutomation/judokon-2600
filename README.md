@@ -64,11 +64,10 @@ npm run docs:check
 Generate coverage-backed health metrics with:
 
 ```sh
-npm run test:coverage
-npx fallow
+npm run fallow:coverage
 ```
 
-Fallow reads the generated Istanbul report for exact CRAP scores and treats `api/**/*.ts` as Vercel function entry points.
+This runs the test suite with coverage, then runs Fallow with the generated Istanbul report for exact CRAP scores. Fallow also treats `api/**/*.ts` as Vercel function entry points.
 
 The behavior IDs used by UI and game tests are documented in [Test behavior contracts](docs/test-contracts.md).
 

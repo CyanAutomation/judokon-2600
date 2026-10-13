@@ -103,6 +103,52 @@ function displayPath(path) {
   return relative(process.cwd(), path) || path;
 }
 
+function resolveLocalTarget(pathname, absoluteFile) {
+  const decodedPath = decodeURIComponent(pathname);
+  if (!pathname) return absoluteFile;
+  if (pathname.startsWith("/")) return resolve(process.cwd(), `.${decodedPath}`);
+  return resolve(dirname(absoluteFile), decodedPath);
+}
+
+function decodeFragment(fragment) {
+  try {
+    return decodeURIComponent(fragment).toLowerCase();
+  } catch {
+    return fragment.toLowerCase();
+  }
+}
+
+function markdownAnchorIssue(targetPath, pathname, fragment, absoluteFile) {
+  if (!fragment || extname(targetPath).toLowerCase() !== ".md") return null;
+
+  let targetMarkdown;
+  try {
+    targetMarkdown = readFileSync(targetPath, "utf8");
+  } catch {
+    return `${displayPath(absoluteFile)}: cannot read Markdown target ${pathname}`;
+  }
+
+  if (headingSlugs(targetMarkdown).has(decodeFragment(fragment))) return null;
+  return `${displayPath(absoluteFile)}: missing heading anchor #${fragment} in ${pathname || displayPath(targetPath)}`;
+}
+
+function checkLinkDestination(rawDestination, absoluteFile) {
+  const { pathname, fragment } = parseDestination(rawDestination);
+  if (/^(?:[a-z][a-z\d+.-]*:|\/\/)/i.test(pathname)) return null;
+
+  let targetPath;
+  try {
+    targetPath = resolveLocalTarget(pathname, absoluteFile);
+  } catch {
+    return `${displayPath(absoluteFile)}: invalid encoded link ${rawDestination}`;
+  }
+
+  if (!existsSync(targetPath)) {
+    return `${displayPath(absoluteFile)}: missing local target ${pathname}`;
+  }
+  return markdownAnchorIssue(targetPath, pathname, fragment, absoluteFile);
+}
+
 /** Check relative file links and heading anchors in one Markdown document. */
 export function checkMarkdownLinks(filePath) {
   const absoluteFile = resolve(filePath);
@@ -111,47 +157,8 @@ export function checkMarkdownLinks(filePath) {
   const linkPattern = /!?\[[^\]]*\]\(\s*(<[^>]+>|[^\s)]+)(?:\s+["'][^"']*["'])?\s*\)/g;
 
   for (const match of withoutCode(source).matchAll(linkPattern)) {
-    const rawDestination = match[1];
-    const { pathname, fragment } = parseDestination(rawDestination);
-    if (/^(?:[a-z][a-z\d+.-]*:|\/\/)/i.test(pathname)) continue;
-
-    let targetPath;
-    try {
-      const decodedPath = decodeURIComponent(pathname);
-      if (!pathname) {
-        targetPath = absoluteFile;
-      } else if (pathname.startsWith("/")) {
-        targetPath = resolve(process.cwd(), `.${decodedPath}`);
-      } else {
-        targetPath = resolve(dirname(absoluteFile), decodedPath);
-      }
-    } catch {
-      issues.push(`${displayPath(absoluteFile)}: invalid encoded link ${rawDestination}`);
-      continue;
-    }
-
-    if (!existsSync(targetPath)) {
-      issues.push(`${displayPath(absoluteFile)}: missing local target ${pathname}`);
-      continue;
-    }
-    if (!fragment || extname(targetPath).toLowerCase() !== ".md") continue;
-
-    let targetMarkdown;
-    try {
-      targetMarkdown = readFileSync(targetPath, "utf8");
-    } catch {
-      issues.push(`${displayPath(absoluteFile)}: cannot read Markdown target ${pathname}`);
-      continue;
-    }
-    let decodedFragment;
-    try {
-      decodedFragment = decodeURIComponent(fragment).toLowerCase();
-    } catch {
-      decodedFragment = fragment.toLowerCase();
-    }
-    if (!headingSlugs(targetMarkdown).has(decodedFragment)) {
-      issues.push(`${displayPath(absoluteFile)}: missing heading anchor #${fragment} in ${pathname || displayPath(targetPath)}`);
-    }
+    const issue = checkLinkDestination(match[1], absoluteFile);
+    if (issue) issues.push(issue);
   }
   return issues;
 }
