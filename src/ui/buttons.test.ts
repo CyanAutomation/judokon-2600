@@ -17,11 +17,12 @@ describe("buttons", () => {
     expect(disabled).toContain("disabled");
   });
 
-  it("quietButton renders its label and shortcut without a disabled state", () => {
-    const markup = quietButton("copy", "Copy", "Ctrl+C");
-    expect(markup).toContain('id="copy"');
-    expect(markup).toContain("Copy");
-    expect(markup).toContain("<kbd>Ctrl+C</kbd>");
-    expect(markup).not.toContain("disabled");
+  it("shows a quiet button's label and keyboard shortcut", () => {
+    const root = document.createElement("div");
+    root.innerHTML = quietButton("copy", "Copy", "Ctrl+C");
+    const button = root.querySelector<HTMLButtonElement>("#copy");
+
+    expect(button?.textContent).toContain("Copy");
+    expect(button?.querySelector("kbd")?.textContent).toBe("Ctrl+C");
   });
 });

@@ -27,7 +27,7 @@ Keyboard controls: choose game mode with `C` (**Classic**) / `H` (**Champion**);
 
 Stat choices display as **Power**, **Speed**, **Technique**, **Kumi-kata**, and **Ne-waza**.
 
-Optional keyboard ticks and outcome beeps are available in **Advanced options**. They are muted by default and the preference is stored in `localStorage`.
+Optional keyboard ticks and outcome beeps are available in **Advanced options**. They are muted by default and the preference is stored in `localStorage`. When enabled, keyboard actions and match outcomes play audio feedback; muting suppresses new feedback.
 
 After each match, the match summary recommends your best stat using this ranking contract: most rounds won, then highest win rate, then the first stat in the displayed order (`power`, `speed`, `technique`, `kumikata`, `newaza`). The tiebreak favors whichever stat appears earliest in that list. The recommendation reports both the number of wins and the total number of times that stat was selected; if no stat won a round, no recommendation is shown.
 
@@ -35,7 +35,7 @@ An optional post-match tactical insight interprets patterns in the player’s ch
 
 In **Champion** mode, you keep the same judoka while opponents rotate. The **Current streak** counts consecutive rounds won at the end of the run: each win extends it, while either a loss or a draw resets it to zero. Earlier wins remain part of the run record but do not count toward the current streak.
 
-Judoka are fetched directly from the public [Budokon catalogue API](https://budokon.scheimann.workers.dev/docs). Before each match six judoka are drawn into a buffer so subsequent opponents can appear instantly. The seed button in the footer **Advanced options** bar opens a dialog for an optional replay seed; otherwise each match gets a fresh seed. A seed reproduces the same draws only while the Budokon dataset version and draw algorithm stay the same. The API returns both values, but this client currently does not retain them with the replay seed. Draw requests time out after 10 seconds. Connection failures, rejected access, missing endpoints, timeouts, and temporary server failures display retry guidance in the status area.
+Judoka are fetched directly from the public [Budokon catalogue API](https://budokon.scheimann.workers.dev/docs). Before each match six judoka are drawn into a buffer so subsequent opponents can appear instantly. The seed button in the footer **Advanced options** bar opens a dialog for an optional replay seed; otherwise each match gets a fresh seed. The **Replay** action starts a fresh match with the active seed, reproducing the same draws only while the Budokon dataset version and draw algorithm stay the same. The API returns both values, but this client currently does not retain them with the replay seed. Draw requests time out after 10 seconds. Connection failures, rejected access, missing endpoints, timeouts, and temporary server failures display retry guidance in the status area.
 
 Reloading the same browser tab restores the last valid saved session, including its match, result, round history, replay seed, active weight class, and prefetched judoka. The app saves only stable match states: an in-progress stat selection and optional tactical assessment are not persisted. With no valid saved session, the app opens in setup.
 

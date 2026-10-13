@@ -54,3 +54,16 @@ The follow-up scores use the same dimension order. Removed mock-only tests are s
 - `npm run build` passed.
 - Follow-up `npm run check` passed: lint, 24 test files and 281 cases, and production build.
 - Mutation coverage was not measured: neither Stryker nor a Vitest coverage provider is installed. The cost/coverage score is therefore provisional, not a measured mutation score.
+
+## Follow-up: current low-scoring cases
+
+The October 2026 follow-up revised the next ten lowest-scoring cases from the current suite:
+
+- Removed the standalone `surface("aside", ...)` test because the rendered Scout report contract already checks its landmark in `main.test.ts`.
+- Removed the synthetic disabled-button click test; it exercised a programmatically dispatched event rather than a normal user click.
+- Replaced exact oscillator frequency, volume, envelope, and delay assertions with enabled/muted keyboard feedback and outcome feedback checks linked to `REQ-AUDIO-016`.
+- Reworked mode and division click-order cases to dispatch click and change events and assert the resulting setup stage under `REQ-UI-014`.
+- Replaced the replay callback mock check with a rendered Replay-button flow that starts a fresh match using the active seed, linked to `REQ-GAME-017`.
+- Changed the section helper check to parse and assert the semantic section and its accessible label. The quiet-button test now checks its visible label and shortcut without asserting the absence of an unsupported disabled option.
+
+The revised cost scores remain provisional because mutation testing is still unavailable.

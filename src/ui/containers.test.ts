@@ -3,18 +3,13 @@ import { surface, terminalMenu } from "./containers";
 
 describe("containers", () => {
   describe("surface", () => {
-    it("renders a section element with proper attributes", () => {
-      const markup = surface("section", "scout-report", "Scout report", "<p>Content</p>");
-      expect(markup).toContain('<section class="surface panel scout-report"');
-      expect(markup).toContain('aria-label="Scout report"');
-      expect(markup).toContain("<p>Content</p>");
-      expect(markup).toContain("</section>");
-    });
+    it("renders a labeled section containing its supplied content", () => {
+      const root = document.createElement("div");
+      root.innerHTML = surface("section", "fighter-card", "Your judoka", "<p>Player</p>");
+      const section = root.querySelector("section[aria-label='Your judoka']");
 
-    it("renders an aside element when specified", () => {
-      const markup = surface("aside", "sidebar", "Sidebar content", "<p>Aside</p>");
-      expect(markup).toContain("<aside");
-      expect(markup).toContain("</aside>");
+      expect(section?.tagName).toBe("SECTION");
+      expect(section?.textContent).toContain("Player");
     });
 
     it("escapes class names and labels for security", () => {
