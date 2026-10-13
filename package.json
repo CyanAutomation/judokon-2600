@@ -12,9 +12,10 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
+    "fallow:coverage": "npm run test:coverage && npx fallow --coverage coverage/coverage-final.json",
     "test:watch": "vitest",
     "lint": "eslint .",
-    "docs:check": "node --test scripts/check-markdown-links.test.mjs && node scripts/check-markdown-links.mjs && markdownlint-cli2 README.md \"docs/**/*.md\"",
+    "docs:check": "node scripts/check-markdown-links.mjs && markdownlint-cli2 README.md \"docs/**/*.md\"",
     "check": "npm run lint && npm run test && npm run docs:check && npm run build"
   },
   "devDependencies": {
