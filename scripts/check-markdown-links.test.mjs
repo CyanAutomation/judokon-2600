@@ -1,11 +1,16 @@
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { dirname, join, relative, sep } from "node:path";
+import process from "node:process";
 import { afterAll, describe, expect, it } from "vitest";
 import { checkMarkdownLinks } from "./check-markdown-links.mjs";
 
 const root = mkdtempSync(join(tmpdir(), "judokon-doc-links-"));
-afterAll(() => rmSync(root, { recursive: true, force: true }));
+const projectRoot = mkdtempSync(join(process.cwd(), ".markdown-links-root-"));
+afterAll(() => {
+  rmSync(root, { recursive: true, force: true });
+  rmSync(projectRoot, { recursive: true, force: true });
+});
 
 function write(relativePath, contents) {
   const filePath = join(root, relativePath);
@@ -44,6 +49,18 @@ describe("checkMarkdownLinks", () => {
     const source = write("README.md", "[missing](docs/missing.md)");
 
     expect(checkMarkdownLinks(source).join("\n")).toMatch(/docs\/missing\.md/);
+  });
+
+  it("resolves percent-encoded root-relative paths from the project root", () => {
+    const target = join(projectRoot, "guide.md");
+    writeFileSync(target, "# Guide\n");
+    const encodedPath = relative(process.cwd(), target)
+      .split(sep)
+      .map(encodeURIComponent)
+      .join("%2F");
+    const source = write("root-relative.md", `[guide](%2F${encodedPath})`);
+
+    expect(checkMarkdownLinks(source)).toEqual([]);
   });
 
   it("reports missing heading anchors in local Markdown files", () => {
