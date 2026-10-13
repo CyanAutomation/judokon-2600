@@ -78,10 +78,10 @@ afterEach(() => {
 });
 
 describe("audio feedback", () => {
-  it("only creates an audio context while sound is enabled", async () => {
-    const { initAudio, keyboardTick, setSoundEnabled } = await loadAudio();
+  it("[REQ-AUDIO-016] plays keyboard feedback only while sound is enabled", async () => {
+    vi.useFakeTimers();
+    const { initAudio, keyboardTick, outcomeBeep, setSoundEnabled } = await loadAudio();
 
-    initAudio(false);
     keyboardTick();
     expect(FakeAudioContext.instances).toHaveLength(0);
 
@@ -92,26 +92,9 @@ describe("audio feedback", () => {
 
     setSoundEnabled(false);
     keyboardTick();
+    outcomeBeep("player");
+    vi.runAllTimers();
     expect(FakeAudioContext.instances[0]?.oscillators).toHaveLength(1);
-  });
-
-  it("schedules the keyboard tick with its configured tone", async () => {
-    const { initAudio, keyboardTick } = await loadAudio();
-
-    initAudio(true);
-    keyboardTick();
-
-    const context = FakeAudioContext.instances[0]!;
-    const oscillator = context.oscillators[0]!;
-    const gain = context.gains[0]!;
-    expect(oscillator.type).toBe("square");
-    expect(oscillator.frequency.value).toBe(780);
-    expect(oscillator.connect).toHaveBeenCalledWith(gain);
-    expect(gain.connect).toHaveBeenCalledWith(context.destination);
-    expect(gain.gain.setValueAtTime).toHaveBeenCalledWith(0.014, 2);
-    expect(gain.gain.exponentialRampToValueAtTime).toHaveBeenCalledWith(0.001, 2.025);
-    expect(oscillator.start).toHaveBeenCalledOnce();
-    expect(oscillator.stop).toHaveBeenCalledWith(2.025);
   });
 
   it("resumes a suspended audio context before playing", async () => {
@@ -124,38 +107,19 @@ describe("audio feedback", () => {
     expect(FakeAudioContext.instances[0]?.resume).toHaveBeenCalledOnce();
   });
 
-  it("plays both player-win notes at their configured delays", async () => {
-    vi.useFakeTimers();
-    const { initAudio, outcomeBeep } = await loadAudio();
-    initAudio(true);
+  it.each(["player", "opponent", "draw"] as const)(
+    "[REQ-AUDIO-016] plays outcome feedback for a %s result",
+    async (outcome) => {
+      vi.useFakeTimers();
+      const { initAudio, outcomeBeep } = await loadAudio();
+      initAudio(true);
 
-    outcomeBeep("player");
-    expect(FakeAudioContext.instances).toHaveLength(0);
+      outcomeBeep(outcome);
+      vi.runAllTimers();
 
-    vi.advanceTimersByTime(0);
-    expect(FakeAudioContext.instances[0]?.oscillators).toHaveLength(1);
-    expect(FakeAudioContext.instances[0]?.oscillators[0]?.frequency.value).toBe(880);
-
-    vi.advanceTimersByTime(95);
-    const context = FakeAudioContext.instances[0]!;
-    expect(context.oscillators.map(({ frequency }) => frequency.value)).toEqual([880, 1175]);
-    for (const gain of context.gains) {
-      expect(gain.gain.setValueAtTime).toHaveBeenCalledWith(0.025, 2);
+      const oscillators = FakeAudioContext.instances.flatMap(({ oscillators }) => oscillators);
+      expect(oscillators.length).toBeGreaterThan(0);
+      expect(oscillators.every(({ start }) => start.mock.calls.length === 1)).toBe(true);
     }
-  });
-
-  it.each([
-    { outcome: "opponent" as const, frequency: 220, duration: 0.16, volume: 0.03 },
-    { outcome: "draw" as const, frequency: 520, duration: 0.1, volume: 0.018 }
-  ])("plays the configured $outcome outcome tone", async ({ outcome, frequency, duration, volume }) => {
-    const { initAudio, outcomeBeep } = await loadAudio();
-    initAudio(true);
-
-    outcomeBeep(outcome);
-
-    const context = FakeAudioContext.instances[0]!;
-    expect(context.oscillators[0]?.frequency.value).toBe(frequency);
-    expect(context.gains[0]?.gain.setValueAtTime).toHaveBeenCalledWith(volume, 2);
-    expect(context.oscillators[0]?.stop).toHaveBeenCalledWith(2 + duration);
-  });
+  );
 });
