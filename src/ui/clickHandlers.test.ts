@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import { handleClickEvent } from "./clickHandlers";
+import { handleChangeEvent } from "./changeHandlers";
 import type { StatKey } from "../api/types";
-import { createMockMatch, createMockGameState, createMockButton, createClickEvent } from "../test/mocks";
+import { createMockMatch, createMockGameState, createMockButton, createClickEvent, createChangeEvent } from "../test/mocks";
 
 describe("handleClickEvent", () => {
   it("opens the seed modal from the footer utility", () => {
@@ -44,24 +45,6 @@ describe("handleClickEvent", () => {
     expect(saveReplaySeed).toHaveBeenCalledWith("dojo-42");
   });
 
-  it("invokes start handler when #replay button is clicked", () => {
-    const start = vi.fn();
-    const handlers = {
-      start,
-      copyReplaySeed: vi.fn(),
-      next: vi.fn(),
-      resolve: vi.fn(),
-      clearAndExit: vi.fn()
-    };
-    const state = createMockGameState({ activeSeed: "completed-match-seed" });
-    const button = createMockButton("replay");
-    const event = createClickEvent(button);
-
-    handleClickEvent(event, state, handlers);
-
-    expect(handlers.start).toHaveBeenCalledWith("completed-match-seed");
-  });
-
   it("confirms an already-selected mode choice when clicked", () => {
     const setSetupStep = vi.fn();
     const handlers = {
@@ -82,24 +65,38 @@ describe("handleClickEvent", () => {
     expect(setSetupStep).toHaveBeenCalledWith("division");
   });
 
-  it("does not confirm a newly-selected mode before its change handler runs", () => {
-    const setSetupStep = vi.fn();
-    const handlers = {
-      start: vi.fn(),
-      copyReplaySeed: vi.fn(),
-      next: vi.fn(),
-      resolve: vi.fn(),
-      clearAndExit: vi.fn(),
-      setSetupStep
-    };
+  it("[REQ-UI-014] advances setup after the newly selected mode changes", () => {
     const state = createMockGameState({ match: null, setupStep: "mode", mode: "classic" });
     const input = document.createElement("input");
+    input.type = "radio";
     input.checked = true;
     input.dataset.introMode = "champion";
+    const root = document.createElement("div");
+    root.append(input);
+    root.addEventListener("click", (event) => handleClickEvent(event as MouseEvent, state, {
+      start: vi.fn(),
+      copyReplaySeed: async () => undefined,
+      next: async () => undefined,
+      resolve: vi.fn(),
+      clearAndExit: vi.fn(),
+      setSetupStep: (step) => { state.setupStep = step; }
+    }));
+    const changeHandlers = {
+      render: vi.fn(),
+      persistPreferences: vi.fn(),
+      setSoundEnabled: vi.fn()
+    };
+    root.addEventListener("change", (event) => handleChangeEvent(event, state, root, changeHandlers));
 
-    handleClickEvent(createClickEvent(input), state, handlers);
+    root.dispatchEvent(createClickEvent(input));
+    expect(state.setupStep).toBe("mode");
 
-    expect(setSetupStep).not.toHaveBeenCalled();
+    root.dispatchEvent(createChangeEvent(input));
+
+    expect(state.mode).toBe("champion");
+    expect(state.setupStep).toBe("division");
+    expect(changeHandlers.persistPreferences).toHaveBeenCalledOnce();
+    expect(changeHandlers.render).toHaveBeenCalledOnce();
   });
 
   it("confirms an already-selected division choice when clicked", () => {
@@ -122,24 +119,38 @@ describe("handleClickEvent", () => {
     expect(setSetupStep).toHaveBeenCalledWith("weight");
   });
 
-  it("does not confirm a newly-selected division before its change handler runs", () => {
-    const setSetupStep = vi.fn();
-    const handlers = {
-      start: vi.fn(),
-      copyReplaySeed: vi.fn(),
-      next: vi.fn(),
-      resolve: vi.fn(),
-      clearAndExit: vi.fn(),
-      setSetupStep
-    };
+  it("[REQ-UI-014] advances setup after the newly selected division changes", () => {
     const state = createMockGameState({ match: null, setupStep: "division", division: "absolute" });
     const input = document.createElement("input");
+    input.type = "radio";
     input.checked = true;
     input.dataset.division = "weight";
+    const root = document.createElement("div");
+    root.append(input);
+    root.addEventListener("click", (event) => handleClickEvent(event as MouseEvent, state, {
+      start: vi.fn(),
+      copyReplaySeed: async () => undefined,
+      next: async () => undefined,
+      resolve: vi.fn(),
+      clearAndExit: vi.fn(),
+      setSetupStep: (step) => { state.setupStep = step; }
+    }));
+    const changeHandlers = {
+      render: vi.fn(),
+      persistPreferences: vi.fn(),
+      setSoundEnabled: vi.fn()
+    };
+    root.addEventListener("change", (event) => handleChangeEvent(event, state, root, changeHandlers));
 
-    handleClickEvent(createClickEvent(input), state, handlers);
+    root.dispatchEvent(createClickEvent(input));
+    expect(state.setupStep).toBe("division");
 
-    expect(setSetupStep).not.toHaveBeenCalled();
+    root.dispatchEvent(createChangeEvent(input));
+
+    expect(state.division).toBe("weight");
+    expect(state.setupStep).toBe("weight");
+    expect(changeHandlers.persistPreferences).toHaveBeenCalledOnce();
+    expect(changeHandlers.render).toHaveBeenCalledOnce();
   });
 
   it("starts the match when a match-length choice is clicked", () => {
@@ -253,7 +264,7 @@ describe("handleClickEvent", () => {
     expect(handlers.next).not.toHaveBeenCalled();
   });
 
-  it("ignores disabled buttons", () => {
+  it("does not activate a disabled button through delegated click handling", () => {
     const start = vi.fn();
     const handlers = {
       start,
@@ -262,13 +273,15 @@ describe("handleClickEvent", () => {
       resolve: vi.fn(),
       clearAndExit: vi.fn()
     };
-    const state = createMockGameState();
+    const root = document.createElement("div");
     const button = createMockButton("start");
     button.disabled = true;
-    const event = createClickEvent(button);
+    root.appendChild(button);
+    root.addEventListener("click", (event) => handleClickEvent(event, createMockGameState(), handlers));
 
-    handleClickEvent(event, state, handlers);
+    button.dispatchEvent(createClickEvent(button));
 
-    expect(handlers.start).not.toHaveBeenCalled();
+    expect(start).not.toHaveBeenCalled();
   });
+
 });

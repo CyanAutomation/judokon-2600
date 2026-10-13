@@ -622,6 +622,72 @@ describe("Main Module - Render Integration", () => {
 });
 
 describe("Main Module - Event Handler Integration", () => {
+  it("[REQ-GAME-017] replay starts a fresh match with the active seed", async () => {
+    const preferenceKeys = [
+      "judokon.divisionMode",
+      "judokon.gameMode",
+      "judokon.weightClass"
+    ];
+    const previousPreferences = new Map(preferenceKeys.map((key) => [key, localStorage.getItem(key)]));
+    const previousSavedMatch = sessionStorage.getItem("judokon.activeMatch.v1");
+    const completedMatch = createMockMatch({
+      phase: "matchOver",
+      winner: "player",
+      scores: { player: 3, opponent: 0 }
+    });
+    const state = createMockGameState({
+      match: completedMatch,
+      result: { ...createMockMatchResult(), match: completedMatch },
+      activeSeed: "completed-match-seed"
+    });
+    const root = document.createElement("div");
+    const requestedSeeds: string[] = [];
+    const client = new class extends BudokonClient {
+      override async drawBatch(seed: string, count: number): Promise<Judoka[]> {
+        requestedSeeds.push(seed);
+        return Array.from({ length: count }, (_, index) => createMockJudoka(`replay-${index}`));
+      }
+    }();
+    const render = () => renderApp(root, state);
+    const deps: OrchestratorDeps = { client, render };
+    let startOperation: Promise<void> | undefined;
+
+    try {
+      root.addEventListener("click", (event) => handleClickEvent(event, state, {
+        start: (seed) => { startOperation = start(state, deps, state.target, seed); },
+        copyReplaySeed: async () => undefined,
+        next: async () => undefined,
+        resolve: vi.fn(),
+        clearAndExit: vi.fn()
+      }));
+      render();
+
+      const replayButton = root.querySelector<HTMLButtonElement>("#replay");
+      if (!replayButton) throw new Error("Replay button must render for a completed match");
+      replayButton.click();
+
+      const operation = startOperation;
+      if (!operation) throw new Error("Replay click must start a new match");
+      await operation;
+
+      expect(requestedSeeds).toEqual(["completed-match-seed"]);
+      expect(state).toMatchObject({
+        activeSeed: "completed-match-seed",
+        busy: false,
+        match: { phase: "selecting", matchNumber: 1, target: 3 }
+      });
+      expect(root.querySelector('[aria-label="Stat selection"]')).not.toBeNull();
+      expect(root.querySelector("#replay")).toBeNull();
+    } finally {
+      for (const [key, value] of previousPreferences) {
+        if (value === null) localStorage.removeItem(key);
+        else localStorage.setItem(key, value);
+      }
+      if (previousSavedMatch === null) sessionStorage.removeItem("judokon.activeMatch.v1");
+      else sessionStorage.setItem("judokon.activeMatch.v1", previousSavedMatch);
+    }
+  });
+
   it("[REQ-GAME-007] quitting clears the active run, removes its saved state, and returns to setup", () => {
     const state = createMockGameState({
       match: createMockMatch(),

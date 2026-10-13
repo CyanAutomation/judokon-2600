@@ -26,3 +26,5 @@ These IDs give the UI and game tests a stable link to observable product behavio
 | REQ-UI-013 | With no saved preferences, setup opens at the mode step with Classic, Absolute, Random weight class, and first-to-3 selected. | [Gameplay flow](../README.md#gameplay) |
 | REQ-UI-014 | Setup presents one decision stage at a time, preserves earlier choices in summaries, and uses a native radio group for the active options. | [Gameplay flow](../README.md#gameplay) |
 | REQ-UI-015 | Before starting, the final setup stage shows the selected target and scoring rule alongside a Start action. | [Gameplay flow](../README.md#gameplay) |
+| REQ-AUDIO-016 | Optional audio feedback is muted by default; when enabled, keyboard actions and match outcomes play feedback, and muting suppresses new feedback. | [Gameplay flow](../README.md#gameplay) |
+| REQ-GAME-017 | Replaying a completed match starts a fresh match with the active replay seed. | [Gameplay flow](../README.md#gameplay) |
