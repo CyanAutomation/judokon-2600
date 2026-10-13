@@ -24,5 +24,6 @@ describe("buttons", () => {
 
     expect(button?.textContent).toContain("Copy");
     expect(button?.querySelector("kbd")?.textContent).toBe("Ctrl+C");
+    expect(button?.disabled).toBe(false);
   });
 });
