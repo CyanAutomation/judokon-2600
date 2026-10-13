@@ -59,19 +59,28 @@ function confirmCurrentSetupChoice(
   state: GameState,
   handlers: ButtonHandlers
 ): boolean {
-  const setupChoice = target.closest<HTMLInputElement>("input[data-intro-mode], input[data-division]")
-    ?? target.closest<HTMLLabelElement>(".choice-card")?.querySelector<HTMLInputElement>("input[data-intro-mode], input[data-division]");
-  if (!state.match && !state.busy && setupChoice?.checked) {
-    if (state.setupStep === "mode" && setupChoice.dataset.introMode === state.mode) {
-      handlers.setSetupStep?.("division");
-      return true;
-    }
-    if (state.setupStep === "division" && setupChoice.dataset.division === state.division) {
-      handlers.setSetupStep?.(setupChoice.dataset.division === "weight" ? "weight" : "length");
-      return true;
-    }
+  const setupChoice = findSetupChoice(target);
+  if (state.match || state.busy || !setupChoice?.checked) return false;
+
+  const nextStep = confirmedSetupStep(state, setupChoice);
+  if (!nextStep) return false;
+
+  handlers.setSetupStep?.(nextStep);
+  return true;
+}
+
+function findSetupChoice(target: Element): HTMLInputElement | null {
+  return target.closest<HTMLInputElement>("input[data-intro-mode], input[data-division]")
+    ?? target.closest<HTMLLabelElement>(".choice-card")?.querySelector<HTMLInputElement>("input[data-intro-mode], input[data-division]")
+    ?? null;
+}
+
+function confirmedSetupStep(state: GameState, setupChoice: HTMLInputElement): SetupStep | null {
+  if (state.setupStep === "mode" && setupChoice.dataset.introMode === state.mode) return "division";
+  if (state.setupStep === "division" && setupChoice.dataset.division === state.division) {
+    return setupChoice.dataset.division === "weight" ? "weight" : "length";
   }
-  return false;
+  return null;
 }
 
 function startFromLengthChoice(
