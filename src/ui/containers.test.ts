@@ -3,13 +3,13 @@ import { surface, terminalMenu } from "./containers";
 
 describe("containers", () => {
   describe("surface", () => {
-    it("renders a labeled section containing its supplied content", () => {
+    it.each(["section", "aside"] as const)("renders the requested %s landmark with its label and content", (tag) => {
       const root = document.createElement("div");
-      root.innerHTML = surface("section", "fighter-card", "Your judoka", "<p>Player</p>");
-      const section = root.querySelector("section[aria-label='Your judoka']");
+      root.innerHTML = surface(tag, "fighter-card", "Your judoka", "<p>Player</p>");
+      const landmark = root.querySelector(`${tag}[aria-label='Your judoka']`);
 
-      expect(section?.tagName).toBe("SECTION");
-      expect(section?.textContent).toContain("Player");
+      expect(landmark?.tagName).toBe(tag.toUpperCase());
+      expect(landmark?.textContent).toContain("Player");
     });
 
     it("escapes class names and labels for security", () => {
