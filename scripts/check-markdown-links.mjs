@@ -105,8 +105,8 @@ function displayPath(path) {
 
 function resolveLocalTarget(pathname, absoluteFile) {
   const decodedPath = decodeURIComponent(pathname);
-  if (!pathname) return absoluteFile;
-  if (pathname.startsWith("/")) return resolve(process.cwd(), `.${decodedPath}`);
+  if (!decodedPath) return absoluteFile;
+  if (decodedPath.startsWith("/")) return resolve(process.cwd(), `.${decodedPath}`);
   return resolve(dirname(absoluteFile), decodedPath);
 }
 
