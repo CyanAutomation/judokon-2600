@@ -119,6 +119,35 @@ describe("handleClickEvent", () => {
     expect(setSetupStep).toHaveBeenCalledWith("weight");
   });
 
+  it("does not confirm the current setup choice while busy or after a match starts", () => {
+    for (const stateOverride of [
+      { busy: true },
+      { match: createMockMatch() }
+    ]) {
+      const setSetupStep = vi.fn();
+      const state = createMockGameState({
+        match: null,
+        setupStep: "mode",
+        mode: "classic",
+        ...stateOverride
+      });
+      const input = document.createElement("input");
+      input.checked = true;
+      input.dataset.introMode = "classic";
+
+      handleClickEvent(createClickEvent(input), state, {
+        start: vi.fn(),
+        copyReplaySeed: vi.fn(),
+        next: vi.fn(),
+        resolve: vi.fn(),
+        clearAndExit: vi.fn(),
+        setSetupStep
+      });
+
+      expect(setSetupStep).not.toHaveBeenCalled();
+    }
+  });
+
   it("[REQ-UI-014] advances setup after the newly selected division changes", () => {
     const state = createMockGameState({ match: null, setupStep: "division", division: "absolute" });
     const input = document.createElement("input");

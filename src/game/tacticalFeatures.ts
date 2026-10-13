@@ -167,26 +167,36 @@ function validateScore(score: unknown, differential: unknown, rounds: number): s
   return differential === (score.player as number) - (score.opponent as number);
 }
 
+function sanitizeSelectionRecord(value: unknown, rounds: number): TacticalStatRecord | null {
+  if (!isRecord(value)) return null;
+
+  const { selected, wins, losses, draws } = value;
+  if (!boundedInteger(selected, rounds)) return null;
+
+  const outcomes = [wins, losses, draws];
+  if (!outcomes.every((count) => boundedInteger(count, selected))) return null;
+  if ((wins as number) + (losses as number) + (draws as number) !== selected) return null;
+
+  const winRate = selected === 0 ? null : (wins as number) / selected;
+  if (value.winRate !== winRate) return null;
+
+  return {
+    selected,
+    wins: wins as number,
+    losses: losses as number,
+    draws: draws as number,
+    winRate
+  };
+}
+
 function sanitizeSelections(value: unknown, rounds: number): Record<StatKey, TacticalStatRecord> | null {
   if (!isRecord(value)) return null;
+
   const selections = {} as Record<StatKey, TacticalStatRecord>;
   for (const stat of STAT_KEYS) {
-    const record = value[stat];
-    if (!isRecord(record)
-      || !boundedInteger(record.selected, rounds)
-      || !boundedInteger(record.wins, record.selected as number)
-      || !boundedInteger(record.losses, record.selected as number)
-      || !boundedInteger(record.draws, record.selected as number)
-      || (record.wins as number) + (record.losses as number) + (record.draws as number) !== record.selected) return null;
-    const winRate = record.selected === 0 ? null : record.wins as number / (record.selected as number);
-    if (record.winRate !== winRate) return null;
-    selections[stat] = {
-      selected: record.selected as number,
-      wins: record.wins as number,
-      losses: record.losses as number,
-      draws: record.draws as number,
-      winRate
-    };
+    const selection = sanitizeSelectionRecord(value[stat], rounds);
+    if (!selection) return null;
+    selections[stat] = selection;
   }
   return selections;
 }
@@ -230,17 +240,21 @@ function isRecentOutcomes(value: unknown, rounds: number): value is TacticalOutc
     && value.every((outcome) => outcome === "win" || outcome === "loss" || outcome === "draw");
 }
 
+function isMissedOpportunityCandidate(value: unknown): value is Record<string, unknown> {
+  return isRecord(value)
+    && STAT_KEYS.includes(value.favoredStat as StatKey)
+    && STAT_KEYS.includes(value.alternativeStat as StatKey)
+    && value.favoredStat !== value.alternativeStat
+    && finiteNumber(value.favoredWinRate)
+    && finiteNumber(value.alternativeWinRate);
+}
+
 function matchesMissedOpportunityCandidate(
   supplied: unknown,
   expected: TacticalFeatures["missedOpportunityCandidate"]
 ): boolean {
   if (supplied === null) return expected === null;
-  if (!expected || !isRecord(supplied)
-    || !STAT_KEYS.includes(supplied.favoredStat as StatKey)
-    || !STAT_KEYS.includes(supplied.alternativeStat as StatKey)
-    || supplied.favoredStat === supplied.alternativeStat
-    || !finiteNumber(supplied.favoredWinRate)
-    || !finiteNumber(supplied.alternativeWinRate)) return false;
+  if (!expected || !isMissedOpportunityCandidate(supplied)) return false;
   return supplied.favoredStat === expected.favoredStat
     && supplied.favoredWinRate === expected.favoredWinRate
     && supplied.alternativeStat === expected.alternativeStat

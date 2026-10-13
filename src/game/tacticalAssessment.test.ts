@@ -205,6 +205,27 @@ describe("server-boundary feature allow-list", () => {
     expect(sanitizeTacticalFeatures({ ...features, recentOutcomes: ["opponent"] })).toBeNull();
   });
 
+  it("rejects selection records with invalid counts or inconsistent outcome totals", () => {
+    const rounds = history([
+      ["power", "opponent"],
+      ["technique", "player"],
+      ["technique", "player"]
+    ]);
+    const features = extractTacticalFeatures(scoreFor(rounds), rounds);
+    const power = features.selections.power;
+
+    for (const selection of [
+      { ...power, selected: -1 },
+      { ...power, wins: power.selected + 1 },
+      { ...power, losses: power.losses - 1 }
+    ]) {
+      expect(sanitizeTacticalFeatures({
+        ...features,
+        selections: { ...features.selections, power: selection }
+      })).toBeNull();
+    }
+  });
+
   it("requires a server supplied missed-opportunity candidate to match derived facts", () => {
     const rounds = history([
       ["power", "opponent"],
@@ -221,6 +242,14 @@ describe("server-boundary feature allow-list", () => {
     expect(sanitizeTacticalFeatures({
       ...features,
       missedOpportunityCandidate: { ...candidate!, alternativeWinRate: 0.5 }
+    })).toBeNull();
+    expect(sanitizeTacticalFeatures({
+      ...features,
+      missedOpportunityCandidate: { ...candidate!, favoredStat: "unknown" }
+    })).toBeNull();
+    expect(sanitizeTacticalFeatures({
+      ...features,
+      missedOpportunityCandidate: { ...candidate!, alternativeWinRate: Number.POSITIVE_INFINITY }
     })).toBeNull();
     expect(sanitizeTacticalFeatures(features)).toEqual(features);
   });
