@@ -1,5 +1,5 @@
 import { STAT_KEYS, type StatKey } from "../api/types";
-import type { MatchHistoryItem, Outcome } from "./game";
+import { tallyStatRecords, type MatchHistoryItem, type Outcome } from "./game";
 import type { TacticalFeatures, TacticalOutcome, TacticalStatRecord } from "./tacticalTypes";
 import { finiteNumber, isRecord } from "./tacticalGuards";
 
@@ -31,14 +31,6 @@ function createFeatureCounts(): TacticalFeatureCounts {
     choicesAfterWinRuns: { decisions: 0, switches: 0 },
     choicesAfterLossRuns: { decisions: 0, switches: 0 }
   };
-}
-
-function recordSelection(selections: Record<StatKey, TacticalStatRecord>, round: MatchHistoryItem): void {
-  const record = selections[round.stat];
-  record.selected += 1;
-  if (round.outcome === "player") record.wins += 1;
-  else if (round.outcome === "opponent") record.losses += 1;
-  else record.draws += 1;
 }
 
 function recordRepeatedStatSequence(
@@ -117,18 +109,12 @@ export function extractTacticalFeatures(
   score: { player: number; opponent: number },
   history: MatchHistoryItem[]
 ): TacticalFeatures {
-  const selections = Object.fromEntries(STAT_KEYS.map((stat) => [stat, { selected: 0, wins: 0, losses: 0, draws: 0, winRate: null }])) as Record<StatKey, TacticalStatRecord>;
+  const selections = tallyStatRecords(history);
   const counts = createFeatureCounts();
   history.forEach((round, index) => {
-    recordSelection(selections, round);
     recordRepeatedStatSequence(history, index, round, counts);
     recordChoiceAfterPreviousOutcome(history, index, round, counts);
   });
-
-  for (const stat of STAT_KEYS) {
-    const record = selections[stat]!;
-    record.winRate = record.selected ? record.wins / record.selected : null;
-  }
 
   return {
     score: { player: score.player, opponent: score.opponent },
