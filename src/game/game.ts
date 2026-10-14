@@ -57,7 +57,7 @@ export function strongestStats(judoka: Judoka): StatKey[] {
  * Resolves a single stat selection in a match.
  * Compares player and opponent values for the chosen stat, determines the outcome,
  * updates scores, and checks for match completion (win/draw/continue).
- * 
+ *
  * @param match - The current match (must be in "selecting" phase)
  * @param stat - The stat chosen by the player
  * @returns MatchResult with outcome, values, and updated match state
@@ -86,7 +86,7 @@ export function selectStat(match: Match, stat: StatKey): MatchResult {
 /**
  * Determines the match winner based on scores, target points, and round number.
  * Returns the winner (player/opponent/draw) or null if match is still in progress.
- * 
+ *
  * @param scores - Current match scores
  * @param target - Points needed to win
  * @param matchNumber - Current round number
@@ -97,18 +97,18 @@ function calculateWinner(scores: { player: number; opponent: number }, target: n
   if (hasWinner) {
     return scores.player > scores.opponent ? "player" : "opponent";
   }
-  
+
   const capped = matchNumber >= MAX_ROUNDS;
   if (capped) {
     return scores.player === scores.opponent ? "draw" : scores.player > scores.opponent ? "player" : "opponent";
   }
-  
+
   return null;
 }
 
-/** 
- * Advance a match with the next draw. Champion mode retains only the player's judoka. 
- * 
+/**
+ * Advance a match with the next draw. Champion mode retains only the player's judoka.
+ *
  * @param match - The current match (must be in "awaitingNext" phase)
  * @param nextPlayer - The next player judoka (used in classic mode)
  * @param nextOpponent - The next opponent judoka
@@ -124,7 +124,7 @@ export function nextMatch(match: Match, nextPlayer: Judoka, nextOpponent: Judoka
 /**
  * Summarizes match statistics from match state and history.
  * Calculates win rates, decisive stats, best-performing stats, and champion-specific metrics.
- * 
+ *
  * @param match - The current or completed match
  * @param history - Array of all stat selections and outcomes in the match
  * @returns MatchSummary with scores, decision stats, records, and streak info
@@ -138,14 +138,14 @@ export function matchSummary(match: Match, history: MatchHistoryItem[]): MatchSu
         draws: history.filter(({ outcome }) => outcome === "draw").length
       }
     : null;
-  
+
   let championStreak = 0;
   if (match.mode === "champion") {
     for (let index = history.length - 1; index >= 0 && history[index]?.outcome === "player"; index -= 1) {
       championStreak += 1;
     }
   }
-  
+
   const { decisiveStat } = aggregateStatistics(history);
   const { bestStat, bestStatWins, bestStatSelections } = selectBestStat(history);
 
@@ -164,53 +164,77 @@ export function matchSummary(match: Match, history: MatchHistoryItem[]): MatchSu
 /**
  * Aggregates selection statistics from match history.
  * Determines which stat was most frequently selected (decisiveStat if unique).
- * 
+ *
  * @param history - Array of stat selections from the match
  * @returns Object containing decisiveStat
  */
 function aggregateStatistics(history: MatchHistoryItem[]): { decisiveStat: StatKey | null } {
-  const counts = new Map<StatKey, number>();
-  
-  for (const { stat } of history) {
-    counts.set(stat, (counts.get(stat) ?? 0) + 1);
-  }
-  
-  const highestSelectionCount = Math.max(0, ...counts.values());
-  const mostSelectedStats = [...counts]
-    .filter(([, selections]) => selections === highestSelectionCount)
-    .map(([stat]) => stat);
-  
+  const tally = tallyStatRecords(history);
+  const highestSelectionCount = Math.max(0, ...STAT_KEYS.map((stat) => tally[stat].selected));
+  const mostSelectedStats = STAT_KEYS.filter((stat) => tally[stat].selected === highestSelectionCount);
   const decisiveStat = mostSelectedStats.length === 1 ? mostSelectedStats[0] : null;
-  
   return { decisiveStat };
 }
 
 /**
  * Determines the best-performing stat from match history.
  * Ranks stats by wins, win rate, and display order as tiebreakers.
- * 
+ *
  * @param history - Array of stat selections and outcomes from the match
  * @returns Object with best stat, win count, and selection count (or nulls if no wins)
  */
 function selectBestStat(history: MatchHistoryItem[]): { bestStat: StatKey | null; bestStatWins: number; bestStatSelections: number } {
-  const performance = new Map<StatKey, { wins: number; selections: number }>();
-  
-  for (const { stat, outcome } of history) {
-    const current = performance.get(stat) ?? { wins: 0, selections: 0 };
-    current.selections += 1;
-    current.wins += Number(outcome === "player");
-    performance.set(stat, current);
-  }
-  
-  const best = [...performance.entries()]
-    .filter(([, record]) => record.wins > 0)
-    .sort(([aStat, a], [bStat, b]) => b.wins - a.wins
-      || b.wins / b.selections - a.wins / a.selections
-      || STAT_KEYS.indexOf(aStat) - STAT_KEYS.indexOf(bStat))[0];
-  
+  const tally = tallyStatRecords(history);
+  const best = STAT_KEYS
+    .filter((stat) => tally[stat].wins > 0)
+    .sort((aStat, bStat) => {
+      const a = tally[aStat];
+      const b = tally[bStat];
+      return b.wins - a.wins
+        || b.wins / b.selected - a.wins / a.selected
+        || STAT_KEYS.indexOf(aStat) - STAT_KEYS.indexOf(bStat);
+    })[0];
+
   return {
-    bestStat: best?.[0] ?? null,
-    bestStatWins: best?.[1].wins ?? 0,
-    bestStatSelections: best?.[1].selections ?? 0
+    bestStat: best ?? null,
+    bestStatWins: best ? tally[best].wins : 0,
+    bestStatSelections: best ? tally[best].selected : 0
   };
+}
+
+export interface StatTallyRecord {
+  selected: number;
+  wins: number;
+  losses: number;
+  draws: number;
+  winRate: number | null;
+}
+
+export type StatTally = Record<StatKey, StatTallyRecord>;
+
+/**
+ * Tally per-stat selection and outcome counts from match history, including the
+ * win rate for each stat (null when the stat was never selected). Single source
+ * of truth shared by match-summary ranking and tactical-feature extraction.
+ *
+ * @param history - Array of stat selections and outcomes from the match
+ * @returns Per-stat tally keyed by stat, in STAT_KEYS display order
+ */
+export function tallyStatRecords(history: MatchHistoryItem[]): StatTally {
+  const tally = Object.fromEntries(STAT_KEYS.map((stat) => [stat, { selected: 0, wins: 0, losses: 0, draws: 0, winRate: null }])) as StatTally;
+
+  for (const { stat, outcome } of history) {
+    const record = tally[stat];
+    record.selected += 1;
+    if (outcome === "player") record.wins += 1;
+    else if (outcome === "opponent") record.losses += 1;
+    else record.draws += 1;
+  }
+
+  for (const stat of STAT_KEYS) {
+    const record = tally[stat];
+    record.winRate = record.selected ? record.wins / record.selected : null;
+  }
+
+  return tally;
 }
