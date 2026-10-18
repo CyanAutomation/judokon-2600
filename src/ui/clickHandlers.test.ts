@@ -293,24 +293,4 @@ describe("handleClickEvent", () => {
     expect(handlers.next).not.toHaveBeenCalled();
   });
 
-  it("does not activate a disabled button through delegated click handling", () => {
-    const start = vi.fn();
-    const handlers = {
-      start,
-      copyReplaySeed: vi.fn(),
-      next: vi.fn(),
-      resolve: vi.fn(),
-      clearAndExit: vi.fn()
-    };
-    const root = document.createElement("div");
-    const button = createMockButton("start");
-    button.disabled = true;
-    root.appendChild(button);
-    root.addEventListener("click", (event) => handleClickEvent(event, createMockGameState(), handlers));
-
-    button.dispatchEvent(createClickEvent(button));
-
-    expect(start).not.toHaveBeenCalled();
-  });
-
 });

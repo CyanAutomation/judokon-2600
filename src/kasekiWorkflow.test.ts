@@ -65,14 +65,22 @@ describe("Kaseki workflow boundaries", () => {
     expect(sweepWorkflow).not.toMatch(/publishMode:\s*["']draft/i);
   });
 
-  it("assigns workflow and Dependabot changes to the repository owner", () => {
+  it("routes workflow and Dependabot configuration changes to the repository owner", () => {
     const codeowners = readFileSync(
       resolve(process.cwd(), ".github/CODEOWNERS"),
       "utf8",
     );
+    const entries = codeowners
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0 && !line.startsWith("#"))
+      .map((line) => {
+        const [pattern, ...owners] = line.split(/\s+/);
+        return { pattern, owners };
+      });
 
-    expect(codeowners).toContain("/.github/workflows/ @cyanautomation");
-    expect(codeowners).toContain("/.github/dependabot.yml @cyanautomation");
+    expect(entries).toContainEqual({ pattern: "/.github/workflows/", owners: ["@cyanautomation"] });
+    expect(entries).toContainEqual({ pattern: "/.github/dependabot.yml", owners: ["@cyanautomation"] });
   });
 
   it("retries transient status poll failures without swallowing permanent client errors", () => {

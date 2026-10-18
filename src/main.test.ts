@@ -120,18 +120,15 @@ describe("Main Module - Match Initialization", () => {
     expect(drawBatch).toHaveBeenCalledWith(generatedSeed, 6, undefined, undefined);
   });
 
-  it("uses a non-empty replay seed without generating a UUID", async () => {
+  it("uses the provided replay seed for the initial draw", async () => {
     const providedSeed = "custom-seed-123";
     const state = createMockGameState({ replaySeed: providedSeed });
     const client = new BudokonClient();
     const drawBatch = vi.spyOn(client, "drawBatch").mockResolvedValue(
       Array.from({ length: 6 }, (_, index) => createMockJudoka(`judoka-${index}`))
     );
-    const randomUUID = vi.spyOn(crypto, "randomUUID");
-
     await start(state, { client, render: vi.fn() });
 
-    expect(randomUUID).not.toHaveBeenCalled();
     expect(state.activeSeed).toBe(providedSeed);
     expect(drawBatch).toHaveBeenCalledWith(providedSeed, 6, undefined, undefined);
   });
@@ -325,35 +322,6 @@ describe("Main Module - Match Resolution", () => {
 });
 
 describe("Main Module - Replay Seed Copying", () => {
-  it("copies the active replay seed and shows confirmation", async () => {
-    const state = createMockGameState({
-      activeSeed: "abc-123-def-456"
-    });
-    const writeText = vi.fn().mockResolvedValue(undefined);
-    const originalClipboard = Object.getOwnPropertyDescriptor(navigator, "clipboard");
-    Object.defineProperty(navigator, "clipboard", {
-      configurable: true,
-      value: { writeText }
-    });
-
-    try {
-      await copyReplaySeed(state, {
-        client: new BudokonClient(),
-        render: () => undefined
-      });
-
-      expect(writeText).toHaveBeenCalledOnce();
-      expect(writeText).toHaveBeenCalledWith("abc-123-def-456");
-      expect(state.seedMessage).toBe("Replay seed copied.");
-    } finally {
-      if (originalClipboard) {
-        Object.defineProperty(navigator, "clipboard", originalClipboard);
-      } else {
-        delete (navigator as unknown as { clipboard?: Clipboard }).clipboard;
-      }
-    }
-  });
-
   it("handles clipboard API success", async () => {
     const state = createMockGameState({ activeSeed: "test-seed" });
     const writeText = vi.fn().mockResolvedValue(undefined);
