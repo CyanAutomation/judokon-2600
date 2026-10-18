@@ -3,8 +3,9 @@ import { buttonChoice, radioChoice, utilityButton } from "./inputs";
 
 describe("inputs", () => {
   describe("radioChoice", () => {
-    it("renders a mutually exclusive choice with a native radio control and shortcut hint", () => {
-      const markup = radioChoice({
+    it("renders a checked native radio choice with its description and shortcut", () => {
+      const root = document.createElement("div");
+      root.innerHTML = radioChoice({
         id: "mode-champion",
         name: "game-mode",
         label: "Champion",
@@ -12,17 +13,18 @@ describe("inputs", () => {
         shortcut: "H",
         checked: true,
       });
+      const input = root.querySelector<HTMLInputElement>("#mode-champion");
 
-      expect(markup).toContain('type="radio"');
-      expect(markup).toContain('name="game-mode"');
-      expect(markup).toContain('id="mode-champion"');
-      expect(markup).toContain("checked");
-      expect(markup).toContain("Build a streak");
-      expect(markup).toContain("<kbd>H</kbd>");
+      expect(input?.type).toBe("radio");
+      expect(input?.name).toBe("game-mode");
+      expect(input?.checked).toBe(true);
+      expect(root.querySelector('label[for="mode-champion"]')?.textContent).toContain("Build a streak");
+      expect(root.querySelector("kbd")?.textContent).toBe("H");
     });
 
-    it("renders both full and compact label variants", () => {
-      const markup = radioChoice({
+    it("keeps the full label available to assistive technology beside its compact display label", () => {
+      const root = document.createElement("div");
+      root.innerHTML = radioChoice({
         id: "test",
         name: "test",
         label: "Full Label",
@@ -31,11 +33,13 @@ describe("inputs", () => {
         shortcut: "T",
         checked: false,
       });
-      const container = document.createElement("div");
-      container.innerHTML = markup;
 
-      expect(container.querySelector(".choice-label-full")?.textContent).toBe("Full Label");
-      expect(container.querySelector(".choice-label-compact")?.textContent).toBe("Short");
+      const fullLabel = root.querySelector(".choice-label-full");
+      const compactLabel = root.querySelector(".choice-label-compact");
+      expect(fullLabel?.textContent).toBe("Full Label");
+      expect(fullLabel?.getAttribute("aria-hidden")).toBeNull();
+      expect(compactLabel?.textContent).toBe("Short");
+      expect(compactLabel?.getAttribute("aria-hidden")).toBe("true");
     });
 
     it("shows the active cursor and disables an unavailable native choice", () => {
@@ -70,55 +74,35 @@ describe("inputs", () => {
   });
 
   describe("buttonChoice", () => {
-    const parseButton = (markup: string) => {
-      const match = markup.match(/^<button\b([^>]*)>([\s\S]*)<\/button>$/);
-      expect(match).not.toBeNull();
-      const attributes = new Map(
-        Array.from(match![1].matchAll(/([\w-]+)(?:="([^"]*)")?/g), ([, name, value]) => [
-          name,
-          value ?? "",
-        ])
-      );
-      return {
-        // HTML boolean attributes reflect as true on the native property regardless of their value.
-        disabled: attributes.has("disabled"),
-        getAttribute: (name: string) => attributes.get(name) ?? null,
-        content: match![2],
-      };
-    };
-
     it("exposes selected and strongest as independent states", () => {
-      const selected = parseButton(buttonChoice({ label: "Power", shortcut: "1", value: "8", data: 'data-stat="power"', disabled: false, selected: true, strongest: false }));
+      const root = document.createElement("div");
+      root.innerHTML = buttonChoice({ label: "Power", shortcut: "1", value: "8", data: 'data-stat="power"', disabled: false, selected: true, strongest: false })
+        + buttonChoice({ label: "Technique", shortcut: "3", value: "10", data: 'data-stat="technique"', disabled: true, selected: false, strongest: true });
+      const selected = root.querySelector<HTMLButtonElement>('[data-stat="power"]');
+      const strongest = root.querySelector<HTMLButtonElement>('[data-stat="technique"]');
 
-      expect(selected.disabled).toBe(false);
-      expect(selected.getAttribute("aria-current")).toBe("true");
-      expect(selected.content).not.toContain("<em>Strongest</em>");
-
-      const strongest = parseButton(
-        buttonChoice({ label: "Technique", shortcut: "3", value: "10", data: 'data-stat="technique"', disabled: true, selected: false, strongest: true })
-      );
-
-      expect(strongest.disabled).toBe(true);
-      expect(strongest.getAttribute("aria-current")).toBeNull();
-      expect(strongest.content).toContain("<em>Strongest</em>");
-      expect(strongest.content).not.toContain('aria-hidden="true">Strongest');
-      expect(strongest.getAttribute("aria-pressed")).toBeNull();
+      expect(selected?.disabled).toBe(false);
+      expect(selected?.getAttribute("aria-current")).toBe("true");
+      expect(selected?.textContent).not.toContain("Strongest");
+      expect(strongest?.disabled).toBe(true);
+      expect(strongest?.getAttribute("aria-current")).toBeNull();
+      expect(strongest?.querySelector("em")?.textContent).toBe("Strongest");
+      expect(strongest?.querySelector("em")?.getAttribute("aria-hidden")).toBeNull();
+      expect(strongest?.getAttribute("aria-pressed")).toBeNull();
     });
 
   });
 
   describe("utilityButton", () => {
-    it("renders with aria-pressed state when provided", () => {
-      const on = utilityButton("sound", "Sound: On", true);
-      expect(on).toContain('aria-pressed="true"');
+    it("exposes toggle state to assistive technology only for toggle buttons", () => {
+      const root = document.createElement("div");
+      root.innerHTML = utilityButton("sound-on", "Sound: On", true)
+        + utilityButton("sound-off", "Sound: Off", false)
+        + utilityButton("copy", "Copy");
 
-      const off = utilityButton("sound", "Sound: Off", false);
-      expect(off).toContain('aria-pressed="false"');
-    });
-
-    it("renders without aria-pressed when state is undefined", () => {
-      const markup = utilityButton("sound", "Sound");
-      expect(markup).not.toContain("aria-pressed");
+      expect(root.querySelector<HTMLButtonElement>("#sound-on")?.getAttribute("aria-pressed")).toBe("true");
+      expect(root.querySelector<HTMLButtonElement>("#sound-off")?.getAttribute("aria-pressed")).toBe("false");
+      expect(root.querySelector<HTMLButtonElement>("#copy")?.hasAttribute("aria-pressed")).toBe(false);
     });
 
   });

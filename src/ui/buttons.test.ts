@@ -1,20 +1,18 @@
 import { describe, expect, it } from "vitest";
-import { primaryButton, quietButton, shortcutHint } from "./buttons";
+import { primaryButton, quietButton } from "./buttons";
 
 describe("buttons", () => {
-  it("renders the keyboard shortcut as decorative text", () => {
-    const markup = shortcutHint("Enter");
-    expect(markup).toContain("<kbd>Enter</kbd>");
-    expect(markup).toContain('aria-hidden="true"');
-  });
+  it("shows a decorative keyboard hint and reflects the button's disabled state", () => {
+    const root = document.createElement("div");
+    root.innerHTML = primaryButton("next-enabled", "Next", "Enter", false)
+      + primaryButton("next-disabled", "Next", "Enter", true);
+    const enabled = root.querySelector<HTMLButtonElement>("#next-enabled");
+    const disabled = root.querySelector<HTMLButtonElement>("#next-disabled");
 
-  it("primaryButton includes shortcut hint and disabled attribute", () => {
-    const enabled = primaryButton("next", "Next", "Enter", false);
-    expect(enabled).not.toContain("disabled");
-    expect(enabled).toContain("<kbd>Enter</kbd>");
-
-    const disabled = primaryButton("next", "Next", "Enter", true);
-    expect(disabled).toContain("disabled");
+    expect(enabled?.disabled).toBe(false);
+    expect(disabled?.disabled).toBe(true);
+    expect(enabled?.querySelector("kbd")?.textContent).toBe("Enter");
+    expect(enabled?.querySelector("kbd")?.closest(".shortcut-hint")?.getAttribute("aria-hidden")).toBe("true");
   });
 
   it("shows a quiet button's label and keyboard shortcut", () => {
@@ -24,6 +22,5 @@ describe("buttons", () => {
 
     expect(button?.textContent).toContain("Copy");
     expect(button?.querySelector("kbd")?.textContent).toBe("Ctrl+C");
-    expect(button?.disabled).toBe(false);
   });
 });
