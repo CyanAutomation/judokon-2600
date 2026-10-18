@@ -120,7 +120,7 @@ describe("Main Module - Match Initialization", () => {
     expect(drawBatch).toHaveBeenCalledWith(generatedSeed, 6, undefined, undefined);
   });
 
-  it("uses a non-empty replay seed without generating a UUID", async () => {
+  it("uses the provided replay seed for the initial draw", async () => {
     const providedSeed = "custom-seed-123";
     const state = createMockGameState({ replaySeed: providedSeed });
     const client = new BudokonClient();
