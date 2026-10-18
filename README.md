@@ -17,27 +17,45 @@ npm ci
 npm run dev
 ```
 
-Open [http://localhost:5173](http://localhost:5173) to play locally. The Vite development server does not run the Vercel tactical-assessment function; gameplay and the deterministic match summary still work. See the [developer guide](docs/index.md) for the repository map and additional setup details.
+Open [http://localhost:5173](http://localhost:5173) to play locally. The Vite development server supports gameplay and deterministic match summaries, but it does not run the Vercel tactical-assessment function. To manually test tactical insight, use a configured Vercel Preview; the [deployment guide](docs/tactical-insight-deployment.md) covers the required Firewall rule and environment variables. See the [developer guide](docs/index.md) for the repository map and additional setup details.
 
 ## Gameplay
 
-Setup unfolds in four steps: choose your mode (**Classic** or **Champion**), pick your division (**Absolute** open-weight or **Weight** class — choose one of the 14 catalogue classes `-48`, `-52`, `-57`, `-60`, `-63`, `-66`, `-70`, `-73`, `-78`, `-81`, `-90`, `-100`, `+78`, or `+100`), set the match length (**Quick** = first-to-3, **Medium** = first-to-5, **Long** = first-to-10), then play. With no saved preferences, setup starts at Classic, Absolute, Random weight class, and Quick (first-to-3). Your selected stat is compared with the opponent's hidden value; the higher value earns a point. A match ends when a side reaches its target, or after 25 rounds.
+### Setup and scoring
 
-Keyboard controls: choose game mode with `C` (**Classic**) / `H` (**Champion**); choose division with `A` (**Absolute**) / `W` (**Weight**); cycle match length with arrow keys or `1`–`3`; confirm weight-class choice with `Enter`; start the match by confirming length with `Enter` or `Space`. During a match, pick a stat with `1`–`5` (`power`, `speed`, `technique`, `kumikata`, `newaza`), press `Enter` or `Space` to advance or replay, and quit with `Esc` or `Q`.
+Setup unfolds in four steps:
 
-Stat choices display as **Power**, **Speed**, **Technique**, **Kumi-kata**, and **Ne-waza**.
+- Choose a mode: **Classic** or **Champion**.
+- Choose a division: **Absolute** open-weight or **Weight** class. Weight division offers the 14 catalogue classes `-48`, `-52`, `-57`, `-60`, `-63`, `-66`, `-70`, `-73`, `-78`, `-81`, `-90`, `-100`, `+78`, and `+100`.
+- Choose a match length: **Quick** (first-to-3), **Medium** (first-to-5), or **Long** (first-to-10).
+- Start the match. With no saved preferences, setup defaults to Classic, Absolute, Random weight class, and Quick (first-to-3).
 
-Optional keyboard ticks and outcome beeps are available in **Advanced options**. They are muted by default and the preference is stored in `localStorage`. When enabled, keyboard actions and match outcomes play audio feedback; muting suppresses new feedback.
+A selected stat is compared with the opponent's hidden value; the higher value earns a point. A match ends when a side reaches its target or after 25 rounds.
 
-After each match, the match summary recommends your best stat using this ranking contract: most rounds won, then highest win rate, then the first stat in the displayed order (`power`, `speed`, `technique`, `kumikata`, `newaza`). The tiebreak favors whichever stat appears earliest in that list. The recommendation reports both the number of wins and the total number of times that stat was selected; if no stat won a round, no recommendation is shown.
+### Keyboard controls
 
-An optional post-match tactical insight interprets patterns in the player’s choices. The browser sends only compact counts and outcome patterns to the same-origin `/api/tactical-assessment`; it does not send judoka IDs, stat values, replay seeds, local storage, or hidden opponent values. Application code assembles the insight text and omits low-confidence results; JEV supplies typed scores only. The deterministic summary remains authoritative, and the match remains playable when the optional insight is unavailable. On Vercel, configure `OPENROUTER_API_KEY` and `JEV_ASSESSMENT_RATE_LIMIT_ID`; `JEV_MODEL` optionally overrides the default `~typesafe/jev-latest`. See the [tactical insight deployment guide](docs/tactical-insight-deployment.md) for Firewall setup and verification. Plain `npm run dev` does not run the Vercel Function, so tactical insight is unavailable locally.
+- During setup, choose a mode with `C` (**Classic**) / `H` (**Champion**) and a division with `A` (**Absolute**) / `W` (**Weight**). Cycle match length with the arrow keys or `1`–`3`; if you chose Weight division, confirm its class with `Enter`, then confirm match length with `Enter` or `Space` to start.
+- During a match, choose a stat with `1`–`5` (`power`, `speed`, `technique`, `kumikata`, `newaza`). Press `Enter` or `Space` to advance or replay, and quit with `Esc` or `Q`.
+- Stat choices display as **Power**, **Speed**, **Technique**, **Kumi-kata**, and **Ne-waza**.
+- Optional keyboard ticks and outcome beeps are available in **Advanced options**. They are muted by default and the preference is stored in `localStorage`. When enabled, keyboard actions and match outcomes play audio feedback; muting suppresses new feedback.
+
+### Match summary and Champion mode
+
+After each match, the summary recommends your best stat by most rounds won, then highest win rate, then earliest position in the displayed order (`power`, `speed`, `technique`, `kumikata`, `newaza`). It reports both wins and total selections; if no stat won a round, no recommendation is shown.
 
 In **Champion** mode, you keep the same judoka while opponents rotate. The **Current streak** counts consecutive rounds won at the end of the run: each win extends it, while either a loss or a draw resets it to zero. Earlier wins remain part of the run record but do not count toward the current streak.
 
-Judoka are fetched directly from the public [Budokon catalogue API](https://budokon.scheimann.workers.dev/docs). Before each match six judoka are drawn into a buffer so subsequent opponents can appear instantly. The seed button in the footer **Advanced options** bar opens a dialog for an optional replay seed; otherwise each match gets a fresh seed. The **Replay** action starts a fresh match with the active seed, reproducing the same draws only while the Budokon dataset version and draw algorithm stay the same. The API returns both values, but this client currently does not retain them with the replay seed. Draw requests time out after 10 seconds. Connection failures, rejected access, missing endpoints, timeouts, and temporary server failures display retry guidance in the status area.
+### Tactical insight
 
-Reloading the same browser tab restores the last valid saved session, including its match, result, round history, replay seed, active weight class, and prefetched judoka. The app saves only stable match states: an in-progress stat selection and optional tactical assessment are not persisted. With no valid saved session, the app opens in setup.
+An optional post-match tactical insight interprets patterns in the player’s choices. The browser sends compact counts and outcome patterns to the same-origin `/api/tactical-assessment`; it does not send judoka IDs, stat values, replay seeds, local storage, or hidden opponent values. Application code assembles the insight text and omits low-confidence results; JEV supplies typed scores only. The deterministic summary remains authoritative, and the match remains playable when the optional insight is unavailable. On Vercel, configure `OPENROUTER_API_KEY` and `JEV_ASSESSMENT_RATE_LIMIT_ID`; `JEV_MODEL` optionally overrides the default `~typesafe/jev-latest`. See the [tactical insight deployment guide](docs/tactical-insight-deployment.md) for Firewall setup and verification.
+
+### Opponents, replay, and connection issues
+
+Judoka are fetched directly from the public [Budokon catalogue API](https://budokon.scheimann.workers.dev/docs). Before each match, six judoka are drawn into a buffer so subsequent opponents can appear instantly. The seed button in the footer **Advanced options** bar opens a dialog for an optional replay seed; otherwise each match gets a fresh seed. **Replay** starts a fresh match with the active seed and reproduces the same draws only while the Budokon dataset version and draw algorithm stay the same. The API returns both values, but this client does not retain them with the replay seed. Draw requests time out after 10 seconds. Connection failures, rejected access, missing endpoints, timeouts, and temporary server failures display retry guidance in the status area.
+
+### Saved sessions and scout report
+
+Reloading the same browser tab restores the last valid saved session, including its match, result, round history, replay seed, active weight class, and prefetched judoka. Only stable match states are saved: an in-progress stat selection and optional tactical assessment are not persisted. With no valid saved session, the app opens in setup.
 
 While a round is open, a scout report shows the opponent's strongest stat (all tied stats when there is a tie). The opponent's exact values remain hidden until you select a stat.
 
