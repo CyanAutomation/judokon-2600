@@ -9,7 +9,7 @@ judokon-2600 is a terminal-style, text-first battle simulator for JU-DO-KON! Cla
 Prerequisites: Node.js >= 24.15.0 < 25.
 
 ```sh
-npm install       # install dependencies
+npm ci            # install locked dependencies
 npm run dev       # start the Vite development server
 npm run check     # lint + test + build quality gate
 npm run build     # production build (tsc + vite build)
