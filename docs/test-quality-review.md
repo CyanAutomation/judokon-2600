@@ -2,7 +2,7 @@
 
 This scorecard follows up on the low-performing cases identified in the test review. It covers the ten listed cases and the five tied status/error cases called out with them; it does not rescore unchanged tests elsewhere in the suite.
 
-Scores are ordered **clarity / behavioral relevance / assertions / isolation / cost vs. coverage**, each from 0 to 2. The original scores are static assessments of the test bodies before remediation. The replacement scores are also static except for the observed suite runtime. No mutation-testing tool is installed, so cost/coverage remains provisional at 1 for replacement tests.
+Scores are ordered **clarity / behavioral relevance / assertions / isolation / cost vs. coverage**, each from 0 to 2. The original scores are static assessments of the test bodies before remediation. The replacement scores are also static except for the observed suite runtime. No mutation score was collected, so cost/coverage remains provisional at 1 for replacement tests.
 
 ## Cases removed or replaced
 
@@ -53,7 +53,7 @@ The follow-up scores use the same dimension order. Removed mock-only tests are s
 - `npm run lint` passed.
 - `npm run build` passed.
 - Follow-up `npm run check` passed: lint, 24 test files and 281 cases, and production build.
-- Mutation coverage was not measured: neither Stryker nor a Vitest coverage provider is installed. The cost/coverage score is therefore provisional, not a measured mutation score.
+- Mutation coverage was not measured. The repository has Vitest coverage instrumentation, but that does not measure mutation score. The cost/coverage score is therefore provisional.
 
 ## Follow-up: current low-scoring cases
 
@@ -66,4 +66,17 @@ The October 2026 follow-up revised the next ten lowest-scoring cases from the cu
 - Replaced the replay callback mock check with a rendered Replay-button flow that starts a fresh match using the active seed, linked to `REQ-GAME-017`.
 - Changed the section helper check to parse and assert the semantic section and its accessible label. The quiet-button test now checks its visible label and shortcut without asserting the absence of an unsupported disabled option.
 
-The revised cost scores remain provisional because mutation testing is still unavailable.
+The revised cost scores remain provisional because mutation scores were not collected.
+
+## Additional low-value test cleanup
+
+The next pass removed duplicate helper-level checks and replaced markup-string checks with DOM contract assertions:
+
+- `main.test.ts`: removed the direct clipboard helper success test because the click-driven success and failure cases cover the user-visible action. The provided-seed test now asserts the active seed and requested draw input, without depending on `crypto.randomUUID` not being called.
+- `keyboardGuards.test.ts`: removed the direct positive seed-modal Escape helper case; keyboard dispatcher coverage exercises that behavior through the event flow. The distinct false cases remain.
+- `clickHandlers.test.ts`: removed a synthetic dispatched click against a disabled button, which does not model normal browser interaction with disabled controls.
+- `inputs.test.ts`: replaced string checks and a custom HTML attribute parser with DOM assertions for radio semantics, accessible full and compact labels, independent selected/strongest states, and toggle `aria-pressed` behavior.
+- `buttons.test.ts`: folded decorative shortcut accessibility into the primary button contract test, checking the native disabled property and shortcut wrapper. Removed the quiet-button assertion that it is enabled by default, since enabled state is not part of that helper's contract.
+- `kasekiWorkflow.test.ts`: parses non-comment CODEOWNERS entries and checks the exact path-to-owner mappings rather than matching raw substrings.
+
+The focused validation after these changes passed: 7 test files and 82 tests, including the keyboard dispatcher integration test. After restoring dependencies with `npm ci`, `npm run check` passed: lint, 27 test files and 312 tests, Markdown link and style checks, and the production build. Mutation scores remain unmeasured, so cost scores remain provisional.

@@ -3,12 +3,6 @@ import { isSeedModalEscape, shouldHandleKeyboardEvent, shouldPlayKeyboardTick } 
 import { createMockGameState, createKeyboardEvent } from "../test/mocks";
 
 describe("isSeedModalEscape", () => {
-  it("returns true when seed modal is open and Escape is pressed", () => {
-    const state = createMockGameState({ seedModalOpen: true });
-
-    expect(isSeedModalEscape(createKeyboardEvent("Escape"), state)).toBe(true);
-  });
-
   it("returns false when the seed modal is closed", () => {
     const state = createMockGameState({ seedModalOpen: false });
 
