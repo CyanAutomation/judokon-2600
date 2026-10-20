@@ -42,6 +42,21 @@ describe("tactical assessment API route", () => {
     expect(client.decide).not.toHaveBeenCalled();
   });
 
+  it("returns not-configured before reading an oversized request body", async () => {
+    const handler = createTacticalAssessmentHandler({ getApiKey: () => undefined });
+    const incoming = new Request("https://judokon.example/api/tactical-assessment", {
+      method: "POST",
+      headers: { "Content-Length": "8193" },
+      body: "{}"
+    });
+
+    const response = await handler(incoming);
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ assessment: null, issue: "not_configured" });
+    expect(incoming.bodyUsed).toBe(false);
+  });
+
   it("does not construct a provider client for a whitespace-only API key", async () => {
     const createClient = vi.fn();
     const handler = createTacticalAssessmentHandler({
@@ -176,9 +191,9 @@ describe("tactical assessment API route", () => {
     });
     expect((await malformed(request({ features }))).status).toBe(502);
 
-    const disabled = createTacticalAssessmentHandler({ getApiKey: () => undefined });
-    expect((await disabled(request({ features: { ...features, rounds: 50 } }))).status).toBe(400);
-    expect((await disabled(new Request("https://judokon.example/api/tactical-assessment", { method: "GET" }))).status).toBe(405);
+    const configured = createTacticalAssessmentHandler({ getApiKey: () => "test-key" });
+    expect((await configured(request({ features: { ...features, rounds: 50 } }))).status).toBe(400);
+    expect((await configured(new Request("https://judokon.example/api/tactical-assessment", { method: "GET" }))).status).toBe(405);
   });
 });
 
