@@ -87,7 +87,7 @@ function setupProgress(state: GameState, step: NonNullable<GameState["setupStep"
     const stateClass = segmentIndex === index - 1 ? " is-current" : segmentIndex < index - 1 ? " is-complete" : "";
     return `<span class="setup-progress-segment${stateClass}" aria-hidden="true"></span>`;
   }).join("");
-  return `<div class="setup-progress"><span class="setup-progress-text">Step ${index} of ${steps.length}</span><div class="setup-progress-track" role="progressbar" aria-label="Match setup progress" aria-valuemin="0" aria-valuemax="${steps.length}" aria-valuenow="${index}" aria-valuetext="Step ${index} of ${steps.length}">${segments}</div></div>`;
+  return `<div class="setup-progress"><span class="setup-progress-text">Step ${index} of ${steps.length}</span><div class="setup-progress-track" role="progressbar" aria-label="Match setup progress" aria-valuemin="1" aria-valuemax="${steps.length}" aria-valuenow="${index}" aria-valuetext="Step ${index} of ${steps.length}">${segments}</div></div>`;
 }
 
 function setupPanel(state: GameState, helpers: Helpers): string {
