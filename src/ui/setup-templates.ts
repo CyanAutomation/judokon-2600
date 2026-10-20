@@ -9,16 +9,17 @@ import { type GameState } from "../state";
 import { createHelpers, lengths, weights, type Helpers } from "./helpers";
 import { getSoundEnabled } from "./helpers/soundStorage";
 import { escapeHtml as esc } from "./utils/escapeHtml";
+import { status } from "./helpers/status";
 
 export function footerUtilities(state: GameState): string {
   const soundEnabled = getSoundEnabled();
-  const seedLabel = state.replaySeed ? `Seed: ${state.replaySeed}` : "Seed: Random";
-  return `<div class="footer-utilities" role="group" aria-label="Match utilities">${utilityButton("seed-button", seedLabel)}${utilityButton("sound-enabled", `Sound: ${soundEnabled ? "On" : "Off"}`, soundEnabled)}</div>`;
+  const seedLabel = state.replaySeed ? `Replay seed: ${state.replaySeed}` : "Replay seed: Random";
+  return `<div class="footer-utilities" role="group" aria-label="Game settings">${utilityButton("seed-button", seedLabel)}${utilityButton("sound-enabled", `Sound: ${soundEnabled ? "On" : "Off"}`, soundEnabled)}</div>`;
 }
 
 export function seedDialog(state: GameState): string {
   const dialog = state.seedModalOpen
-    ? `<div class="modal-backdrop"><section class="panel seed-dialog" role="dialog" aria-modal="true" aria-labelledby="seed-dialog-title"><p class="eyebrow">Replay setup</p><h2 id="seed-dialog-title">Set replay seed</h2><p>The same seed reproduces draws while the Budokon catalogue version stays the same.</p><label for="replay-seed">Seed<input id="replay-seed" value="${esc(state.seedDraft ?? state.replaySeed)}" placeholder="Leave blank for a fresh draw" autocomplete="off" spellcheck="false" /></label><div class="dialog-actions">${quietButton("cancel-seed", "Cancel", "Esc")}${primaryButton("save-seed", "Use seed", "Enter")}</div></section></div>`
+    ? `<div class="modal-backdrop"><section class="panel seed-dialog" role="dialog" aria-modal="true" aria-labelledby="seed-dialog-title"><p class="eyebrow">Replay setup</p><h2 id="seed-dialog-title">Set a replay seed</h2><p>Use the same seed to replay the same matchups, as long as the Budokon judoka catalogue has not changed.</p><label for="replay-seed">Replay seed<input id="replay-seed" value="${esc(state.seedDraft ?? state.replaySeed)}" placeholder="Leave blank for a fresh matchup" autocomplete="off" spellcheck="false" /></label><div class="dialog-actions">${quietButton("cancel-seed", "Cancel", "Esc")}${primaryButton("save-seed", "Use seed", "Enter")}</div></section></div>`
     : "";
   return dialog;
 }
@@ -73,7 +74,15 @@ function lengthChoices(state: GameState, cursor: number): string {
 }
 
 function setupSummary(label: string, value: string, target: "mode" | "division"): string {
-  return `<div class="setup-summary"><span>${esc(label)}: <strong>${esc(value)}</strong></span><button class="quiet setup-change" data-setup-step="${target}">Change</button></div>`;
+  return `<div class="setup-summary"><span>${esc(label)}: <strong>${esc(value)}</strong></span><button type="button" class="control control--quiet quiet setup-change" data-setup-step="${target}">Change</button></div>`;
+}
+
+function setupProgress(state: GameState, step: NonNullable<GameState["setupStep"]>): string {
+  const steps: string[] = state.division === "weight"
+    ? ["mode", "division", "weight", "length"]
+    : ["mode", "division", "length"];
+  const index = Math.max(steps.indexOf(step), 0) + 1;
+  return `<div class="setup-progress"><span class="setup-progress-text">Step ${index} of ${steps.length}</span><progress value="${index}" max="${steps.length}" aria-label="Match setup progress">${index} of ${steps.length}</progress></div>`;
 }
 
 function setupPanel(state: GameState, helpers: Helpers): string {
@@ -81,22 +90,22 @@ function setupPanel(state: GameState, helpers: Helpers): string {
   const cursor = state.setupCursor ?? 0;
   if (step === "mode") {
     const hint = state.mode === "champion"
-      ? "Keep one judoka in the fight and build a streak."
-      : "Draw fresh opponents for every round.";
-    return `<fieldset class="setup-group setup-stage"><legend>Choose game mode</legend>${terminalMenu(modeChoices(state, cursor))}<small>${hint}</small></fieldset>`;
+      ? "Keep your judoka in the fight and build a streak."
+      : "Meet a fresh opponent every round.";
+    return `${setupProgress(state, step)}<fieldset class="setup-group setup-stage"><legend>Choose game mode</legend>${terminalMenu(modeChoices(state, cursor))}<small>${hint}</small></fieldset>`;
   }
   if (step === "division") {
-    return `${setupSummary("Game mode", helpers.modeLabel(), "mode")}<fieldset class="setup-group setup-stage"><legend>Choose division</legend>${terminalMenu(divisionChoices(state, cursor))}</fieldset>`;
+    return `${setupSummary("Game mode", helpers.modeLabel(), "mode")}${setupProgress(state, step)}<fieldset class="setup-group setup-stage"><legend>Choose division</legend>${terminalMenu(divisionChoices(state, cursor))}</fieldset>`;
   }
   if (step === "weight") {
     const options = [
       `<option value="random" ${state.weight === "random" ? "selected" : ""}>Random weight class</option>`,
       ...weights.map((weight) => `<option value="${weight}" ${state.weight === weight ? "selected" : ""}>${weight} kg</option>`)
     ].join("");
-    return `${setupSummary("Game mode", helpers.modeLabel(), "mode")}${setupSummary("Division", "Weight class", "division")}<fieldset class="setup-group setup-stage"><legend>Choose weight class</legend><label class="weight-picker" for="weight-class"><span>Match competitors by weight</span><select id="weight-class">${options}</select></label>${primaryButton("confirm-weight", "Continue", "Enter")}</fieldset>`;
+    return `${setupSummary("Game mode", helpers.modeLabel(), "mode")}${setupSummary("Division", "Weight class", "division")}${setupProgress(state, step)}<fieldset class="setup-group setup-stage"><legend>Choose weight class</legend><label class="weight-picker" for="weight-class"><span>Match by weight class</span><select id="weight-class">${options}</select></label>${primaryButton("confirm-weight", "Continue", "Enter")}</fieldset>`;
   }
 
-  return `${setupSummary("Game mode", helpers.modeLabel(), "mode")}${setupSummary("Division", helpers.divisionLabel(), "division")}<fieldset class="setup-group setup-stage"><legend>Choose match length</legend>${terminalMenu(lengthChoices(state, cursor))}</fieldset><p class="setup-rule"><strong>Higher stat wins the point.</strong> Draws score no points.</p><p class="start-context">First to ${state.target} points</p>${primaryButton("start", "Start match", "Enter", state.busy)}`;
+  return `${setupSummary("Game mode", helpers.modeLabel(), "mode")}${setupSummary("Division", helpers.divisionLabel(), "division")}${setupProgress(state, step)}<fieldset class="setup-group setup-stage"><legend>Choose match length</legend>${terminalMenu(lengthChoices(state, cursor))}</fieldset><p class="setup-rule"><strong>The higher stat takes the point.</strong> A draw leaves the score unchanged.</p><p class="start-context">First to ${state.target} points</p>${primaryButton("start", "Start match", "Enter", state.busy)}`;
 }
 
 /**
@@ -104,8 +113,6 @@ function setupPanel(state: GameState, helpers: Helpers): string {
  */
 export function intro(state: GameState): string {
   const helpers = createHelpers(state);
-  const statusMessage = state.busy
-    ? "Drawing judoka…"
-    : state.errorMessage || "System ready. Configure your match";
-  return `<section class="intro" aria-labelledby="intro-title"><div class="intro-copy"><p class="eyebrow">Budokon terminal · 2600</p><h1 id="intro-title">Enter the<br/>judoka circuit.</h1><p class="intro-lede">Choose your format, then read the opponent and build a run one point at a time.</p><p class="intro-status" role="status">${esc(statusMessage)}<span class="block-cursor" aria-hidden="true">█</span></p></div><section class="intro-mode-panel panel" aria-label="Match setup">${helpers.eyebrow("Match setup")}${setupPanel(state, helpers)}</section><p class="intro-footnote">Setup unfolds one choice at a time.</p></section>`;
+  const statusMessage = status(state);
+  return `<section class="intro" aria-labelledby="intro-title"><div class="intro-copy"><p class="eyebrow">JU-DO-KON! · Circuit 2600</p><h1 id="intro-title">Step into the<br/>judoka circuit.</h1><p class="intro-lede">Choose your game mode, then pick one of your judoka’s stats each round. Higher numbers take the point.</p><p class="intro-status" role="status">${esc(statusMessage)}<span class="block-cursor" aria-hidden="true">█</span></p></div><section class="intro-mode-panel panel" aria-label="Match setup">${helpers.eyebrow("Match setup")}${setupPanel(state, helpers)}</section><p class="intro-footnote">Your last setup will be waiting here next time.</p></section>`;
 }

@@ -5,6 +5,7 @@
  */
 
 import { escapeHtml } from "./utils/escapeHtml";
+import { shortcutHint } from "./buttons";
 
 export type RadioChoice = {
   id: string;
@@ -36,11 +37,11 @@ const attributes = (values: Record<string, string> = {}): string =>
 
 export function buttonChoice(config: ButtonChoiceConfig): string {
   const { label, shortcut, value, data, disabled = false, selected = false, strongest = false } = config;
-  return `<button class="control control--choice action-button option-card ${selected ? "is-selected" : ""} ${strongest ? "is-strongest" : ""}" ${data} ${disabled ? "disabled" : ""}${selected ? ' aria-current="true"' : ""}><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong>${strongest ? "<em>Strongest</em>" : ""}<span class="badge shortcut-hint" aria-hidden="true"><kbd>${escapeHtml(shortcut)}</kbd></span></button>`;
+  return `<button type="button" class="control control--choice action-button option-card ${selected ? "is-selected" : ""} ${strongest ? "is-strongest" : ""}" ${data} ${disabled ? "disabled" : ""} aria-pressed="${selected}"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong>${strongest ? "<em>Top stat</em>" : ""}${shortcutHint(shortcut)}</button>`;
 }
 
 export function utilityButton(id: string, label: string, pressed?: boolean): string {
-  return `<button class="control control--utility utility-button" id="${escapeHtml(id)}"${pressed === undefined ? "" : ` aria-pressed="${pressed}"`}><span>${escapeHtml(label)}</span></button>`;
+  return `<button type="button" class="control control--utility utility-button" id="${escapeHtml(id)}"${pressed === undefined ? "" : ` aria-pressed="${pressed}"`}><span>${escapeHtml(label)}</span></button>`;
 }
 
 /**
@@ -68,5 +69,5 @@ export function radioChoice({
   data,
 }: RadioChoice): string {
   const choiceLabel = formatChoiceLabel(compactLabel, label);
-  return `<label class="choice-card ${checked ? "is-selected" : ""} ${active ? "is-active" : ""}" for="${escapeHtml(id)}"><span class="menu-caret" aria-hidden="true">${active ? ">" : "&nbsp;"}</span><input class="choice-input" id="${escapeHtml(id)}" name="${escapeHtml(name)}" type="radio"${attributes(data)} ${checked ? "checked" : ""} ${disabled ? "disabled" : ""}/><span class="choice-label">${choiceLabel}</span><small>${escapeHtml(description)}</small><span class="badge shortcut-hint" aria-hidden="true"><kbd>${escapeHtml(shortcut)}</kbd></span></label>`;
+  return `<label class="control control--choice choice-card ${checked ? "is-selected" : ""} ${active ? "is-active" : ""}" for="${escapeHtml(id)}"><span class="menu-caret" aria-hidden="true">${active ? ">" : "&nbsp;"}</span><input class="choice-input" id="${escapeHtml(id)}" name="${escapeHtml(name)}" type="radio"${attributes(data)} ${checked ? "checked" : ""} ${disabled ? "disabled" : ""}/><span class="choice-label">${choiceLabel}</span><small>${escapeHtml(description)}</small>${shortcutHint(shortcut)}</label>`;
 }

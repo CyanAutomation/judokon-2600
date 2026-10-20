@@ -11,7 +11,7 @@ describe("status", () => {
       pendingStat: "power"
     });
 
-    expect(status(state)).toBe(">> Drawing judoka…");
+    expect(status(state)).toBe(">> Putting your matchup together…");
   });
 
   it("[REQ-UI-009] reports draw errors as plain text", () => {
@@ -22,25 +22,25 @@ describe("status", () => {
 
   it("[REQ-UI-009] prompts for setup when no match is active", () => {
     expect(status(createMockGameState({ match: null })))
-      .toBe(">> Configure a division and select a match length.");
+      .toBe(">> Choose a game mode to start.");
   });
 
-  it("[REQ-UI-009] explains when the opponent is committing a stat", () => {
+  it("[REQ-UI-009] keeps the opponent reveal playful and clear", () => {
     const state = createMockGameState({ match: createMockMatch(), pendingStat: "power" });
 
-    expect(status(state)).toBe(">> Opponent commits…");
+    expect(status(state)).toBe(">> Your opponent is sizing you up…");
   });
 
   it("[REQ-UI-009] prompts for a stat while a round is selecting", () => {
     const state = createMockGameState({ match: createMockMatch({ phase: "selecting" }) });
 
-    expect(status(state)).toBe(">> Choose your stat:");
+    expect(status(state)).toBe(">> Pick one of your stats.");
   });
 
   it.each([
-    ["player", ">> You win the match!"],
-    ["opponent", ">> Opponent wins the match."],
-    ["draw", ">> Match drawn."]
+    ["player", ">> The match is yours!"],
+    ["opponent", ">> Your opponent takes the match."],
+    ["draw", ">> It’s a draw!"]
   ] as const)("[REQ-UI-009] reports a completed match when the winner is %s", (winner, expected) => {
     const state = createMockGameState({ match: createMockMatch({ phase: "matchOver", winner }) });
 
