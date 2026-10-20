@@ -55,8 +55,9 @@ describe("game templates", () => {
     const current = state({ match });
     const markup = game(match, current, createHelpers(current));
 
-    expect(markup).toContain("The higher value wins the exchange.");
-    expect(markup.indexOf("The higher value wins the exchange.")).toBeLessThan(markup.indexOf('aria-label="Stat selection"'));
+    expect(markup).toContain("The higher number takes the point.");
+    expect(markup.indexOf("The higher number takes the point.")).toBeLessThan(markup.indexOf('aria-label="Stat selection"'));
+    expect(markup).toContain("Your opponent’s top stats:");
   });
 
   it("adds code-authored tactical insight beside the unchanged deterministic summary", () => {
@@ -177,12 +178,15 @@ describe("game templates", () => {
     const opponent = markup.indexOf('class="surface panel fighter-card opponent"');
     const history = markup.indexOf('aria-label="Round history"');
     const controls = markup.indexOf('aria-label="Stat selection"');
+    const selectedStat = document.createElement("div");
+    selectedStat.innerHTML = markup;
 
     expect(result).toBeGreaterThan(-1);
     expect(player).toBeGreaterThan(result);
     expect(opponent).toBeGreaterThan(player);
     expect(history).toBeGreaterThan(opponent);
     expect(controls).toBeGreaterThan(history);
+    expect(selectedStat.querySelector<HTMLButtonElement>('[data-stat="power"]')?.getAttribute("aria-pressed")).toBe("true");
   });
 
   it("makes the horizontally scrolling round history keyboard focusable and described", () => {

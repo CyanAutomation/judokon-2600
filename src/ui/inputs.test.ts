@@ -20,6 +20,9 @@ describe("inputs", () => {
       expect(input?.checked).toBe(true);
       expect(root.querySelector('label[for="mode-champion"]')?.textContent).toContain("Build a streak");
       expect(root.querySelector("kbd")?.textContent).toBe("H");
+      expect(root.querySelector(".visually-hidden")?.textContent).toContain("Shortcut: H");
+      expect(root.querySelector("label[for='mode-champion']")?.classList.contains("control")).toBe(true);
+      expect(root.querySelector("label[for='mode-champion']")?.classList.contains("control--choice")).toBe(true);
     });
 
     it("keeps the full label available to assistive technology beside its compact display label", () => {
@@ -82,13 +85,17 @@ describe("inputs", () => {
       const strongest = root.querySelector<HTMLButtonElement>('[data-stat="technique"]');
 
       expect(selected?.disabled).toBe(false);
-      expect(selected?.getAttribute("aria-current")).toBe("true");
+      expect(selected?.classList.contains("control")).toBe(true);
+      expect(selected?.classList.contains("control--choice")).toBe(true);
+      expect(selected?.getAttribute("aria-pressed")).toBe("true");
+      expect(selected?.hasAttribute("aria-current")).toBe(false);
       expect(selected?.textContent).not.toContain("Strongest");
       expect(strongest?.disabled).toBe(true);
-      expect(strongest?.getAttribute("aria-current")).toBeNull();
-      expect(strongest?.querySelector("em")?.textContent).toBe("Strongest");
+      expect(strongest?.getAttribute("aria-pressed")).toBe("false");
+      expect(strongest?.querySelector("em")?.textContent).toBe("Top stat");
       expect(strongest?.querySelector("em")?.getAttribute("aria-hidden")).toBeNull();
-      expect(strongest?.getAttribute("aria-pressed")).toBeNull();
+      expect(selected?.querySelector(".visually-hidden")?.textContent).toContain("Shortcut: 1");
+      expect(strongest?.querySelector(".visually-hidden")?.textContent).toContain("Shortcut: 3");
     });
 
   });

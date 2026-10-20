@@ -12,28 +12,28 @@ function generateHint(state: GameState): string {
   if (!state.match) {
     // Setup phase hints
     if (state.setupStep === "mode" || !state.setupStep) {
-      return `${shortcutHint("C / H")} Game mode`;
+      return `${shortcutHint("C / H")} Choose a game mode`;
     }
     if (state.setupStep === "division") {
-      return `${shortcutHint("A / W")} Division`;
+      return `${shortcutHint("A / W")} Choose a division`;
     }
     if (state.setupStep === "weight") {
-      return "Choose a weight class";
+      return `${shortcutHint("Enter")} Continue`;
     }
-    return `${shortcutHint("1–3")} Length ${shortcutHint("Enter")} Start`;
+    return `${shortcutHint("1–3")} Choose a length ${shortcutHint("Enter")} Start`;
   }
 
   // Match phase hints
   if (state.pendingStat) {
-    return "Resolving opponent…";
+    return "Your opponent is sizing you up…";
   }
   if (state.match.phase === "selecting") {
-    return `${shortcutHint("1–5")} Choose a stat ${shortcutHint("Esc / Q")} Quit match`;
+    return `${shortcutHint("1–5")} Pick a stat ${shortcutHint("Esc / Q")} Quit match`;
   }
   if (state.match.phase === "awaitingNext") {
     return `${shortcutHint("Enter")} Next round ${shortcutHint("Esc / Q")} Quit match`;
   }
-  return `${shortcutHint("Enter")} Play again ${shortcutHint("Esc / Q")} Change settings`;
+  return `${shortcutHint("Enter")} Replay match ${shortcutHint("Esc / Q")} Change settings`;
 }
 
 /**
@@ -52,5 +52,5 @@ export function renderApp(root: HTMLElement, state: GameState): void {
 
   const settings = generateSettings(state);
   const dialog = !state.match ? seedDialog(state) : "";
-  root.innerHTML = `<header><div>bash - JU-DO-KON</div><p>${headerContext(state, helpers)}</p></header><main id="game" tabindex="-1" class="${!state.match ? "intro-main" : ""}">${content}</main><footer><div class="footer-toolbar"><span class="footer-hint">${hint}</span>${settings}</div></footer>${dialog}`;
+  root.innerHTML = `<header><div class="brand">JU-DO-KON! <span aria-hidden="true">·</span> CIRCUIT 2600</div><p>${headerContext(state, helpers)}</p></header><main id="game" tabindex="-1" class="${!state.match ? "intro-main" : ""}">${content}</main><footer><div class="footer-toolbar"><span class="footer-hint">${hint}</span>${settings}</div></footer>${dialog}`;
 }

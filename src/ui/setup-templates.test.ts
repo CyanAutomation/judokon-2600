@@ -26,6 +26,39 @@ function state(overrides: Partial<GameState> = {}): GameState {
 }
 
 describe("setup templates", () => {
+  it("shows a progress step count for the active setup path", () => {
+    const scenarios = [
+      { setupStep: "mode" as const, division: "absolute" as const, step: 1, total: 3 },
+      { setupStep: "division" as const, division: "absolute" as const, step: 2, total: 3 },
+      { setupStep: "length" as const, division: "absolute" as const, step: 3, total: 3 },
+      { setupStep: "mode" as const, division: "weight" as const, step: 1, total: 4 },
+      { setupStep: "division" as const, division: "weight" as const, step: 2, total: 4 },
+      { setupStep: "weight" as const, division: "weight" as const, step: 3, total: 4 },
+      { setupStep: "length" as const, division: "weight" as const, step: 4, total: 4 },
+    ];
+
+    for (const scenario of scenarios) {
+      const root = document.createElement("div");
+      root.innerHTML = intro(state(scenario));
+      const progress = root.querySelector<HTMLProgressElement>(".setup-progress progress");
+
+      expect(root.querySelector(".setup-progress-text")?.textContent).toBe(`Step ${scenario.step} of ${scenario.total}`);
+      expect(progress?.value).toBe(scenario.step);
+      expect(progress?.max).toBe(scenario.total);
+      expect(progress?.getAttribute("aria-label")).toBe("Match setup progress");
+    }
+  });
+
+  it("uses the product name and a clear, lively setup prompt", () => {
+    const root = document.createElement("div");
+    root.innerHTML = intro(state());
+
+    expect(root.querySelector(".intro .eyebrow")?.textContent).toContain("JU-DO-KON!");
+    expect(root.querySelector(".intro-lede")?.textContent).toContain("Choose your game mode");
+    expect(root.querySelector(".intro-status")?.textContent).toContain("Choose a game mode to start.");
+    expect(root.querySelector(".intro-footnote")?.textContent).toContain("waiting here next time");
+  });
+
   it("[REQ-UI-014] starts with game mode as the only setup choice", () => {
     const current = state();
     const markup = intro(current);
@@ -93,7 +126,7 @@ describe("setup templates", () => {
     root.innerHTML = `${intro(current)}${advanced(current)}`;
     const setupPanel = root.querySelector(".intro-mode-panel");
 
-    expect(setupPanel?.querySelector(".setup-rule")?.textContent).toBe("Higher stat wins the point. Draws score no points.");
+    expect(setupPanel?.querySelector(".setup-rule")?.textContent).toBe("The higher stat takes the point. A draw leaves the score unchanged.");
     expect(setupPanel?.querySelector(".start-context")?.textContent).toBe("First to 5 points");
     expect(setupPanel?.querySelector("#start")?.textContent).toContain("Start match");
     expect(root.querySelector("#seed-button")?.closest(".intro-mode-panel")).toBeNull();
@@ -116,9 +149,9 @@ describe("setup templates", () => {
     const markup = advanced(state({ replaySeed: "dojo-42" }));
 
     expect(markup).toContain('id="seed-button"');
-    expect(markup).toContain("Seed: dojo-42");
+    expect(markup).toContain("Replay seed: dojo-42");
     expect(markup).toContain('id="sound-enabled"');
-    expect(markup).toContain('class="footer-utilities" role="group" aria-label="Match utilities"');
+    expect(markup).toContain('class="footer-utilities" role="group" aria-label="Game settings"');
     expect(markup).not.toContain("<details");
   });
 
@@ -128,6 +161,6 @@ describe("setup templates", () => {
     expect(markup).toContain('role="dialog"');
     expect(markup).toContain('id="replay-seed"');
     expect(markup).toContain('id="save-seed"');
-    expect(markup).toContain("while the Budokon catalogue version stays the same");
+    expect(markup).toContain("replay the same matchups, as long as the Budokon judoka catalogue has not changed");
   });
 });
