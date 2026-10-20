@@ -60,6 +60,18 @@ const historyItemSchema = {
   roundNumber: (v: unknown) => Number.isInteger(v)
 };
 
+const resultSchema = {
+  match: isMatch,
+  outcome: (v: unknown) => outcomes.has(v as Outcome),
+  stat: (v: unknown) => STAT_KEYS.includes(v as StatKey),
+  playerValue: (v: unknown) => typeof v === "number" && Number.isFinite(v),
+  opponentValue: (v: unknown) => typeof v === "number" && Number.isFinite(v)
+};
+
+function isMatchResult(value: unknown): value is MatchResult {
+  return validateSchema(value, resultSchema);
+}
+
 function isHistory(value: unknown): value is SavedHistoryItem[] {
   if (!Array.isArray(value)) return false;
   return value.every(item => validateSchema(item, historyItemSchema));
@@ -73,7 +85,7 @@ export function stringifySavedMatch(value: SavedMatch): string { return JSON.str
 const savedMatchSchema = {
   version: (v: unknown) => v === 1,
   match: isMatchOrNull,
-  result: (v: unknown) => (v === null || (v && typeof v === "object")) as boolean,
+  result: (v: unknown) => v === null || isMatchResult(v),
   history: isHistory,
   activeSeed: (v: unknown) => typeof v === "string",
   activeWeight: (v: unknown) => (v === undefined || typeof v === "string") as boolean,
