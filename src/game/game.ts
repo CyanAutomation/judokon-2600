@@ -1,4 +1,4 @@
-import { STAT_KEYS, type Judoka, type StatKey } from "../api/types";
+import { STAT_KEYS, type Judoka, type StatKey } from "../api/types.js";
 
 export type Outcome = "player" | "opponent" | "draw";
 export type Phase = "selecting" | "awaitingNext" | "matchOver";

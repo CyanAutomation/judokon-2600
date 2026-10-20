@@ -1,10 +1,10 @@
-import type { StatKey } from "../api/types";
-import type { JevScoreAnswer } from "../jev/types";
+import type { StatKey } from "../api/types.js";
+import type { JevScoreAnswer } from "../jev/types.js";
 
 export type TacticalSignal = "overReliance" | "adaptation" | "missedOpportunity" | "momentumResponse";
 export type TacticalAssessment = Partial<Record<TacticalSignal, true>>;
 export type TacticalOutcome = "win" | "loss" | "draw";
-export type TacticalAssessmentIssue = "not_configured" | "invalid_api_key" | "rate_limited" | "unavailable";
+export type TacticalAssessmentIssue = "not_configured" | "invalid_api_key" | "unavailable";
 
 export interface TacticalAssessmentResult {
   assessment: TacticalAssessment | null;
