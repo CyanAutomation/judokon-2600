@@ -49,6 +49,7 @@ describe("setup templates", () => {
       expect(root.querySelectorAll(".setup-progress-segment.is-complete")).toHaveLength(scenario.step - 1);
       expect(progress?.getAttribute("role")).toBe("progressbar");
       expect(progress?.getAttribute("aria-label")).toBe("Match setup progress");
+      expect(progress?.getAttribute("aria-valuemin")).toBe("1");
       expect(progress?.getAttribute("aria-valuenow")).toBe(String(scenario.step));
       expect(progress?.getAttribute("aria-valuemax")).toBe(String(scenario.total));
       expect(progress?.getAttribute("aria-valuetext")).toBe(`Step ${scenario.step} of ${scenario.total}`);

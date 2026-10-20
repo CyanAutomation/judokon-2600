@@ -581,7 +581,7 @@ summary:focus-visible,
 .scout-report { border-style: dashed; color: var(--color-subtle); }
 .scout-report strong { color: var(--color-draw); }
 .decision-guide { margin: var(--space-3) 0 var(--space-2); color: var(--color-subtle); line-height: 1.5; }
-.commitment { display: flex; align-items: center; gap: var(--space-3); margin-block: var(--space-4); padding: var(--space-4); border-style: dashed; border-color: var(--color-accent); }
+.commitment { display: flex; align-items: center; gap: var(--space-3); margin-block: var(--space-4); padding: var(--space-4); border-width: 1px; border-style: dashed; border-color: var(--color-accent); }
 .commitment p { margin-top: var(--space-1); color: var(--color-subtle); }
 .replay-seed,
 .seed-message { flex-basis: 100%; overflow-wrap: anywhere; font-size: .85rem; }
