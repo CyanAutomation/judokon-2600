@@ -1,6 +1,6 @@
-import type { JevDecisionResult, JevQuestion, JevScoreAnswer } from "../jev/types";
-import type { TacticalAssessment, TacticalJudgment, TacticalSignal } from "./tacticalTypes";
-import { finiteNumber, isRecord } from "./tacticalGuards";
+import type { JevDecisionResult, JevQuestion, JevScoreAnswer } from "../jev/types.js";
+import type { TacticalAssessment, TacticalJudgment, TacticalSignal } from "./tacticalTypes.js";
+import { finiteNumber, isRecord } from "./tacticalGuards.js";
 
 export const TACTICAL_CONFIDENCE_THRESHOLD = 0.7;
 export const TACTICAL_SIGNAL_SCORE_THRESHOLD = 1.5;
