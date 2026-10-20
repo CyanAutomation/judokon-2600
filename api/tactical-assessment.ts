@@ -125,10 +125,11 @@ export function createTacticalAssessmentHandler(options: TacticalAssessmentHandl
     if (request.method !== "POST") return json({ assessment: null }, 405);
 
     const apiKey = (options.getApiKey ?? (() => process.env.OPENROUTER_API_KEY))()?.trim();
+    if (!apiKey || apiKey.length === 0) return json({ assessment: null, issue: "not_configured" });
+
     const featureResult = await readTacticalFeatures(request);
     if (!featureResult.ok) return json({ assessment: null }, featureResult.status);
 
-    if (!apiKey || apiKey.length === 0) return json({ assessment: null, issue: "not_configured" });
     return runAssessment(featureResult.features, apiKey, options);
   };
 }
