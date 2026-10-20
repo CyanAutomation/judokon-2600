@@ -4,12 +4,13 @@
  * HTML generation for game mode selection, division choice, weight class selection, and match length configuration.
  */
 
-import { primaryButton, quietButton, radioChoice, terminalMenu, utilityButton } from "./controls";
+import { primaryButton, quietButton, radioChoice, surface, terminalMenu, utilityButton } from "./controls";
 import { type GameState } from "../state";
 import { createHelpers, lengths, weights, type Helpers } from "./helpers";
 import { getSoundEnabled } from "./helpers/soundStorage";
 import { escapeHtml as esc } from "./utils/escapeHtml";
 import { status } from "./helpers/status";
+import { pointRule, tieRule } from "./constants";
 
 export function footerUtilities(state: GameState): string {
   const soundEnabled = getSoundEnabled();
@@ -53,7 +54,7 @@ function divisionChoices(state: GameState, cursor: number): string {
   });
   const weight = radioChoice({
     id: "division-weight", name: "division", label: "Weight class", compactLabel: "Weight",
-    description: "Comparable division", shortcut: "W", checked: state.division === "weight", active: cursor === 1,
+    description: "Match with judoka near your weight", shortcut: "W", checked: state.division === "weight", active: cursor === 1,
     data: { "data-division": "weight" }
   });
   return absolute + weight;
@@ -82,7 +83,11 @@ function setupProgress(state: GameState, step: NonNullable<GameState["setupStep"
     ? ["mode", "division", "weight", "length"]
     : ["mode", "division", "length"];
   const index = Math.max(steps.indexOf(step), 0) + 1;
-  return `<div class="setup-progress"><span class="setup-progress-text">Step ${index} of ${steps.length}</span><progress value="${index}" max="${steps.length}" aria-label="Match setup progress">${index} of ${steps.length}</progress></div>`;
+  const segments = steps.map((_, segmentIndex) => {
+    const stateClass = segmentIndex === index - 1 ? " is-current" : segmentIndex < index - 1 ? " is-complete" : "";
+    return `<span class="setup-progress-segment${stateClass}" aria-hidden="true"></span>`;
+  }).join("");
+  return `<div class="setup-progress"><span class="setup-progress-text">Step ${index} of ${steps.length}</span><div class="setup-progress-track" role="progressbar" aria-label="Match setup progress" aria-valuemin="1" aria-valuemax="${steps.length}" aria-valuenow="${index}" aria-valuetext="Step ${index} of ${steps.length}">${segments}</div></div>`;
 }
 
 function setupPanel(state: GameState, helpers: Helpers): string {
@@ -105,7 +110,7 @@ function setupPanel(state: GameState, helpers: Helpers): string {
     return `${setupSummary("Game mode", helpers.modeLabel(), "mode")}${setupSummary("Division", "Weight class", "division")}${setupProgress(state, step)}<fieldset class="setup-group setup-stage"><legend>Choose weight class</legend><label class="weight-picker" for="weight-class"><span>Match by weight class</span><select id="weight-class">${options}</select></label>${primaryButton("confirm-weight", "Continue", "Enter")}</fieldset>`;
   }
 
-  return `${setupSummary("Game mode", helpers.modeLabel(), "mode")}${setupSummary("Division", helpers.divisionLabel(), "division")}${setupProgress(state, step)}<fieldset class="setup-group setup-stage"><legend>Choose match length</legend>${terminalMenu(lengthChoices(state, cursor))}</fieldset><p class="setup-rule"><strong>The higher stat takes the point.</strong> A draw leaves the score unchanged.</p><p class="start-context">First to ${state.target} points</p>${primaryButton("start", "Start match", "Enter", state.busy)}`;
+  return `${setupSummary("Game mode", helpers.modeLabel(), "mode")}${setupSummary("Division", helpers.divisionLabel(), "division")}${setupProgress(state, step)}<fieldset class="setup-group setup-stage"><legend>Choose match length</legend>${terminalMenu(lengthChoices(state, cursor))}</fieldset><p class="setup-rule"><strong>${pointRule}</strong> ${tieRule}</p><p class="start-context">First to ${state.target} points</p>${primaryButton("start", "Start match", "Enter", state.busy)}`;
 }
 
 /**
@@ -114,5 +119,5 @@ function setupPanel(state: GameState, helpers: Helpers): string {
 export function intro(state: GameState): string {
   const helpers = createHelpers(state);
   const statusMessage = status(state);
-  return `<section class="intro" aria-labelledby="intro-title"><div class="intro-copy"><p class="eyebrow">JU-DO-KON! · Circuit 2600</p><h1 id="intro-title">Step into the<br/>judoka circuit.</h1><p class="intro-lede">Choose your game mode, then pick one of your judoka’s stats each round. Higher numbers take the point.</p><p class="intro-status" role="status">${esc(statusMessage)}<span class="block-cursor" aria-hidden="true">█</span></p></div><section class="intro-mode-panel panel" aria-label="Match setup">${helpers.eyebrow("Match setup")}${setupPanel(state, helpers)}</section><p class="intro-footnote">Your last setup will be waiting here next time.</p></section>`;
+  return `<section class="intro" aria-labelledby="intro-title"><div class="intro-copy"><p class="eyebrow">Choose your challenge</p><h1 id="intro-title">Step into the<br/>judoka circuit.</h1><p class="intro-lede">Pick a game mode, then choose one of your judoka’s stats each round. ${pointRule}</p><p class="intro-status" role="status">${esc(statusMessage)}<span class="block-cursor" aria-hidden="true">█</span></p></div>${surface("section", "intro-mode-panel", "Match setup", `${helpers.eyebrow("Match setup")}${setupPanel(state, helpers)}`)}<p class="intro-footnote">Your last setup will be waiting here next time.</p></section>`;
 }

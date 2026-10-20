@@ -17,6 +17,17 @@ describe("containers", () => {
       expect(markup).toContain('&quot;');
       expect(markup).toContain("&lt;script&gt;");
     });
+
+    it("supports a live region without dropping shared surface classes", () => {
+      const root = document.createElement("div");
+      root.innerHTML = surface("section", "commitment", "Opponent thinking", "Please wait.", { ariaLive: "polite" });
+      const panel = root.querySelector("section.commitment");
+
+      expect(panel?.classList.contains("surface")).toBe(true);
+      expect(panel?.classList.contains("panel")).toBe(true);
+      expect(panel?.getAttribute("aria-label")).toBe("Opponent thinking");
+      expect(panel?.getAttribute("aria-live")).toBe("polite");
+    });
   });
 
   describe("terminalMenu", () => {
@@ -28,7 +39,7 @@ describe("containers", () => {
       const help = root.querySelector(".menu-help");
 
       expect(group?.textContent).toContain("Option");
-      expect(help?.textContent?.replace(/\s+/g, " ").trim()).toContain("Use the arrow keys to move. Press Enter to choose.");
+      expect(help?.textContent?.replace(/\s+/g, " ").trim()).toContain("Use the arrow keys or tap a choice. Press Enter to choose.");
       expect(help?.querySelector('[aria-hidden="true"]')?.textContent).toBe("↑ ↓");
     });
   });

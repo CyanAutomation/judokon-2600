@@ -55,9 +55,33 @@ describe("game templates", () => {
     const current = state({ match });
     const markup = game(match, current, createHelpers(current));
 
-    expect(markup).toContain("The higher number takes the point.");
-    expect(markup.indexOf("The higher number takes the point.")).toBeLessThan(markup.indexOf('aria-label="Stat selection"'));
+    expect(markup).toContain("The higher number wins the point.");
+    expect(markup.indexOf("The higher number wins the point.")).toBeLessThan(markup.indexOf('aria-label="Stat selection"'));
     expect(markup).toContain("Your opponent’s top stats:");
+    expect(markup).toContain('class="surface panel scoreboard"');
+  });
+
+  it("uses the shared panel and live-region component for the opponent reveal", () => {
+    const match: Match = {
+      player: judoka,
+      opponent: { ...judoka, id: "opponent", slug: "opponent" },
+      target: 3,
+      matchNumber: 1,
+      scores: { player: 0, opponent: 0 },
+      mode: "classic",
+      phase: "selecting",
+      winner: null,
+    };
+    const current = state({ match, pendingStat: "power" });
+    const markup = game(match, current, createHelpers(current));
+    const root = document.createElement("div");
+    root.innerHTML = markup;
+    const commitment = root.querySelector(".commitment");
+
+    expect(commitment?.classList.contains("surface")).toBe(true);
+    expect(commitment?.classList.contains("panel")).toBe(true);
+    expect(commitment?.getAttribute("aria-live")).toBe("polite");
+    expect(commitment?.getAttribute("aria-label")).toBe("Opponent thinking");
   });
 
   it("adds code-authored tactical insight beside the unchanged deterministic summary", () => {
@@ -96,7 +120,7 @@ describe("game templates", () => {
     expect(markup).toContain('class="surface panel match-summary"');
     expect(markup).toContain("Technique · 2/2 wins");
     expect(markup).toContain('class="surface panel tactical-insight"');
-    expect(markup).toContain("Technique won 2/2 selections while Power, your most-used stat, won 1/4.");
+    expect(markup).toContain("Technique won 2 of 2 picks. Your go-to, Power, won 1 of 4.");
     expect(markup).not.toContain("JEV says");
   });
 
@@ -126,9 +150,10 @@ describe("game templates", () => {
 
     const markup = game(match, current, createHelpers(current));
 
-    expect(markup).toContain("You changed stats after 2 of 2 choices following a loss.");
-    expect(markup).toContain("You switched stats after 1 of 1 choices made following runs of wins or losses.");
-    expect(markup).not.toContain("missed opportunity");
+    expect(markup).toContain("After a loss, you switched stats on 2 of 2 picks.");
+    expect(markup).toContain("After a win or loss streak, you switched stats on 1 of 1 pick.");
+    expect(markup).toContain("Dojo notes");
+    expect(markup).not.toContain("Optional tactical insight");
   });
 
   it("omits an insight when the claimed signal has no supporting transitions", () => {
@@ -153,6 +178,26 @@ describe("game templates", () => {
     });
 
     expect(game(match, current, createHelpers(current))).not.toContain('class="surface panel tactical-insight"');
+  });
+
+  it("uses the same playful outcome copy for result panels and status updates", () => {
+    const match: Match = {
+      player: judoka,
+      opponent: { ...judoka, id: "opponent", slug: "opponent" },
+      target: 3,
+      matchNumber: 2,
+      scores: { player: 3, opponent: 2 },
+      mode: "classic",
+      phase: "matchOver",
+      winner: "draw",
+    };
+    const result: MatchResult = { match, outcome: "draw", stat: "power", playerValue: 8, opponentValue: 8 };
+    const current = state({ match, result });
+    const markup = game(match, current, createHelpers(current));
+    const root = document.createElement("div");
+    root.innerHTML = markup;
+
+    expect(root.querySelector(".result-panel .eyebrow")?.textContent).toBe("It’s a draw!");
   });
 
   it("keeps the result, both judoka, and round history together before the decision controls", () => {

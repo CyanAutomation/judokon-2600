@@ -22,7 +22,7 @@ describe("status", () => {
 
   it("[REQ-UI-009] prompts for setup when no match is active", () => {
     expect(status(createMockGameState({ match: null })))
-      .toBe(">> Choose a game mode to start.");
+      .toBe(">> Pick a mode to begin.");
   });
 
   it("[REQ-UI-009] keeps the opponent reveal playful and clear", () => {
@@ -54,5 +54,14 @@ describe("status", () => {
     });
 
     expect(status(state)).toBe(">> You take the point: Power 8–5.");
+  });
+
+  it("uses the same no-point wording for a tied round wherever results are announced", () => {
+    const state = createMockGameState({
+      match: createMockMatch({ phase: "awaitingNext" }),
+      result: { ...createMockMatchResult(), outcome: "draw", playerValue: 8, opponentValue: 8 }
+    });
+
+    expect(status(state)).toBe(">> No point this round: Power 8–8.");
   });
 });
