@@ -16,7 +16,7 @@ import { extractTacticalFeatures } from "../game/tacticalAssessment";
  * Generate fighter card HTML
  */
 function fighter(j: Judoka, side: "player" | "opponent", state: GameState, helpers: Helpers): string {
-  const label = side === "player" ? "Your judoka" : "Opponent";
+  const label = side === "player" ? "Your judoka" : "Your opponent";
   const value = state.result ? side === "player" ? state.result.playerValue : state.result.opponentValue : null;
   const chosen = state.result ? `<p class="selected-stat outcome-${state.result.outcome}"><span>${labels[state.result.stat]}</span><strong>${value}</strong></p>` : "";
   const rarity = j.rarity || "Unclassified";
@@ -42,7 +42,7 @@ function scoreboard(m: Match, result: MatchResult | null): string {
  */
 function callout(m: Match, r: MatchResult, helpers: Helpers): string {
   const move = { power: "a driving throw", speed: "a lightning entry", technique: "clean technique", kumikata: "a dominant grip", newaza: "a tight turnover" }[r.stat];
-  return r.outcome === "draw" ? `${helpers.nameOf(m.player)} and ${helpers.nameOf(m.opponent)} are evenly matched in the exchange.` : `${helpers.nameOf(r.outcome === "player" ? m.player : m.opponent)} takes the point with ${move}.`;
+  return r.outcome === "draw" ? `${helpers.nameOf(m.player)} and ${helpers.nameOf(m.opponent)} tie this exchange.` : `${helpers.nameOf(r.outcome === "player" ? m.player : m.opponent)} takes the point with ${move}.`;
 }
 
 /**
@@ -84,7 +84,7 @@ function summary(m: Match, state: GameState): string {
   const details = matchSummary(m, state.history);
   const progress = m.mode === "champion" ? `Run record: ${details.championRecord!.wins}–${details.championRecord!.losses}–${details.championRecord!.draws}` : `Points won: ${details.playerWins}`;
   const bestChoice = details.bestStat ? `${labels[details.bestStat]} · ${details.bestStatWins}/${details.bestStatSelections} ${details.bestStatWins === 1 ? "win" : "wins"}` : "No winning choice";
-  const content = `<p class="eyebrow">Match summary</p><dl><div><dt>Final score</dt><dd>${details.score}</dd></div><div><dt>Most used stat</dt><dd>${details.decisiveStat ? labels[details.decisiveStat] : "—"}</dd></div><div><dt>Best choice</dt><dd>${bestChoice}</dd></div><div><dt>${m.mode === "champion" ? "Champion progress" : "Match progress"}</dt><dd>${progress}</dd></div></dl>`;
+  const content = `<p class="eyebrow">Match summary</p><dl><div><dt>Final score</dt><dd>${details.score}</dd></div><div><dt>Most-used stat</dt><dd>${details.decisiveStat ? labels[details.decisiveStat] : "—"}</dd></div><div><dt>Best choice</dt><dd>${bestChoice}</dd></div><div><dt>${m.mode === "champion" ? "Champion progress" : "Match progress"}</dt><dd>${progress}</dd></div></dl>`;
   return sectionPanel("match-summary", "Match summary", content);
 }
 
@@ -151,8 +151,10 @@ function tacticalInsight(m: Match, state: GameState): string {
  * Generate result panel for round outcome
  */
 function resultPanel(m: Match, r: MatchResult, helpers: Helpers): string {
-  const title = m.phase === "matchOver" ? r.outcome === "draw" ? "MATCH DRAWN" : r.outcome === "player" ? "MATCH WON" : "MATCH LOST" : r.outcome === "draw" ? "NO POINT AWARDED" : r.outcome === "player" ? "POINT WON" : "POINT LOST";
-  const content = `${helpers.eyebrow(title)}<p>You used <strong>${r.playerValue}</strong> in ${labels[r.stat]}. ${esc(helpers.nameOf(m.opponent))} had <strong>${r.opponentValue}</strong>.</p><p class="callout">${esc(callout(m, r, helpers))}</p>`;
+  const title = m.phase === "matchOver"
+    ? r.outcome === "draw" ? "Match drawn" : r.outcome === "player" ? "Match won" : "Match lost"
+    : r.outcome === "draw" ? "No point" : r.outcome === "player" ? "Point to you" : "Point to your opponent";
+  const content = `${helpers.eyebrow(title)}<p>You scored <strong>${r.playerValue}</strong> with ${labels[r.stat]}; ${esc(helpers.nameOf(m.opponent))} scored <strong>${r.opponentValue}</strong>.</p><p class="callout">${esc(callout(m, r, helpers))}</p>`;
   return sectionPanel(`result-panel outcome-${r.outcome}`, "Round result", content);
 }
 
@@ -173,12 +175,12 @@ export function game(m: Match, state: GameState, helpers: Helpers): string {
     };
     return buttonChoice(config);
   }).join("");
-  const committing = state.pendingStat ? `<section class="commitment" aria-live="polite"><span class="block-cursor" aria-hidden="true">█</span><div><strong>Opponent commits…</strong><p>Resolving ${labels[state.pendingStat as StatKey]}.</p></div></section>` : "";
+  const committing = state.pendingStat ? `<section class="commitment" aria-live="polite"><span class="block-cursor" aria-hidden="true">█</span><div><strong>Your opponent is sizing you up…</strong><p>Let’s see how your ${labels[state.pendingStat as StatKey]} stacks up.</p></div></section>` : "";
   const resolved = state.result ? resultPanel(m, state.result, helpers) : "";
   const postMatch = state.result ? `${summary(m, state)}${tacticalInsight(m, state)}` : "";
   const action = m.phase === "awaitingNext" ? primaryButton("next", "Next round", "Enter", state.busy) : m.phase === "matchOver" ? `${primaryButton("replay", "Replay match", "Enter")}${quietButton("copy-seed", "Copy replay seed", "Copy")}<p class="replay-seed">Replay seed: <code>${esc(state.activeSeed)}</code></p>${state.seedMessage ? `<p class="seed-message" role="status">${esc(state.seedMessage)}</p>` : ""}` : "";
-  const scout = state.result ? "" : surface("aside", "scout-report", "Scout report", `${helpers.eyebrow("Scout report")}<p>Opponent's likely strength: <strong>${strongestStats(m.opponent).map((stat) => labels[stat]).join(" / ")}</strong>. Choose your exchange carefully.</p>`);
-  const decisionGuide = state.result ? "" : `<p class="decision-guide">Choose one of your judoka's stats. The higher value wins the exchange.</p>`;
-  const opponent = state.result ? fighter(m.opponent, "opponent", state, helpers) : surface("section", "fighter-card opponent concealed", "Opponent concealed", `${helpers.eyebrow("Opponent")}<h2>Hidden judoka</h2><p>Revealed after your selection.</p>`);
+  const scout = state.result ? "" : surface("aside", "scout-report", "Scout report", `${helpers.eyebrow("Scout report")}<p>Your opponent’s top stats: <strong>${strongestStats(m.opponent).map((stat) => labels[stat]).join(" / ")}</strong>. Pick a stat to chase the point.</p>`);
+  const decisionGuide = state.result ? "" : `<p class="decision-guide">Pick one of your judoka’s stats. The higher number takes the point.</p>`;
+  const opponent = state.result ? fighter(m.opponent, "opponent", state, helpers) : surface("section", "fighter-card opponent concealed", "Your opponent concealed", `${helpers.eyebrow("Your opponent")}<h2>Hidden judoka</h2><p>Their stats appear after your pick.</p>`);
   return `${scoreboard(m, state.result)}<section class="battle-layout">${resolved}${fighter(m.player, "player", state, helpers)}${opponent}${historyStrip(state, helpers)}${championProgress(m, state, helpers)}${scout}${decisionGuide}<section aria-label="Stat selection" class="stats">${stats}</section>${committing}${postMatch}<div class="actions game-actions">${action}${quietButton("quit", m.phase === "matchOver" ? "Change settings" : "Quit match", "Esc / Q")}</div></section>`;
 }

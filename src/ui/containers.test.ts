@@ -28,7 +28,7 @@ describe("containers", () => {
       const help = root.querySelector(".menu-help");
 
       expect(group?.textContent).toContain("Option");
-      expect(help?.textContent?.replace(/\s+/g, " ").trim()).toBe("↑ ↓ move · Enter select");
+      expect(help?.textContent?.replace(/\s+/g, " ").trim()).toContain("Use the arrow keys to move. Press Enter to choose.");
       expect(help?.querySelector('[aria-hidden="true"]')?.textContent).toBe("↑ ↓");
     });
   });

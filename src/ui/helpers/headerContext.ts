@@ -14,6 +14,6 @@ import { type Helpers } from "./createHelpers";
 export function headerContext(state: GameState, helpers: Helpers): string {
   if (!state.match) return `${helpers.modeLabel()} · ${helpers.divisionLabel()} division · First to ${state.target}`;
   const full = `Round ${state.match.matchNumber} · ${helpers.modeLabel()} · ${helpers.divisionLabel()} · First to ${state.match.target} · You: ${state.match.scores.player} · Opponent: ${state.match.scores.opponent}`;
-  const compact = `R${state.match.matchNumber} · ${helpers.divisionLabel()} · ${state.match.scores.player}–${state.match.scores.opponent} · FT${state.match.target}`;
+  const compact = `Round ${state.match.matchNumber} · ${helpers.modeLabel()} · ${helpers.divisionLabel()} · ${state.match.scores.player}–${state.match.scores.opponent} · First to ${state.match.target}`;
   return `<span class="header-context-wide">${full}</span><span class="header-context-compact">${compact}</span>`;
 }

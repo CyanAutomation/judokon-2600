@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { primaryButton, quietButton } from "./buttons";
 
 describe("buttons", () => {
-  it("shows a decorative keyboard hint and reflects the button's disabled state", () => {
+  it("shows the keyboard hint visually and exposes it to assistive technology", () => {
     const root = document.createElement("div");
     root.innerHTML = primaryButton("next-enabled", "Next", "Enter", false)
       + primaryButton("next-disabled", "Next", "Enter", true);
@@ -13,6 +13,7 @@ describe("buttons", () => {
     expect(disabled?.disabled).toBe(true);
     expect(enabled?.querySelector("kbd")?.textContent).toBe("Enter");
     expect(enabled?.querySelector("kbd")?.closest(".shortcut-hint")?.getAttribute("aria-hidden")).toBe("true");
+    expect(enabled?.querySelector(".visually-hidden")?.textContent).toContain("Shortcut: Enter");
   });
 
   it("shows a quiet button's label and keyboard shortcut", () => {
@@ -22,5 +23,6 @@ describe("buttons", () => {
 
     expect(button?.textContent).toContain("Copy");
     expect(button?.querySelector("kbd")?.textContent).toBe("Ctrl+C");
+    expect(button?.querySelector(".visually-hidden")?.textContent).toContain("Shortcut: Ctrl+C");
   });
 });

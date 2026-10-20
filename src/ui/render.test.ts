@@ -35,7 +35,7 @@ describe("renderApp", () => {
     expect(root.querySelector(".header-context-wide")?.textContent)
       .toBe("Round 4 · Champion · Absolute · First to 5 · You: 2 · Opponent: 1");
     expect(root.querySelector(".header-context-compact")?.textContent)
-      .toBe("R4 · Absolute · 2–1 · FT5");
+      .toBe("Round 4 · Champion · Absolute · 2–1 · First to 5");
   });
 
   it("[REQ-UI-009] shows draw progress on the setup screen", () => {
@@ -44,7 +44,7 @@ describe("renderApp", () => {
 
     renderApp(root, state);
 
-    expect(root.querySelector('[role="status"]')?.textContent).toContain("Drawing judoka");
+    expect(root.querySelector('[role="status"]')?.textContent).toContain("Putting your matchup together");
   });
 
   it("[REQ-UI-009] shows a setup draw error as text", () => {

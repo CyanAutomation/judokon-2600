@@ -12,5 +12,5 @@ export function surface(tag: "aside" | "section", classes: string, label: string
 
 /** Shared one-column menu shell for every staged setup decision. */
 export function terminalMenu(content: string): string {
-  return `<div class="terminal-menu" role="radiogroup">${content}</div><p class="menu-help"><span aria-hidden="true">↑ ↓</span> move <span aria-hidden="true">·</span> Enter select</p>`;
+  return `<div class="terminal-menu" role="radiogroup">${content}</div><p class="menu-help"><span aria-hidden="true">↑ ↓</span><span>Use the arrow keys to move. Press Enter to choose.</span></p>`;
 }

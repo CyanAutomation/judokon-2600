@@ -1,7 +1,7 @@
 {
   "name": "JU-DO-KON! Classic Battle",
   "short_name": "JU-DO-KON",
-  "description": "A terminal-style, text-first judo battle game.",
+  "description": "A playful, terminal-inspired judoka battle game.",
   "icons": [
     {
       "src": "/favicon.svg",
