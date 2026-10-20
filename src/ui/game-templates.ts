@@ -40,8 +40,16 @@ function scoreboard(m: Match, result: MatchResult | null): string {
 /**
  * Generate callout text for match result
  */
+const resultMoves: Record<StatKey, string> = {
+  power: "a driving throw",
+  speed: "a lightning entry",
+  technique: "clean technique",
+  kumikata: "a dominant grip",
+  newaza: "a tight turnover"
+};
+
 function callout(m: Match, r: MatchResult, helpers: Helpers): string {
-  const move = { power: "a driving throw", speed: "a lightning entry", technique: "clean technique", kumikata: "a dominant grip", newaza: "a tight turnover" }[r.stat];
+  const move = resultMoves[r.stat] ?? "a well-timed move";
   return r.outcome === "draw" ? `${helpers.nameOf(m.player)} and ${helpers.nameOf(m.opponent)} tie this exchange.` : `${helpers.nameOf(r.outcome === "player" ? m.player : m.opponent)} takes the point with ${move}.`;
 }
 
