@@ -4,7 +4,7 @@ export type {
   TacticalAssessmentResult,
   TacticalFeatures,
   TacticalSignal,
-} from "./tacticalTypes";
+} from "./tacticalTypes.js";
 
 export {
   TACTICAL_CONFIDENCE_THRESHOLD,
@@ -13,6 +13,6 @@ export {
   applyTacticalConfidencePolicy,
   assessmentFromJev,
   parseTacticalJudgment
-} from "./tacticalJudgment";
+} from "./tacticalJudgment.js";
 
-export { extractTacticalFeatures, sanitizeTacticalFeatures } from "./tacticalFeatures";
+export { extractTacticalFeatures, sanitizeTacticalFeatures } from "./tacticalFeatures.js";

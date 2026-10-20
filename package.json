@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "tsc -p tsconfig.app.json && vite build",
+    "build": "tsc -p tsconfig.api.json && tsc -p tsconfig.app.json && vite build",
     "preview": "vite preview",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
@@ -32,7 +32,6 @@
     "vitest": "^5.0.3"
   },
   "dependencies": {
-    "@vercel/firewall": "^1.2.6",
     "@vercel/speed-insights": "^2.0.0"
   }
 }
