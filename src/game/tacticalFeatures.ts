@@ -1,7 +1,7 @@
-import { STAT_KEYS, type StatKey } from "../api/types";
-import { tallyStatRecords, type MatchHistoryItem, type Outcome } from "./game";
-import type { TacticalFeatures, TacticalOutcome, TacticalStatRecord } from "./tacticalTypes";
-import { finiteNumber, isRecord } from "./tacticalGuards";
+import { STAT_KEYS, type StatKey } from "../api/types.js";
+import { tallyStatRecords, type MatchHistoryItem, type Outcome } from "./game.js";
+import type { TacticalFeatures, TacticalOutcome, TacticalStatRecord } from "./tacticalTypes.js";
+import { finiteNumber, isRecord } from "./tacticalGuards.js";
 
 function mapOutcome(outcome: Outcome): TacticalOutcome {
   if (outcome === "player") return "win";

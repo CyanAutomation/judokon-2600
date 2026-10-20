@@ -269,9 +269,7 @@ export function resolve(state: GameState, _match: Match, stat: StatKey, deps: Or
                 ? "Optional tactical insight is not configured. Your match summary is still available."
                 : result.issue === "invalid_api_key"
                   ? "The tactical insight service rejected its API key. Your match summary is still available."
-                  : result.issue === "rate_limited"
-                    ? "Tactical insight is temporarily busy. Your match summary is still available."
-                    : "The tactical insight service could not be reached. Your match summary is still available.";
+                  : "The tactical insight service could not be reached. Your match summary is still available.";
             }
             deps.render();
           })

@@ -17,7 +17,7 @@ npm ci
 npm run dev
 ```
 
-Open [http://localhost:5173](http://localhost:5173) to play locally. The Vite development server supports gameplay and deterministic match summaries, but it does not run the Vercel tactical-assessment function. To manually test tactical insight, use a configured Vercel Preview; the [deployment guide](docs/tactical-insight-deployment.md) covers the required Firewall rule and environment variables. See the [developer guide](docs/index.md) for the repository map and additional setup details.
+Open [http://localhost:5173](http://localhost:5173) to play locally. The Vite development server supports gameplay and deterministic match summaries, but it does not run the Vercel tactical-assessment function. To manually test tactical insight, use a configured Vercel Preview; the [deployment guide](docs/tactical-insight-deployment.md) covers the required environment variables and verification. See the [developer guide](docs/index.md) for the repository map and additional setup details.
 
 ## Gameplay
 
@@ -47,7 +47,7 @@ In **Champion** mode, you keep the same judoka while opponents rotate. The **Cur
 
 ### Tactical insight
 
-An optional post-match tactical insight interprets patterns in the player’s choices. The browser sends compact counts and outcome patterns to the same-origin `/api/tactical-assessment`; it does not send judoka IDs, stat values, replay seeds, local storage, or hidden opponent values. Application code assembles the insight text and omits low-confidence results; JEV supplies typed scores only. The deterministic summary remains authoritative, and the match remains playable when the optional insight is unavailable. On Vercel, configure `OPENROUTER_API_KEY` and `JEV_ASSESSMENT_RATE_LIMIT_ID`; `JEV_MODEL` optionally overrides the default `~typesafe/jev-latest`. See the [tactical insight deployment guide](docs/tactical-insight-deployment.md) for Firewall setup and verification.
+An optional post-match tactical insight interprets patterns in the player’s choices. The browser sends compact counts and outcome patterns to the same-origin `/api/tactical-assessment`; it does not send judoka IDs, stat values, replay seeds, local storage, or hidden opponent values. Application code assembles the insight text and omits low-confidence results; JEV supplies typed scores only. The deterministic summary remains authoritative, and the match remains playable when the optional insight is unavailable. On Vercel, configure `OPENROUTER_API_KEY`; `JEV_MODEL` optionally overrides the default `~typesafe/jev-latest`. See the [tactical insight deployment guide](docs/tactical-insight-deployment.md) for setup and verification.
 
 ### Opponents, replay, and connection issues
 

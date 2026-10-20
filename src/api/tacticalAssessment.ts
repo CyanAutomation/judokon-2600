@@ -10,7 +10,7 @@ function isAssessment(value: unknown): value is TacticalAssessment {
 }
 
 function isIssue(value: unknown): value is TacticalAssessmentIssue {
-  return value === "not_configured" || value === "invalid_api_key" || value === "rate_limited" || value === "unavailable";
+  return value === "not_configured" || value === "invalid_api_key" || value === "unavailable";
 }
 
 /** Calls the same-origin optional assessment route. Every failure preserves the deterministic match summary. */
