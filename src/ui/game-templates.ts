@@ -9,6 +9,7 @@ import { buttonChoice, type ButtonChoiceConfig, primaryButton, quietButton, surf
 import { matchSummary, type Match, type MatchResult, strongestStats } from "../game/game";
 import { type GameState } from "../state";
 import { labels, type Helpers } from "./helpers";
+import { matchOutcomeCopy, pointRule, roundOutcomeCopy } from "./constants";
 import { escapeHtml as esc } from "./utils/escapeHtml";
 import { extractTacticalFeatures } from "../game/tacticalAssessment";
 
@@ -34,7 +35,7 @@ function pips(score: number, side: "player" | "opponent", match: Match, result: 
  * Generate scoreboard HTML
  */
 function scoreboard(m: Match, result: MatchResult | null): string {
-  return `<section class="scoreboard" aria-label="Match score: You ${m.scores.player}, opponent ${m.scores.opponent}. First to ${m.target} points."><div class="score-side player"><span>You</span><strong>${m.scores.player}</strong><div class="score-pips">${pips(m.scores.player, "player", m, result)}</div></div><p>First to ${m.target}</p><div class="score-side opponent"><span>Opponent</span><strong>${m.scores.opponent}</strong><div class="score-pips">${pips(m.scores.opponent, "opponent", m, result)}</div></div></section>`;
+  return surface("section", "scoreboard", `Match score: You ${m.scores.player}, opponent ${m.scores.opponent}. First to ${m.target} points.`, `<div class="score-side player"><span>You</span><strong>${m.scores.player}</strong><div class="score-pips">${pips(m.scores.player, "player", m, result)}</div></div><p>First to ${m.target}</p><div class="score-side opponent"><span>Opponent</span><strong>${m.scores.opponent}</strong><div class="score-pips">${pips(m.scores.opponent, "opponent", m, result)}</div></div>`);
 }
 
 /**
@@ -104,7 +105,7 @@ function overRelianceMessage(
   if (!enabled || !decisiveStat || features.repeatedFailedSelections === 0) return null;
   const record = features.selections[decisiveStat];
   if (record.selected < 3 || record.losses <= record.wins) return null;
-  return `${labels[decisiveStat]} was your most-used stat; it lost ${record.losses} of ${record.selected} selections.`;
+  return `${labels[decisiveStat]} was your go-to, with ${record.wins} win${record.wins === 1 ? "" : "s"} from ${record.selected} picks.`;
 }
 
 function adaptationMessage(
@@ -113,7 +114,7 @@ function adaptationMessage(
 ): string | null {
   const { decisions, switches } = features.choicesAfterLosses;
   if (!enabled || switches === 0) return null;
-  return `You changed stats after ${switches} of ${decisions} choices following a loss.`;
+  return `After a loss, you switched stats on ${switches} of ${decisions} ${decisions === 1 ? "pick" : "picks"}.`;
 }
 
 function missedOpportunityMessage(
@@ -124,7 +125,7 @@ function missedOpportunityMessage(
   if (!enabled || !candidate) return null;
   const favored = features.selections[candidate.favoredStat];
   const alternative = features.selections[candidate.alternativeStat];
-  return `${labels[candidate.alternativeStat]} won ${alternative.wins}/${alternative.selected} selections while ${labels[candidate.favoredStat]}, your most-used stat, won ${favored.wins}/${favored.selected}.`;
+  return `${labels[candidate.alternativeStat]} won ${alternative.wins} of ${alternative.selected} picks. Your go-to, ${labels[candidate.favoredStat]}, won ${favored.wins} of ${favored.selected}.`;
 }
 
 function momentumResponseMessage(
@@ -134,7 +135,7 @@ function momentumResponseMessage(
   const decisions = features.choicesAfterWinRuns.decisions + features.choicesAfterLossRuns.decisions;
   const switches = features.choicesAfterWinRuns.switches + features.choicesAfterLossRuns.switches;
   if (!enabled || decisions === 0 || switches === 0) return null;
-  return `You switched stats after ${switches} of ${decisions} choices made following runs of wins or losses.`;
+  return `After a win or loss streak, you switched stats on ${switches} of ${decisions} ${decisions === 1 ? "pick" : "picks"}.`;
 }
 
 /** Render code-authored feedback only for high-confidence JEV signals with matching facts. */
@@ -151,17 +152,15 @@ function tacticalInsight(m: Match, state: GameState): string {
     momentumResponseMessage(assessment.momentumResponse, features)
   ].filter((message): message is string => message !== null);
   if (!messages.length) return "";
-  const content = `<p class="eyebrow">Optional tactical insight</p>${messages.map((message) => `<p>${esc(message)}</p>`).join("")}`;
-  return sectionPanel("tactical-insight", "Tactical insight", content);
+  const content = `<p class="eyebrow">Dojo notes</p>${messages.map((message) => `<p>${esc(message)}</p>`).join("")}`;
+  return sectionPanel("tactical-insight", "Dojo notes", content);
 }
 
 /**
  * Generate result panel for round outcome
  */
 function resultPanel(m: Match, r: MatchResult, helpers: Helpers): string {
-  const title = m.phase === "matchOver"
-    ? r.outcome === "draw" ? "Match drawn" : r.outcome === "player" ? "Match won" : "Match lost"
-    : r.outcome === "draw" ? "No point" : r.outcome === "player" ? "Point to you" : "Point to your opponent";
+  const title = m.phase === "matchOver" ? matchOutcomeCopy[r.outcome] : roundOutcomeCopy[r.outcome];
   const content = `${helpers.eyebrow(title)}<p>You scored <strong>${r.playerValue}</strong> with ${labels[r.stat]}; ${esc(helpers.nameOf(m.opponent))} scored <strong>${r.opponentValue}</strong>.</p><p class="callout">${esc(callout(m, r, helpers))}</p>`;
   return sectionPanel(`result-panel outcome-${r.outcome}`, "Round result", content);
 }
@@ -183,12 +182,12 @@ export function game(m: Match, state: GameState, helpers: Helpers): string {
     };
     return buttonChoice(config);
   }).join("");
-  const committing = state.pendingStat ? `<section class="commitment" aria-live="polite"><span class="block-cursor" aria-hidden="true">█</span><div><strong>Your opponent is sizing you up…</strong><p>Let’s see how your ${labels[state.pendingStat as StatKey]} stacks up.</p></div></section>` : "";
+  const committing = state.pendingStat ? surface("section", "commitment", "Opponent thinking", `<span class="block-cursor" aria-hidden="true">█</span><div><strong>Your opponent is sizing you up…</strong><p>Let’s see how your ${labels[state.pendingStat as StatKey]} stacks up.</p></div>`, { ariaLive: "polite" }) : "";
   const resolved = state.result ? resultPanel(m, state.result, helpers) : "";
   const postMatch = state.result ? `${summary(m, state)}${tacticalInsight(m, state)}` : "";
   const action = m.phase === "awaitingNext" ? primaryButton("next", "Next round", "Enter", state.busy) : m.phase === "matchOver" ? `${primaryButton("replay", "Replay match", "Enter")}${quietButton("copy-seed", "Copy replay seed", "Copy")}<p class="replay-seed">Replay seed: <code>${esc(state.activeSeed)}</code></p>${state.seedMessage ? `<p class="seed-message" role="status">${esc(state.seedMessage)}</p>` : ""}` : "";
   const scout = state.result ? "" : surface("aside", "scout-report", "Scout report", `${helpers.eyebrow("Scout report")}<p>Your opponent’s top stats: <strong>${strongestStats(m.opponent).map((stat) => labels[stat]).join(" / ")}</strong>. Pick a stat to chase the point.</p>`);
-  const decisionGuide = state.result ? "" : `<p class="decision-guide">Pick one of your judoka’s stats. The higher number takes the point.</p>`;
+  const decisionGuide = state.result ? "" : `<p class="decision-guide">Pick one of your judoka’s stats. ${pointRule}</p>`;
   const opponent = state.result ? fighter(m.opponent, "opponent", state, helpers) : surface("section", "fighter-card opponent concealed", "Your opponent concealed", `${helpers.eyebrow("Your opponent")}<h2>Hidden judoka</h2><p>Their stats appear after your pick.</p>`);
   return `${scoreboard(m, state.result)}<section class="battle-layout">${resolved}${fighter(m.player, "player", state, helpers)}${opponent}${historyStrip(state, helpers)}${championProgress(m, state, helpers)}${scout}${decisionGuide}<section aria-label="Stat selection" class="stats">${stats}</section>${committing}${postMatch}<div class="actions game-actions">${action}${quietButton("quit", m.phase === "matchOver" ? "Change settings" : "Quit match", "Esc / Q")}</div></section>`;
 }

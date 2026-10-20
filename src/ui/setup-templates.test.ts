@@ -40,23 +40,39 @@ describe("setup templates", () => {
     for (const scenario of scenarios) {
       const root = document.createElement("div");
       root.innerHTML = intro(state(scenario));
-      const progress = root.querySelector<HTMLProgressElement>(".setup-progress progress");
+      const progress = root.querySelector<HTMLElement>(".setup-progress-track");
+      const segments = root.querySelectorAll<HTMLElement>(".setup-progress-segment");
 
       expect(root.querySelector(".setup-progress-text")?.textContent).toBe(`Step ${scenario.step} of ${scenario.total}`);
-      expect(progress?.value).toBe(scenario.step);
-      expect(progress?.max).toBe(scenario.total);
+      expect(segments).toHaveLength(scenario.total);
+      expect(root.querySelectorAll(".setup-progress-segment.is-current")).toHaveLength(1);
+      expect(root.querySelectorAll(".setup-progress-segment.is-complete")).toHaveLength(scenario.step - 1);
+      expect(progress?.getAttribute("role")).toBe("progressbar");
       expect(progress?.getAttribute("aria-label")).toBe("Match setup progress");
+      expect(progress?.getAttribute("aria-valuenow")).toBe(String(scenario.step));
+      expect(progress?.getAttribute("aria-valuemax")).toBe(String(scenario.total));
+      expect(progress?.getAttribute("aria-valuetext")).toBe(`Step ${scenario.step} of ${scenario.total}`);
     }
   });
 
-  it("uses the product name and a clear, lively setup prompt", () => {
+  it("uses a task-focused eyebrow and a clear, lively setup prompt", () => {
     const root = document.createElement("div");
     root.innerHTML = intro(state());
 
-    expect(root.querySelector(".intro .eyebrow")?.textContent).toContain("JU-DO-KON!");
-    expect(root.querySelector(".intro-lede")?.textContent).toContain("Choose your game mode");
-    expect(root.querySelector(".intro-status")?.textContent).toContain("Choose a game mode to start.");
+    expect(root.querySelector(".intro .eyebrow")?.textContent).toBe("Choose your challenge");
+    expect(root.querySelector(".intro-lede")?.textContent).toContain("Pick a game mode");
+    expect(root.querySelector(".intro-lede")?.textContent).toContain("The higher number wins the point.");
+    expect(root.querySelector(".intro-status")?.textContent).toContain("Pick a mode to begin.");
     expect(root.querySelector(".intro-footnote")?.textContent).toContain("waiting here next time");
+  });
+
+  it("uses the shared surface panel component for match setup", () => {
+    const root = document.createElement("div");
+    root.innerHTML = intro(state());
+    const panel = root.querySelector(".intro-mode-panel");
+
+    expect(panel?.classList.contains("surface")).toBe(true);
+    expect(panel?.classList.contains("panel")).toBe(true);
   });
 
   it("[REQ-UI-014] starts with game mode as the only setup choice", () => {
@@ -126,7 +142,7 @@ describe("setup templates", () => {
     root.innerHTML = `${intro(current)}${advanced(current)}`;
     const setupPanel = root.querySelector(".intro-mode-panel");
 
-    expect(setupPanel?.querySelector(".setup-rule")?.textContent).toBe("The higher stat takes the point. A draw leaves the score unchanged.");
+    expect(setupPanel?.querySelector(".setup-rule")?.textContent).toBe("The higher number wins the point. Tied numbers leave the score unchanged.");
     expect(setupPanel?.querySelector(".start-context")?.textContent).toBe("First to 5 points");
     expect(setupPanel?.querySelector("#start")?.textContent).toContain("Start match");
     expect(root.querySelector("#seed-button")?.closest(".intro-mode-panel")).toBeNull();
