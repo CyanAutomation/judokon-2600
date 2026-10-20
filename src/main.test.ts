@@ -40,7 +40,7 @@ describe("Main Module - Render Functions", () => {
 
       const resultPanel = root.querySelector(".result-panel");
       expect(resultPanel).not.toBeNull();
-      expect(resultPanel?.textContent).toContain("You used 17 in Power. Rival Fighter had 3.");
+      expect(resultPanel?.textContent).toContain("You scored 17 with Power; Rival Fighter scored 3.");
     });
 
     it("[REQ-UI-011] identifies both judoka by name once the round has resolved", () => {
@@ -53,7 +53,7 @@ describe("Main Module - Render Functions", () => {
       renderApp(root, createMockGameState({ match, result }));
 
       expect(root.querySelector('[aria-label="Your judoka: Aiko Tanaka"]')?.textContent).toContain("Aiko Tanaka");
-      expect(root.querySelector('[aria-label="Opponent: Mina Sato"]')?.textContent).toContain("Mina Sato");
+      expect(root.querySelector('[aria-label="Your opponent: Mina Sato"]')?.textContent).toContain("Mina Sato");
     });
 
     it.each([
@@ -226,7 +226,7 @@ describe("Main Module - Draw Error Handling", () => {
     expect(state.errorMessage).toBe(expectedMessage);
     expect(state.busy).toBe(false);
     expect(state.match).toBeNull();
-    expect(visibleMessages[0]).toContain("Drawing judoka");
+    expect(visibleMessages[0]).toContain("Putting your matchup together");
     expect(root.querySelector<HTMLElement>('[role="status"]')?.textContent).toContain(expectedMessage);
   });
 });
@@ -435,26 +435,31 @@ describe("Main Module - Render Integration", () => {
       const visibleStatus = status?.cloneNode(true) as HTMLElement | undefined;
       visibleStatus?.querySelectorAll('[aria-hidden="true"]').forEach((element) => element.remove());
 
-      expect(visibleStatus?.textContent?.trim()).toBe(">> Choose your stat:");
+      expect(visibleStatus?.textContent?.trim()).toBe(">> Pick one of your stats.");
       expect(statShortcut).toBeDefined();
-      expect(statShortcut?.parentElement?.textContent).toContain("1–5 Choose a stat");
+      expect(statShortcut?.parentElement?.textContent).toContain("Pick a stat");
     });
 
     it.each([
       {
         phase: "intro",
         state: createMockGameState({ match: null }),
-        actions: ["Length", "Start"]
+        actions: ["Choose a length", "Start"]
       },
       {
         phase: "selecting",
         state: createMockGameState({ match: createMockMatch({ phase: "selecting" }) }),
-        actions: ["Choose a stat", "Quit match"]
+        actions: ["Pick a stat", "Quit match"]
       },
       {
         phase: "post-round",
         state: createMockGameState({ match: createMockMatch({ phase: "awaitingNext" }) }),
         actions: ["Next round", "Quit match"]
+      },
+      {
+        phase: "match-over",
+        state: createMockGameState({ match: createMockMatch({ phase: "matchOver", winner: "player" }) }),
+        actions: ["Replay match", "Change settings"]
       }
     ])("renders the $phase keyboard actions in the footer", ({ state, actions }) => {
       const root = document.createElement("div");
@@ -513,7 +518,7 @@ describe("Main Module - Render Integration", () => {
       renderApp(root, createMockGameState({ match, result }));
 
       const panel = root.querySelector('[aria-label="Round result"]');
-      expect(panel?.textContent).toContain("You used 8 in Power. Test Fighter had 5.");
+      expect(panel?.textContent).toContain("You scored 8 with Power; Test Fighter scored 5.");
     });
 
     it("[REQ-UI-004] shows the opponent's strongest stat in the scout report before resolution", () => {
