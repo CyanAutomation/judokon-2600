@@ -1,4 +1,5 @@
 import "./style.css";
+import { lengths } from "./ui/constants";
 import { injectSpeedInsights } from "@vercel/speed-insights";
 import { BudokonClient } from "./api/budokon";
 import type { StatKey } from "./api/types";
@@ -87,7 +88,7 @@ function createChangeHandlers() {
 function createIntroKeyboardHandlers() {
   return {
     choose: (n: number) => {
-      state.setupCursor = [3, 5, 10].indexOf(n);
+      state.setupCursor = lengths.indexOf(n as (typeof lengths)[number]);
       chooseLength(state, n, deps);
     },
     start: () => { if (!state.busy) void start(state, deps); },
