@@ -21,8 +21,16 @@ describe("status", () => {
   });
 
   it("[REQ-UI-009] prompts for setup when no match is active", () => {
-    expect(status(createMockGameState({ match: null })))
+    expect(status(createMockGameState({ match: null, setupStep: "mode" })))
       .toBe(">> Pick a mode to begin.");
+  });
+
+  it.each([
+    ["division", ">> Choose a division."],
+    ["weight", ">> Choose a weight class."],
+    ["length", ">> Choose a match length."],
+  ] as const)("prompts for the active %s setup step", (setupStep, expected) => {
+    expect(status(createMockGameState({ match: null, setupStep }))).toBe(expected);
   });
 
   it("[REQ-UI-009] keeps the opponent reveal playful and clear", () => {

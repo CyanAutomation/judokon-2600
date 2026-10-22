@@ -5,10 +5,10 @@
  */
 
 // Re-export button components
-export { shortcutHint, primaryButton, quietButton } from "./buttons";
+export { actionGroup, type ActionGroupOptions, shortcutHint, primaryButton, quietButton } from "./buttons";
 
 // Re-export input/choice components
 export { type ButtonChoiceConfig, buttonChoice, utilityButton, radioChoice } from "./inputs";
 
 // Re-export container components
-export { surface, terminalMenu } from "./containers";
+export { definitionList, type DefinitionListItem, surface, terminalMenu } from "./containers";

@@ -14,7 +14,15 @@ import { labels, matchOutcomeCopy, roundOutcomeCopy } from "../constants";
 export function status(state: GameState): string {
   if (state.busy) return ">> Putting your matchup together…";
   if (state.errorMessage) return `>> ${state.errorMessage}`;
-  if (!state.match) return ">> Pick a mode to begin.";
+  if (!state.match) {
+    const prompts = {
+      mode: "Pick a mode to begin.",
+      division: "Choose a division.",
+      weight: "Choose a weight class.",
+      length: "Choose a match length.",
+    } as const;
+    return `>> ${prompts[state.setupStep ?? "mode"]}`;
+  }
   if (state.pendingStat) return ">> Your opponent is sizing you up…";
   if (state.match.phase === "selecting") return ">> Pick one of your stats.";
   if (state.match.phase === "matchOver") return `>> ${matchOutcomeCopy[state.match.winner ?? "draw"]}`;
