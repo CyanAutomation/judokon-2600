@@ -65,6 +65,7 @@ describe("setup templates", () => {
     expect(root.querySelector(".intro-lede")?.textContent).toContain("The higher number wins the point.");
     expect(root.querySelector(".intro-status")?.textContent).toContain("Pick a mode to begin.");
     expect(root.querySelector(".intro-footnote")?.textContent).toContain("waiting here next time");
+    expect(root.querySelector("h1")?.textContent?.replace(/\s+/g, " ").trim()).toBe("Step into the judoka circuit.");
   });
 
   it("uses the shared surface panel component for match setup", () => {
@@ -134,6 +135,7 @@ describe("setup templates", () => {
     expect(panel?.querySelector("legend")?.textContent).toBe("Choose weight class");
     expect(panel?.querySelector<HTMLSelectElement>("#weight-class")?.value).toBe("-73");
     expect(panel?.querySelector("#confirm-weight")?.textContent).toContain("Continue");
+    expect(panel?.querySelector("#confirm-weight")?.closest(".action-group--mobile-sticky")).not.toBeNull();
     expect(panel?.querySelector("#start")).toBeNull();
   });
 
@@ -146,6 +148,7 @@ describe("setup templates", () => {
     expect(setupPanel?.querySelector(".setup-rule")?.textContent).toBe("The higher number wins the point. Tied numbers leave the score unchanged.");
     expect(setupPanel?.querySelector(".start-context")?.textContent).toBe("First to 5 points");
     expect(setupPanel?.querySelector("#start")?.textContent).toContain("Start match");
+    expect(setupPanel?.querySelector("#start")?.closest(".action-group--mobile-sticky")).not.toBeNull();
     expect(root.querySelector("#seed-button")?.closest(".intro-mode-panel")).toBeNull();
   });
 
