@@ -61,6 +61,32 @@ describe("game templates", () => {
     expect(markup).toContain('class="surface panel scoreboard"');
   });
 
+  it("places the active stat choice before supporting fighter details", () => {
+    const match: Match = {
+      player: judoka,
+      opponent: { ...judoka, id: "opponent", slug: "opponent" },
+      target: 3,
+      matchNumber: 1,
+      scores: { player: 0, opponent: 0 },
+      mode: "classic",
+      phase: "selecting",
+      winner: null,
+    };
+    const current = state({ match });
+    const root = document.createElement("div");
+    root.innerHTML = game(match, current, createHelpers(current));
+    const layout = root.querySelector(".battle-layout");
+    const stats = root.querySelector('[aria-label="Stat selection"]');
+    const guide = root.querySelector(".decision-guide");
+    const scout = root.querySelector(".scout-report");
+    const player = root.querySelector(".fighter-card.player");
+
+    expect(layout?.getAttribute("data-phase")).toBe("selecting");
+    expect(guide!.compareDocumentPosition(stats!)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(stats!.compareDocumentPosition(scout!)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(scout!.compareDocumentPosition(player!)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+  });
+
   it("uses the shared panel and live-region component for the opponent reveal", () => {
     const match: Match = {
       player: judoka,
@@ -118,7 +144,7 @@ describe("game templates", () => {
     const markup = game(match, current, createHelpers(current));
 
     expect(markup).toContain('class="surface panel match-summary"');
-    expect(markup).toContain("Technique · 2/2 wins");
+    expect(markup).toContain("Technique · 2 wins from 2 picks");
     expect(markup).toContain('class="surface panel tactical-insight"');
     expect(markup).toContain("Technique won 2 of 2 picks. Your go-to, Power, won 1 of 4.");
     expect(markup).not.toContain("JEV says");
@@ -222,16 +248,44 @@ describe("game templates", () => {
     const player = markup.indexOf('class="surface panel fighter-card player"');
     const opponent = markup.indexOf('class="surface panel fighter-card opponent"');
     const history = markup.indexOf('aria-label="Round history"');
-    const controls = markup.indexOf('aria-label="Stat selection"');
-    const selectedStat = document.createElement("div");
-    selectedStat.innerHTML = markup;
+    const resultView = document.createElement("div");
+    resultView.innerHTML = markup;
 
     expect(result).toBeGreaterThan(-1);
     expect(player).toBeGreaterThan(result);
     expect(opponent).toBeGreaterThan(player);
     expect(history).toBeGreaterThan(opponent);
-    expect(controls).toBeGreaterThan(history);
-    expect(selectedStat.querySelector<HTMLButtonElement>('[data-stat="power"]')?.getAttribute("aria-pressed")).toBe("true");
+    expect(markup).not.toContain('aria-label="Stat selection"');
+    expect(markup.indexOf('id="next"')).toBeLessThan(player);
+    expect(resultView.querySelector(".fighter-card.player .selected-stat")?.textContent).toContain("Power");
+  });
+
+  it("brings completed-match takeaways and replay actions before reference details", () => {
+    const match: Match = {
+      player: judoka,
+      opponent: { ...judoka, id: "opponent", slug: "opponent" },
+      target: 3,
+      matchNumber: 1,
+      scores: { player: 3, opponent: 1 },
+      mode: "classic",
+      phase: "matchOver",
+      winner: "player",
+    };
+    const current = state({
+      match,
+      result: { match, outcome: "player", stat: "technique", playerValue: 9, opponentValue: 7 },
+      history: [{ stat: "technique", outcome: "player", roundNumber: 1 }],
+    });
+    const markup = game(match, current, createHelpers(current));
+    const root = document.createElement("div");
+    root.innerHTML = markup;
+
+    expect(root.querySelector(".battle-layout")?.getAttribute("data-phase")).toBe("matchOver");
+    expect(root.querySelector('[aria-label="Stat selection"]')).toBeNull();
+    expect(markup.indexOf('class="surface panel match-summary"')).toBeLessThan(markup.indexOf('id="replay"'));
+    expect(markup.indexOf('id="replay"')).toBeLessThan(markup.indexOf('class="surface panel fighter-card player"'));
+    expect(root.querySelector(".match-summary")?.textContent).toContain("Best this match");
+    expect(root.querySelector(".match-summary")?.textContent).toContain("Technique · 1 win from 1 pick");
   });
 
   it("uses a generic move description if a result contains an unknown stat", () => {
