@@ -376,6 +376,7 @@ summary:focus-visible,
   font-size: .82rem;
 }
 
+.menu-help__touch { display: none; }
 .menu-help > span:first-child { color: var(--color-accent); font-family: var(--font-mono); font-weight: 700; }
 
 .weight-picker {
