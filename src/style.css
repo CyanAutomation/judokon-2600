@@ -376,6 +376,7 @@ summary:focus-visible,
   font-size: .82rem;
 }
 
+.menu-help__touch { display: none; }
 .menu-help > span:first-child { color: var(--color-accent); font-family: var(--font-mono); font-weight: 700; }
 
 .weight-picker {
@@ -529,19 +530,16 @@ summary:focus-visible,
 .result-panel p:not(.eyebrow) { margin-top: var(--space-2); }
 .result-panel .callout { color: var(--color-text); font-weight: 700; }
 
-.match-summary dl,
-.champion-progress dl {
+.definition-list {
   display: grid;
   gap: var(--space-3);
   margin-top: var(--space-3);
 }
 
-.match-summary dl { grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr)); }
-.champion-progress dl { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-.match-summary dt,
-.champion-progress dt { color: var(--color-muted); font-size: .82rem; }
-.match-summary dd,
-.champion-progress dd { margin: var(--space-1) 0 0; font-weight: 700; }
+.definition-list dt { color: var(--color-muted); font-size: .82rem; }
+.definition-list dd { margin: var(--space-1) 0 0; font-weight: 700; }
+.match-summary-list { grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr)); }
+.champion-progress-list { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .tactical-insight { border-color: var(--color-accent); }
 .tactical-insight p + p { margin-top: var(--space-2); }
 .champion-progress { border-color: var(--color-accent); background: var(--color-surface-raised); }
@@ -588,8 +586,10 @@ summary:focus-visible,
 .replay-seed { color: var(--color-muted); }
 .seed-message { color: var(--color-accent); }
 
-.actions { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-block: var(--space-4); }
+.action-group { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-block: var(--space-4); }
 .game-actions { grid-column: 1; }
+.setup-actions { margin-block: var(--space-3); }
+.post-match-summary { display: grid; grid-column: 1 / -1; gap: 0; min-width: 0; }
 
 .footer-toolbar {
   display: flex;
@@ -688,6 +688,7 @@ footer { border-top: var(--border); color: var(--color-muted); font-size: .88rem
   .battle-layout > .result-panel,
   .battle-layout > .match-summary,
   .battle-layout > .tactical-insight,
+  .battle-layout > .post-match-summary,
   .battle-layout > .match-history,
   .battle-layout > .champion-progress,
   .battle-layout > .scout-report,
@@ -696,6 +697,7 @@ footer { border-top: var(--border); color: var(--color-muted); font-size: .88rem
   .battle-layout > .commitment,
   .battle-layout > .game-actions { grid-column: 1 / -1; }
   .battle-layout > .opponent { margin-top: 0; }
+  .battle-layout > * { order: initial; }
   .intro { grid-template-columns: 1fr; gap: var(--space-5); }
   .intro-copy { text-align: center; }
   .intro-lede { margin-inline: auto; }
@@ -734,10 +736,10 @@ footer { border-top: var(--border); color: var(--color-muted); font-size: .88rem
   .score-side span { font-size: .7rem; }
   .score-side strong { font-size: 1.1rem; }
   .stats { grid-template-columns: 1fr; }
-  .actions > button { width: 100%; }
+  .action-group > button { width: 100%; }
   .weight-picker { align-items: stretch; flex-direction: column; }
-  .match-summary dl,
-  .champion-progress dl { grid-template-columns: 1fr; }
+  .match-summary-list,
+  .champion-progress-list { grid-template-columns: 1fr; }
   .fighter-card { min-height: 9.4rem; }
   .fighter-card .eyebrow { padding-right: 5rem; }
   .match-history { overflow: hidden; }
@@ -745,6 +747,75 @@ footer { border-top: var(--border); color: var(--color-muted); font-size: .88rem
   .setup-progress { grid-template-columns: 1fr minmax(4rem, .7fr); }
   .footer-hint { padding: .4rem .5rem; }
   .dialog-actions > button { width: 100%; }
+  .intro-main--sticky-action { min-height: auto; padding-bottom: calc(7rem + env(safe-area-inset-bottom)); }
+  .action-group--mobile-sticky {
+    position: fixed;
+    z-index: 15;
+    inset-inline: 0;
+    bottom: 0;
+    width: min(100%, var(--content-width));
+    margin: 0 auto;
+    padding: var(--space-3);
+    padding-bottom: calc(var(--space-3) + env(safe-area-inset-bottom));
+    border-top: var(--border);
+    background: var(--color-canvas);
+    box-shadow: 0 -0.75rem 1.25rem rgb(3 7 3 / .7);
+  }
+  .intro[data-setup-step="division"] .intro-lede,
+  .intro[data-setup-step="weight"] .intro-lede,
+  .intro[data-setup-step="length"] .intro-lede,
+  .intro[data-setup-step="division"] .intro-footnote,
+  .intro[data-setup-step="weight"] .intro-footnote,
+  .intro[data-setup-step="length"] .intro-footnote { display: none; }
+  .intro[data-setup-step="division"] .intro-copy h1,
+  .intro[data-setup-step="weight"] .intro-copy h1,
+  .intro[data-setup-step="length"] .intro-copy h1 {
+    font-size: 1.45rem;
+    line-height: 1.1;
+    letter-spacing: -.03em;
+    text-shadow: none;
+  }
+  .intro[data-setup-step="division"] .intro-copy h1 br,
+  .intro[data-setup-step="weight"] .intro-copy h1 br,
+  .intro[data-setup-step="length"] .intro-copy h1 br { display: none; }
+}
+
+@media (min-width: 701px) {
+  .battle-layout[data-phase="selecting"] > .fighter-card.player,
+  .battle-layout[data-phase="awaitingNext"] > .result-panel,
+  .battle-layout[data-phase="matchOver"] > .result-panel { order: 1; }
+
+  .battle-layout[data-phase="selecting"] > .fighter-card.opponent,
+  .battle-layout[data-phase="awaitingNext"] > .fighter-card.player,
+  .battle-layout[data-phase="matchOver"] > .fighter-card.player { order: 2; }
+
+  .battle-layout[data-phase="selecting"] > .stats,
+  .battle-layout[data-phase="awaitingNext"] > .fighter-card.opponent,
+  .battle-layout[data-phase="matchOver"] > .fighter-card.opponent { order: 3; }
+
+  .battle-layout[data-phase="selecting"] > .commitment,
+  .battle-layout[data-phase="awaitingNext"] > .match-history,
+  .battle-layout[data-phase="matchOver"] > .match-history { order: 4; }
+
+  .battle-layout[data-phase="selecting"] > .decision-guide,
+  .battle-layout[data-phase="awaitingNext"] > .champion-progress,
+  .battle-layout[data-phase="matchOver"] > .champion-progress { order: 5; }
+
+  .battle-layout[data-phase="selecting"] > .scout-report,
+  .battle-layout[data-phase="awaitingNext"] > .game-actions,
+  .battle-layout[data-phase="matchOver"] > .post-match-summary { order: 6; }
+
+  .battle-layout[data-phase="selecting"] > .champion-progress,
+  .battle-layout[data-phase="matchOver"] > .game-actions { order: 7; }
+
+  .battle-layout[data-phase="selecting"] > .match-history { order: 8; }
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .shortcut-hint,
+  .menu-help__keys,
+  .menu-help__keyboard { display: none; }
+  .menu-help__touch { display: inline; }
 }
 
 @media (prefers-reduced-motion: reduce) {

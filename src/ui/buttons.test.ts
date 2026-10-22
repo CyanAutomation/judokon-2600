@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { primaryButton, quietButton } from "./buttons";
+import { actionGroup, primaryButton, quietButton } from "./buttons";
 
 describe("buttons", () => {
   it("shows the keyboard hint visually and exposes it to assistive technology", () => {
@@ -24,5 +24,21 @@ describe("buttons", () => {
     expect(button?.textContent).toContain("Copy");
     expect(button?.querySelector("kbd")?.textContent).toBe("Ctrl+C");
     expect(button?.querySelector(".visually-hidden")?.textContent).toContain("Shortcut: Ctrl+C");
+  });
+
+  it("provides a shared accessible action group with an optional mobile-sticky treatment", () => {
+    const root = document.createElement("div");
+    root.innerHTML = actionGroup(primaryButton("start", "Start match", "Enter"), {
+      label: "Setup actions",
+      className: "setup-actions",
+      mobileSticky: true,
+    });
+    const group = root.querySelector<HTMLElement>(".action-group");
+
+    expect(group?.getAttribute("role")).toBe("group");
+    expect(group?.getAttribute("aria-label")).toBe("Setup actions");
+    expect(group?.classList.contains("setup-actions")).toBe(true);
+    expect(group?.classList.contains("action-group--mobile-sticky")).toBe(true);
+    expect(group?.querySelector("#start")).not.toBeNull();
   });
 });

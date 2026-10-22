@@ -4,7 +4,7 @@
  * HTML generation for game mode selection, division choice, weight class selection, and match length configuration.
  */
 
-import { primaryButton, quietButton, radioChoice, surface, terminalMenu, utilityButton } from "./controls";
+import { actionGroup, primaryButton, quietButton, radioChoice, surface, terminalMenu, utilityButton } from "./controls";
 import { type GameState } from "../state";
 import { createHelpers, lengths, weights, type Helpers } from "./helpers";
 import { getSoundEnabled } from "./helpers/soundStorage";
@@ -20,7 +20,7 @@ export function footerUtilities(state: GameState): string {
 
 export function seedDialog(state: GameState): string {
   const dialog = state.seedModalOpen
-    ? `<div class="modal-backdrop"><section class="panel seed-dialog" role="dialog" aria-modal="true" aria-labelledby="seed-dialog-title"><p class="eyebrow">Replay setup</p><h2 id="seed-dialog-title">Set a replay seed</h2><p>Use the same seed to replay the same matchups, as long as the Budokon judoka catalogue has not changed.</p><label for="replay-seed">Replay seed<input id="replay-seed" value="${esc(state.seedDraft ?? state.replaySeed)}" placeholder="Leave blank for a fresh matchup" autocomplete="off" spellcheck="false" /></label><div class="dialog-actions">${quietButton("cancel-seed", "Cancel", "Esc")}${primaryButton("save-seed", "Use seed", "Enter")}</div></section></div>`
+    ? `<div class="modal-backdrop"><section class="panel seed-dialog" role="dialog" aria-modal="true" aria-labelledby="seed-dialog-title"><p class="eyebrow">Replay setup</p><h2 id="seed-dialog-title">Set a replay seed</h2><p>Use the same seed to replay the same matchups, as long as the Budokon judoka catalogue has not changed.</p><label for="replay-seed">Replay seed<input id="replay-seed" value="${esc(state.seedDraft ?? state.replaySeed)}" placeholder="Leave blank for a fresh matchup" autocomplete="off" spellcheck="false" /></label>${actionGroup(`${quietButton("cancel-seed", "Cancel", "Esc")}${primaryButton("save-seed", "Use seed", "Enter")}`, { label: "Replay seed actions", className: "dialog-actions" })}</section></div>`
     : "";
   return dialog;
 }
@@ -78,6 +78,10 @@ function setupSummary(label: string, value: string, target: "mode" | "division")
   return `<div class="setup-summary"><span>${esc(label)}: <strong>${esc(value)}</strong></span><button type="button" class="control control--quiet quiet setup-change" data-setup-step="${target}">Change</button></div>`;
 }
 
+function setupAction(content: string): string {
+  return actionGroup(content, { label: "Setup actions", className: "setup-actions", mobileSticky: true });
+}
+
 function setupProgress(state: GameState, step: NonNullable<GameState["setupStep"]>): string {
   const steps: string[] = state.division === "weight"
     ? ["mode", "division", "weight", "length"]
@@ -107,10 +111,10 @@ function setupPanel(state: GameState, helpers: Helpers): string {
       `<option value="random" ${state.weight === "random" ? "selected" : ""}>Random weight class</option>`,
       ...weights.map((weight) => `<option value="${weight}" ${state.weight === weight ? "selected" : ""}>${weight} kg</option>`)
     ].join("");
-    return `${setupSummary("Game mode", helpers.modeLabel(), "mode")}${setupSummary("Division", "Weight class", "division")}${setupProgress(state, step)}<fieldset class="setup-group setup-stage"><legend>Choose weight class</legend><label class="weight-picker" for="weight-class"><span>Match by weight class</span><select id="weight-class">${options}</select></label>${primaryButton("confirm-weight", "Continue", "Enter")}</fieldset>`;
+    return `${setupSummary("Game mode", helpers.modeLabel(), "mode")}${setupSummary("Division", "Weight class", "division")}${setupProgress(state, step)}<fieldset class="setup-group setup-stage"><legend>Choose weight class</legend><label class="weight-picker" for="weight-class"><span>Match by weight class</span><select id="weight-class">${options}</select></label>${setupAction(primaryButton("confirm-weight", "Continue", "Enter"))}</fieldset>`;
   }
 
-  return `${setupSummary("Game mode", helpers.modeLabel(), "mode")}${setupSummary("Division", helpers.divisionLabel(), "division")}${setupProgress(state, step)}<fieldset class="setup-group setup-stage"><legend>Choose match length</legend>${terminalMenu(lengthChoices(state, cursor))}</fieldset><p class="setup-rule"><strong>${pointRule}</strong> ${tieRule}</p><p class="start-context">First to ${state.target} points</p>${primaryButton("start", "Start match", "Enter", state.busy)}`;
+  return `${setupSummary("Game mode", helpers.modeLabel(), "mode")}${setupSummary("Division", helpers.divisionLabel(), "division")}${setupProgress(state, step)}<fieldset class="setup-group setup-stage"><legend>Choose match length</legend>${terminalMenu(lengthChoices(state, cursor))}</fieldset><p class="setup-rule"><strong>${pointRule}</strong> ${tieRule}</p><p class="start-context">First to ${state.target} points</p>${setupAction(primaryButton("start", "Start match", "Enter", state.busy))}`;
 }
 
 /**
@@ -118,6 +122,7 @@ function setupPanel(state: GameState, helpers: Helpers): string {
  */
 export function intro(state: GameState): string {
   const helpers = createHelpers(state);
+  const step = state.setupStep ?? "mode";
   const statusMessage = status(state);
-  return `<section class="intro" aria-labelledby="intro-title"><div class="intro-copy"><p class="eyebrow">Choose your challenge</p><h1 id="intro-title">Step into the<br/>judoka circuit.</h1><p class="intro-lede">Pick a game mode, then choose one of your judoka’s stats each round. ${pointRule}</p><p class="intro-status" role="status">${esc(statusMessage)}<span class="block-cursor" aria-hidden="true">█</span></p></div>${surface("section", "intro-mode-panel", "Match setup", `${helpers.eyebrow("Match setup")}${setupPanel(state, helpers)}`)}<p class="intro-footnote">Your last setup will be waiting here next time.</p></section>`;
+  return `<section class="intro" data-setup-step="${step}" aria-labelledby="intro-title"><div class="intro-copy"><p class="eyebrow">Choose your challenge</p><h1 id="intro-title">Step into the <br/>judoka circuit.</h1><p class="intro-lede">Pick a game mode, then choose one of your judoka’s stats each round. ${pointRule}</p><p class="intro-status" role="status">${esc(statusMessage)}<span class="block-cursor" aria-hidden="true">█</span></p></div>${surface("section", "intro-mode-panel", "Match setup", `${helpers.eyebrow("Match setup")}${setupPanel(state, helpers)}`)}<p class="intro-footnote">Your last setup will be waiting here next time.</p></section>`;
 }
