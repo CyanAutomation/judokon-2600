@@ -471,18 +471,22 @@ describe("Main Module - Render Integration", () => {
       for (const action of actions) expect(footer?.textContent).toContain(action);
     });
 
-    it("groups footer shortcuts and setup utilities in one toolbar and keeps dialogs outside it", () => {
+    it("exposes labeled setup utilities and a modal replay-seed dialog", () => {
       const root = document.createElement("div");
 
       renderApp(root, createMockGameState({ match: null, seedModalOpen: true }));
 
-      const toolbar = root.querySelector("footer .footer-toolbar");
-      expect(toolbar).not.toBeNull();
-      expect(toolbar?.querySelector(".footer-hint") ?? null).not.toBeNull();
-      expect(toolbar?.querySelector(".footer-utilities #seed-button") ?? null).not.toBeNull();
-      expect(toolbar?.querySelector(".footer-utilities #sound-enabled") ?? null).not.toBeNull();
-      expect(root.querySelector("footer .seed-dialog")).toBeNull();
-      expect(root.querySelector(".modal-backdrop .seed-dialog")).not.toBeNull();
+      const settings = root.querySelector<HTMLElement>('[role="group"][aria-label="Game settings"]');
+      const seedButton = settings?.querySelector<HTMLButtonElement>("#seed-button");
+      const soundButton = settings?.querySelector<HTMLButtonElement>("#sound-enabled");
+      const dialog = root.querySelector<HTMLElement>('[role="dialog"][aria-modal="true"]');
+
+      expect(seedButton?.textContent).toContain("Replay seed");
+      expect(soundButton?.textContent).toContain("Sound:");
+      expect(soundButton?.getAttribute("aria-pressed")).toMatch(/^(true|false)$/);
+      expect(dialog?.getAttribute("aria-labelledby")).toBe("seed-dialog-title");
+      expect(dialog?.querySelector("#seed-dialog-title")?.textContent).toBe("Set a replay seed");
+      expect(root.querySelector("footer")?.contains(dialog ?? null)).toBe(false);
     });
 
     it("[REQ-UI-001] renders setup choices when no match is active", () => {
