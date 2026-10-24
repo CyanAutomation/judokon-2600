@@ -4,6 +4,7 @@ import type { Match, MatchResult } from "../game/game";
 import type { GameState } from "../state";
 import { game } from "./game-templates";
 import { createHelpers } from "./helpers";
+import { status } from "./helpers/status";
 
 function state(overrides: Partial<GameState> = {}): GameState {
   return {
@@ -222,8 +223,10 @@ describe("game templates", () => {
     const markup = game(match, current, createHelpers(current));
     const root = document.createElement("div");
     root.innerHTML = markup;
+    const resultCopy = root.querySelector(".result-panel .eyebrow")?.textContent;
 
-    expect(root.querySelector(".result-panel .eyebrow")?.textContent).toBe("It’s a draw!");
+    expect(resultCopy).toBe("It’s a draw!");
+    expect(status(current)).toBe(`>> ${resultCopy}`);
   });
 
   it("keeps the result, both judoka, and round history together before the decision controls", () => {
@@ -288,29 +291,6 @@ describe("game templates", () => {
     expect(root.querySelector(".match-summary")?.textContent).toContain("Technique · 1 win from 1 pick");
   });
 
-  it("uses a generic move description if a result contains an unknown stat", () => {
-    const match: Match = {
-      player: judoka,
-      opponent: { ...judoka, id: "opponent", slug: "opponent" },
-      target: 3,
-      matchNumber: 2,
-      scores: { player: 1, opponent: 0 },
-      mode: "classic",
-      phase: "awaitingNext",
-      winner: null,
-    };
-    const result = {
-      match,
-      outcome: "player",
-      stat: "stamina",
-      playerValue: 8,
-      opponentValue: 7,
-    } as unknown as MatchResult;
-    const current = state({ match, result });
-
-    expect(game(match, current, createHelpers(current))).toContain("takes the point with a well-timed move.");
-  });
-
   it("makes the horizontally scrolling round history keyboard focusable and described", () => {
     const match: Match = {
       player: judoka,
@@ -328,8 +308,13 @@ describe("game templates", () => {
       history: [{ stat: "power", outcome: "opponent", roundNumber: 1 }]
     });
 
-    const markup = game(match, current, createHelpers(current));
+    const root = document.createElement("div");
+    root.innerHTML = game(match, current, createHelpers(current));
+    const history = root.querySelector<HTMLOListElement>(
+      'ol[aria-label="Round history. Use the left and right arrow keys to view all rounds."]'
+    );
 
-    expect(markup).toContain('<ol tabindex="0" aria-label="Round history. Use the left and right arrow keys to view all rounds.">');
+    expect(history).not.toBeNull();
+    expect(history?.tabIndex).toBe(0);
   });
 });

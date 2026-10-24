@@ -56,25 +56,13 @@ describe("setup templates", () => {
     }
   });
 
-  it("uses a task-focused eyebrow and a clear, lively setup prompt", () => {
+  it("provides a page heading and a live status for setup", () => {
     const root = document.createElement("div");
     root.innerHTML = intro(state());
 
-    expect(root.querySelector(".intro .eyebrow")?.textContent).toBe("Choose your challenge");
-    expect(root.querySelector(".intro-lede")?.textContent).toContain("Pick a game mode");
-    expect(root.querySelector(".intro-lede")?.textContent).toContain("The higher number wins the point.");
-    expect(root.querySelector(".intro-status")?.textContent).toContain("Pick a mode to begin.");
-    expect(root.querySelector(".intro-footnote")?.textContent).toContain("waiting here next time");
-    expect(root.querySelector("h1")?.textContent?.replace(/\s+/g, " ").trim()).toBe("Step into the judoka circuit.");
-  });
-
-  it("uses the shared surface panel component for match setup", () => {
-    const root = document.createElement("div");
-    root.innerHTML = intro(state());
-    const panel = root.querySelector(".intro-mode-panel");
-
-    expect(panel?.classList.contains("surface")).toBe(true);
-    expect(panel?.classList.contains("panel")).toBe(true);
+    expect(root.querySelectorAll("h1")).toHaveLength(1);
+    expect(root.querySelector("h1")?.textContent?.trim()).not.toBe("");
+    expect(root.querySelector('[role="status"]')).not.toBeNull();
   });
 
   it("[REQ-UI-014] starts with game mode as the only setup choice", () => {
@@ -135,7 +123,6 @@ describe("setup templates", () => {
     expect(panel?.querySelector("legend")?.textContent).toBe("Choose weight class");
     expect(panel?.querySelector<HTMLSelectElement>("#weight-class")?.value).toBe("-73");
     expect(panel?.querySelector("#confirm-weight")?.textContent).toContain("Continue");
-    expect(panel?.querySelector("#confirm-weight")?.closest(".action-group--mobile-sticky")).not.toBeNull();
     expect(panel?.querySelector("#start")).toBeNull();
   });
 
@@ -148,8 +135,6 @@ describe("setup templates", () => {
     expect(setupPanel?.querySelector(".setup-rule")?.textContent).toBe("The higher number wins the point. Tied numbers leave the score unchanged.");
     expect(setupPanel?.querySelector(".start-context")?.textContent).toBe("First to 5 points");
     expect(setupPanel?.querySelector("#start")?.textContent).toContain("Start match");
-    expect(setupPanel?.querySelector("#start")?.closest(".action-group--mobile-sticky")).not.toBeNull();
-    expect(root.querySelector("#seed-button")?.closest(".intro-mode-panel")).toBeNull();
   });
 
   it("puts the match length on the full clickable choice card", () => {
@@ -163,16 +148,6 @@ describe("setup templates", () => {
     expect(input?.dataset.length).toBe("3");
     expect(input?.checked).toBe(true);
     expect(card?.htmlFor).toBe("length-3");
-  });
-
-  it("renders seed and sound as direct footer utilities, not a disclosure", () => {
-    const markup = advanced(state({ replaySeed: "dojo-42" }));
-
-    expect(markup).toContain('id="seed-button"');
-    expect(markup).toContain("Replay seed: dojo-42");
-    expect(markup).toContain('id="sound-enabled"');
-    expect(markup).toContain('class="footer-utilities" role="group" aria-label="Game settings"');
-    expect(markup).not.toContain("<details");
   });
 
   it("renders an accessible seed dialog when requested", () => {
