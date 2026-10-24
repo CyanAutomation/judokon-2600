@@ -80,3 +80,13 @@ The next pass removed duplicate helper-level checks and replaced markup-string c
 - `kasekiWorkflow.test.ts`: parses non-comment CODEOWNERS entries and checks the exact path-to-owner mappings rather than matching raw substrings.
 
 The focused validation after these changes passed: 7 test files and 82 tests, including the keyboard dispatcher integration test. After restoring dependencies with `npm ci`, `npm run check` passed: lint, 27 test files and 312 tests, Markdown link and style checks, and the production build. Mutation scores remain unmeasured, so cost scores remain provisional.
+
+## Follow-up cleanup after the October 2026 scorecard
+
+- Removed the setup-panel shared-class check, the render-only sticky-class check, the raw setup utility markup check, and the stylesheet regex test. The remaining setup and render assertions focus on page semantics, available actions, and the accessible settings group.
+- Removed the unknown-stat callout test because it constructed a `MatchResult` that violates the type and saved-session validation contract. The defensive production fallback remains in place.
+- Replaced the setup copy assertions with a page-heading and status-region contract. The result-copy test now compares the result panel with the status helper, so it verifies both surfaces.
+- Reworked the action-group test to assert its labeled group and contained action, and changed the round-history check to inspect the parsed list's accessible label and keyboard focusability.
+- Reworked the rendered settings test to assert the labeled settings group, seed and sound controls, and the modal dialog's accessible name and location.
+
+Validation after this cleanup: `npm run check` passed, including lint, 27 test files and 324 tests, Markdown link/style checks, and the production build. Mutation scores remain unmeasured, so cost/coverage scores remain provisional.

@@ -47,17 +47,6 @@ describe("renderApp", () => {
     expect(root.querySelector('[role="status"]')?.textContent).toContain("Putting your matchup together");
   });
 
-  it("marks setup stages that use a sticky action as mobile-ready", () => {
-    const root = document.createElement("div");
-
-    renderApp(root, createMockGameState({ setupStep: "length" }));
-    expect(root.querySelector("main")?.classList.contains("intro-main--sticky-action")).toBe(true);
-    expect(root.querySelector(".intro")?.getAttribute("data-setup-step")).toBe("length");
-
-    renderApp(root, createMockGameState({ setupStep: "division" }));
-    expect(root.querySelector("main")?.classList.contains("intro-main--sticky-action")).toBe(false);
-  });
-
   it("[REQ-UI-009] shows a setup draw error as text", () => {
     const root = document.createElement("div");
     const message = '<img src="x" onerror="alert(1)">';

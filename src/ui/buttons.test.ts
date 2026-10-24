@@ -26,19 +26,13 @@ describe("buttons", () => {
     expect(button?.querySelector(".visually-hidden")?.textContent).toContain("Shortcut: Ctrl+C");
   });
 
-  it("provides a shared accessible action group with an optional mobile-sticky treatment", () => {
+  it("labels a related action group for assistive technology", () => {
     const root = document.createElement("div");
     root.innerHTML = actionGroup(primaryButton("start", "Start match", "Enter"), {
-      label: "Setup actions",
-      className: "setup-actions",
-      mobileSticky: true,
+      label: "Setup actions"
     });
-    const group = root.querySelector<HTMLElement>(".action-group");
+    const group = root.querySelector<HTMLElement>('[role="group"][aria-label="Setup actions"]');
 
-    expect(group?.getAttribute("role")).toBe("group");
-    expect(group?.getAttribute("aria-label")).toBe("Setup actions");
-    expect(group?.classList.contains("setup-actions")).toBe(true);
-    expect(group?.classList.contains("action-group--mobile-sticky")).toBe(true);
-    expect(group?.querySelector("#start")).not.toBeNull();
+    expect(group?.querySelector<HTMLButtonElement>("#start")?.textContent).toContain("Start match");
   });
 });
