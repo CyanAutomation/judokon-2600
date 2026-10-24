@@ -313,7 +313,7 @@ const handler = createStandardHandler(config);
 // fallow-ignore-file code-duplication
 ```
 
-This is separate from the dead code suppression tokens. See the full list of valid tokens in the [CLI Reference](cli-reference.md#inline-suppression-comments).
+This is separate from the dead code suppression tokens. See the full list of valid tokens in the [CLI Reference](ci-reference.md#inline-suppression-comments).
 
 ---
 
