@@ -4,50 +4,45 @@ Common pitfalls and their correct solutions when working with fallow.
 
 ---
 
-## `fix` Requires `--yes` in Non-TTY Environments
+## Preview Fixes and Preserve User Authorization
 
-The `fix` command prompts for confirmation in interactive terminals. In agent subprocesses, CI pipelines, or piped input (non-TTY), the `--yes` flag is mandatory. Without it, `fix` exits with code 2 and an error.
+In non-TTY environments, pass `--yes` to apply a fix; without it, `fix` exits with code 2. Preview first and inspect the proposed changes. `--yes` skips the CLI prompt; it does not grant user authorization. Apply only when the user asked for the changes, then inspect the resulting diff and run relevant checks when requested.
 
 ```bash
 # WRONG: fix exits with code 2 in non-TTY
 fallow fix --format json --quiet
 
-# CORRECT: always use --dry-run first, then --yes
+# Preview, then apply only when the task authorizes the change
 fallow fix --dry-run --format json --quiet   # preview
 fallow fix --yes --format json --quiet       # apply
 ```
 
-Always preview with `--dry-run` before applying. This is a destructive operation that modifies source files.
+`fix` modifies source files. If the user asked only for analysis, stop after the preview.
 
 ---
 
-## `npx` Requires `-y` Flag in Non-Interactive Environments
+## Prefer the Installed Project Version
 
-The `npx fallow` command (without the `-y` flag) prompts for installation confirmation when fallow is not already installed. In agent subprocesses, CI pipelines, or automated workflows (non-TTY), this prompt blocks execution indefinitely.
+When Fallow is already a project dependency, invoke that locked version with the package manager rather than fetching another version. If Fallow is not installed, `npx fallow` may ask to install it and block in a non-interactive environment. Use `npx -y` only when a one-off package fetch is intended; it may select a newer version than the project's lockfile.
 
 ```bash
-# WRONG: blocks waiting for user confirmation in non-TTY
-npx fallow dead-code --format json --quiet
-# Output: "Need to install the following packages:
-#          fallow@3.10.0
-#          Ok to proceed? (y)" [hangs]
+# Preferred when fallow is in devDependencies
+npm exec -- fallow dead-code --format json --quiet
 
-# CORRECT: auto-accept installation prompt
+# For an intentional one-off install in a non-interactive environment
 npx -y fallow dead-code --format json --quiet
 
-# BEST: pre-install in persistent environments
-npm install -g fallow                    # global (developer machines, long-lived containers)
-npm install --save-dev fallow           # project devDependency (CI, version pinning)
-fallow dead-code --format json --quiet  # no npx needed when installed
+# Add Fallow as a project dependency when it will be used regularly
+npm install --save-dev fallow
 ```
 
-For projects using fallow regularly, add it to `devDependencies` in `package.json` to avoid external fetches and enable version pinning. For one-off CI runs, `npx -y fallow` is sufficient.
+In this repository, Fallow is already locked in `package-lock.json`; use `npm exec -- fallow ...` or `npm run fallow:coverage` for coverage-backed analysis.
 
 ---
 
 ## Don't Create Config Unless Needed
 
-Fallow works with zero configuration for most projects thanks to 114 auto-detecting framework plugins. Creating an unnecessary config file can mask issues or override detection behavior.
+Fallow can auto-detect many common frameworks. Creating an unnecessary config file can mask issues or override detection behavior, so inspect the project and its resolved config before adding one.
 
 ```bash
 # WRONG: creating config for a standard Next.js project
@@ -80,7 +75,7 @@ fallow dead-code | grep "unused"
 fallow dead-code --format json --quiet
 ```
 
-The `--quiet` flag suppresses progress bars on stderr. Without it, stderr output may interfere with stdout parsing.
+The `--quiet` flag suppresses progress output. Parse JSON from stdout; keep stderr available for warnings and diagnostics instead of discarding it globally.
 
 ---
 
