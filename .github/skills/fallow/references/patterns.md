@@ -50,7 +50,9 @@ fallow dupes --format json --quiet
 fallow fix --dry-run --format json --quiet
 ```
 
-### Step 5: Apply fixes (after user confirmation)
+### Step 5: Apply fixes when the task authorizes changes
+
+The preview is not authorization by itself. If the user asked only for an audit, stop after reviewing it. If the user asked you to apply cleanup, use `--yes` in a non-interactive environment, inspect the resulting diff, and run relevant checks when requested.
 
 ```bash
 fallow fix --yes --format json --quiet
@@ -91,14 +93,13 @@ Parse the JSON to list specific files and exports that became unused.
 ### GitHub Actions: Basic
 
 ```yaml
-# Option 1: Install then run (recommended for multiple fallow commands)
-- name: Install fallow
-  run: npm install -g fallow
+# For a repository that declares fallow in package.json, install locked dependencies first
+- run: npm ci
 
 - name: Dead code check
-  run: fallow dead-code --fail-on-issues --quiet
+  run: npm exec -- fallow dead-code --fail-on-issues --quiet
 
-# Option 2: One-off with npx (use -y to auto-accept installation)
+# For a deliberately unpinned one-off package fetch only
 - name: Dead code check
   run: npx -y fallow dead-code --fail-on-issues --quiet
 ```
@@ -107,7 +108,7 @@ Parse the JSON to list specific files and exports that became unused.
 
 ```yaml
 - name: Fallow analysis
-  run: npx -y fallow dead-code --ci > fallow.sarif
+  run: npm exec -- fallow dead-code --ci > fallow.sarif
   continue-on-error: true  # --ci sets --fail-on-issues; continue to upload SARIF even if issues found
 
 - name: Upload SARIF
@@ -183,14 +184,14 @@ Annotations appear as inline warnings on the PR diff. They work with all command
 
 ```yaml
 - name: Check for new dead code
-  run: npx -y fallow dead-code --format json --quiet --changed-since ${{ github.event.pull_request.base.sha }} --fail-on-issues
+  run: npm exec -- fallow dead-code --format json --quiet --changed-since ${{ github.event.pull_request.base.sha }} --fail-on-issues
 ```
 
 ### GitHub Actions: Duplication Gate
 
 ```yaml
 - name: Duplication check
-  run: npx -y fallow dupes --format json --quiet --threshold 5 --mode mild
+  run: npm exec -- fallow dupes --format json --quiet --threshold 5 --mode mild
 ```
 
 Fails if overall duplication exceeds 5%.
@@ -199,7 +200,7 @@ Fails if overall duplication exceeds 5%.
 
 ```yaml
 - name: Check duplication in changed files
-  run: npx -y fallow dupes --format json --quiet --changed-since ${{ github.event.pull_request.base.sha }}
+  run: npm exec -- fallow dupes --format json --quiet --changed-since ${{ github.event.pull_request.base.sha }}
 ```
 
 Only reports duplication in files modified by the PR.
@@ -296,7 +297,7 @@ Computes the health score and compares against saved snapshots. The MR comment i
 fallow:
   image: node:20-slim
   script:
-    - npx -y fallow dead-code --fail-on-issues --quiet --format json > fallow-results.json
+    - npm exec -- fallow dead-code --fail-on-issues --quiet --format json > fallow-results.json
   artifacts:
     paths:
       - fallow-results.json
@@ -642,7 +643,7 @@ Focus on findings that are BOTH dead code and duplicated:
 
 ## Custom Plugin Setup
 
-For frameworks not covered by the 118 built-in plugins.
+For frameworks that Fallow does not detect automatically.
 
 ### Option 1: Inline framework config
 
@@ -714,7 +715,7 @@ fallow dead-code --format sarif --quiet > fallow.sarif
 fallow dead-code --ci > fallow.sarif
 ```
 
-The `--ci` flag is equivalent to `--format sarif --fail-on-issues --quiet`. Note: `--fail-on-issues` means exit code 1 if issues exist, in CI scripts use `continue-on-error: true` or `|| true` to ensure the SARIF upload step still runs.
+The `--ci` flag is equivalent to `--format sarif --fail-on-issues --quiet`. Since findings can return exit code 1, configure the CI step to continue to SARIF upload while retaining the step outcome for a later gate. Do not use `|| true` as a blanket fix: it also hides execution errors such as exit code 2.
 
 ---
 
