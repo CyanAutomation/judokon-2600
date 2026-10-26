@@ -37,7 +37,7 @@ A selected stat is compared with the opponent's hidden value; the higher value e
 - During setup, choose a mode with `C` (**Classic**) / `H` (**Champion**) and a division with `A` (**Absolute**) / `W` (**Weight**). Cycle match length with the arrow keys or `1`–`3`; if you chose Weight division, confirm its class with `Enter`, then confirm match length with `Enter` or `Space` to start.
 - During a match, choose a stat with `1`–`5` (`power`, `speed`, `technique`, `kumikata`, `newaza`). Press `Enter` or `Space` to advance or replay, and quit with `Esc` or `Q`.
 - Stat choices display as **Power**, **Speed**, **Technique**, **Kumi-kata**, and **Ne-waza**.
-- Optional keyboard ticks and outcome beeps are available in **Advanced options**. They are muted by default and the preference is stored in `localStorage`. When enabled, keyboard actions and match outcomes play audio feedback; muting suppresses new feedback.
+- Optional keyboard ticks and outcome beeps are available in **Game settings**. They are muted by default and the preference is stored in `localStorage`. When enabled, keyboard actions and match outcomes play audio feedback; muting suppresses new feedback.
 
 ### Match summary and Champion mode
 
@@ -51,7 +51,7 @@ An optional post-match tactical insight interprets patterns in the player’s ch
 
 ### Opponents, replay, and connection issues
 
-Judoka are fetched directly from the public [Budokon catalogue API](https://budokon.scheimann.workers.dev/docs). Before each match, six judoka are drawn into a buffer so subsequent opponents can appear instantly. The seed button in the footer **Advanced options** bar opens a dialog for an optional replay seed; otherwise each match gets a fresh seed. **Replay** starts a fresh match with the active seed and reproduces the same draws only while the Budokon dataset version and draw algorithm stay the same. The API returns both values, but this client does not retain them with the replay seed. Draw requests time out after 10 seconds. Connection failures, rejected access, missing endpoints, timeouts, and temporary server failures display retry guidance in the status area.
+Judoka are fetched directly from the public [Budokon catalogue API](https://budokon.scheimann.workers.dev/docs). Before each match, six judoka are drawn into a buffer so subsequent opponents can appear instantly. The seed button in the footer **Game settings** bar opens a dialog for an optional replay seed; otherwise each match gets a fresh seed. **Replay** starts a fresh match with the active seed and reproduces the same draws only while the Budokon dataset version and draw algorithm stay the same. The API returns both values, but this client does not retain them with the replay seed. Draw requests time out after 10 seconds. Connection failures, rejected access, missing endpoints, timeouts, and temporary server failures display retry guidance in the status area.
 
 ### Saved sessions and scout report
 
@@ -71,7 +71,7 @@ Run the complete local quality gate with:
 npm run check
 ```
 
-This runs lint, tests, local Markdown link and style checks, and the production build. The build compiles with `tsc -p tsconfig.app.json` then produces the bundle with `vite build`.
+This runs lint, tests, local Markdown link and style checks, and the production build. The build type-checks both the API (`tsc -p tsconfig.api.json`) and application (`tsc -p tsconfig.app.json`), then produces the bundle with `vite build`.
 
 To run the documentation checks on their own:
 
