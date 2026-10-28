@@ -211,14 +211,6 @@ export interface StatTallyRecord {
 export type StatTally = Record<StatKey, StatTallyRecord>;
 
 /**
- * Tally per-stat selection and outcome counts from match history, including the
- * win rate for each stat (null when the stat was never selected). Single source
- * of truth shared by match-summary ranking and tactical-feature extraction.
- *
- * @param history - Array of stat selections and outcomes from the match
- * @returns Per-stat tally keyed by stat, in STAT_KEYS display order
- */
-/**
  * Returns the uniquely most-selected stat from a per-stat selection tally,
  * or null when no stat is selected or the highest count is tied.
  *
@@ -233,6 +225,14 @@ export function mostSelectedStat(tally: Record<StatKey, { selected: number }>): 
   return { stat, count: highestSelectionCount };
 }
 
+/**
+ * Tally per-stat selection and outcome counts from match history, including the
+ * win rate for each stat (null when the stat was never selected). Single source
+ * of truth shared by match-summary ranking and tactical-feature extraction.
+ *
+ * @param history - Array of stat selections and outcomes from the match
+ * @returns Per-stat tally keyed by stat, in STAT_KEYS display order
+ */
 export function tallyStatRecords(history: MatchHistoryItem[]): StatTally {
   const tally = Object.fromEntries(STAT_KEYS.map((stat) => [stat, { selected: 0, wins: 0, losses: 0, draws: 0, winRate: null }])) as StatTally;
 
