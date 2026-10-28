@@ -170,9 +170,7 @@ export function matchSummary(match: Match, history: MatchHistoryItem[]): MatchSu
  */
 function aggregateStatistics(history: MatchHistoryItem[]): { decisiveStat: StatKey | null } {
   const tally = tallyStatRecords(history);
-  const highestSelectionCount = Math.max(0, ...STAT_KEYS.map((stat) => tally[stat].selected));
-  const mostSelectedStats = STAT_KEYS.filter((stat) => tally[stat].selected === highestSelectionCount);
-  const decisiveStat = mostSelectedStats.length === 1 ? mostSelectedStats[0] : null;
+  const decisiveStat = mostSelectedStat(tally)?.stat ?? null;
   return { decisiveStat };
 }
 
@@ -220,6 +218,21 @@ export type StatTally = Record<StatKey, StatTallyRecord>;
  * @param history - Array of stat selections and outcomes from the match
  * @returns Per-stat tally keyed by stat, in STAT_KEYS display order
  */
+/**
+ * Returns the uniquely most-selected stat from a per-stat selection tally,
+ * or null when no stat is selected or the highest count is tied.
+ *
+ * @param tally - Per-stat selection counts, in STAT_KEYS display order
+ * @returns The unique most-selected stat with its count, or null
+ */
+export function mostSelectedStat(tally: Record<StatKey, { selected: number }>): { stat: StatKey; count: number } | null {
+  const highestSelectionCount = Math.max(0, ...STAT_KEYS.map((stat) => tally[stat]!.selected));
+  const mostSelectedStats = STAT_KEYS.filter((stat) => tally[stat]!.selected === highestSelectionCount);
+  if (mostSelectedStats.length !== 1) return null;
+  const stat = mostSelectedStats[0]!;
+  return { stat, count: highestSelectionCount };
+}
+
 export function tallyStatRecords(history: MatchHistoryItem[]): StatTally {
   const tally = Object.fromEntries(STAT_KEYS.map((stat) => [stat, { selected: 0, wins: 0, losses: 0, draws: 0, winRate: null }])) as StatTally;
 
