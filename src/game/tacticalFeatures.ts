@@ -1,5 +1,5 @@
 import { STAT_KEYS, type StatKey } from "../api/types.js";
-import { tallyStatRecords, type MatchHistoryItem, type Outcome } from "./game.js";
+import { mostSelectedStat, tallyStatRecords, type MatchHistoryItem, type Outcome } from "./game.js";
 import type { TacticalFeatures, TacticalOutcome, TacticalStatRecord } from "./tacticalTypes.js";
 import { finiteNumber, isRecord } from "./tacticalGuards.js";
 
@@ -85,13 +85,12 @@ function recordChoiceAfterPreviousOutcome(
 function findMissedOpportunityCandidate(
   selections: Record<StatKey, TacticalStatRecord>
 ): TacticalFeatures["missedOpportunityCandidate"] {
-  const highestSelectionCount = Math.max(0, ...STAT_KEYS.map((stat) => selections[stat].selected));
-  const favoredStats = STAT_KEYS.filter((stat) => selections[stat].selected === highestSelectionCount);
-  if (highestSelectionCount < 2 || favoredStats.length !== 1) return null;
+  const favored = mostSelectedStat(selections);
+  if (!favored || favored.count < 2) return null;
 
-  const favoredStat = favoredStats[0]!;
-  const favored = selections[favoredStat]!;
-  if (favored.winRate === null || favored.winRate > 0.5) return null;
+  const favoredStat = favored.stat;
+  const favoredRecord = selections[favoredStat]!;
+  if (favoredRecord.winRate === null || favoredRecord.winRate > 0.5) return null;
 
   const alternatives = STAT_KEYS
     .filter((stat) => stat !== favoredStat && selections[stat].selected >= 2 && selections[stat].winRate !== null)
@@ -99,9 +98,9 @@ function findMissedOpportunityCandidate(
   const alternativeStat = alternatives[0];
   if (!alternativeStat) return null;
   const alternativeWinRate = selections[alternativeStat]!.winRate!;
-  if (alternativeWinRate - favored.winRate < 0.25 || alternativeWinRate <= 0.5) return null;
+  if (alternativeWinRate - favoredRecord.winRate < 0.25 || alternativeWinRate <= 0.5) return null;
 
-  return { favoredStat, favoredWinRate: favored.winRate, alternativeStat, alternativeWinRate };
+  return { favoredStat, favoredWinRate: favoredRecord.winRate, alternativeStat, alternativeWinRate };
 }
 
 /** Build compact facts from only the player's recorded choices and round outcomes. */
