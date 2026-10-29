@@ -13,7 +13,9 @@ In the Vercel project's **Settings → Environment Variables**, configure:
 
 Mark `OPENROUTER_API_KEY` as a sensitive value where Vercel offers that option. Do not commit the key to the repository or expose it in client-side configuration. Create a new deployment after changing an environment variable so the function receives the updated value.
 
-Configure provider-side spend limits or alerts for this key where the OpenRouter account supports them. The assessment endpoint is public and each valid request can incur a provider call, so also configure a Vercel Firewall rate limit scoped to `POST /api/tactical-assessment`. Start at 10 requests per minute per IP in log mode, review matching production traffic, then enable throttling and adjust the threshold to match real use. Vercel firewall rate-limit counters are regional, so treat them as abuse protection rather than a strict global spending ceiling.
+Configure provider-side spend limits or alerts for this key where the OpenRouter account supports them. Identical tactical features and model reuse a successful result for five minutes in Vercel's regional Runtime Cache, but cache misses, cold starts, and different feature sets can still incur provider calls. The assessment endpoint is public, so also configure a Vercel Firewall rate limit scoped to `POST /api/tactical-assessment`. Start at 10 requests per minute per IP in log mode, review matching production traffic, then enable throttling and adjust the threshold to match real use. Vercel firewall rate-limit counters are regional, so treat them as abuse protection rather than a strict global spending ceiling.
+
+Successful cached results are keyed by normalized features and model, and remain internal to the function. Responses still use `Cache-Control: no-store`. Runtime Cache is scoped to a region and deployment environment and is not a global spending limit. See the [caching guide](caching.md) for implementation details.
 
 ## Verify a deployment
 

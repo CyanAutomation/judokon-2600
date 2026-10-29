@@ -10,6 +10,15 @@ export interface BudokonCacheOptions {
   clock?: () => number;
 }
 
+export interface BudokonCacheStats {
+  requests: number;
+  hits: number;
+  coalesced: number;
+  misses: number;
+  evictions: number;
+  expirations: number;
+}
+
 interface CacheEntry {
   request: Promise<Judoka[]>;
   createdAt: number;
@@ -39,6 +48,14 @@ export class BudokonCache {
   private readonly maxEntries: number;
   private readonly expirationMs: number;
   private readonly clock: () => number;
+  private readonly stats: BudokonCacheStats = {
+    requests: 0,
+    hits: 0,
+    coalesced: 0,
+    misses: 0,
+    evictions: 0,
+    expirations: 0
+  };
 
   constructor(options: BudokonCacheOptions = {}) {
     this.maxEntries = options.maxEntries ?? DEFAULT_CACHE_MAX_ENTRIES;
@@ -57,14 +74,21 @@ export class BudokonCache {
     key: string,
     fetcher: () => Promise<Judoka[]>
   ): Promise<Judoka[]> {
+    this.stats.requests += 1;
     const now = this.clock();
     const cached = this.draws.get(key);
     if (cached && (!cached.completed || !this.isExpired(cached, now))) {
+      this.stats.hits += 1;
+      if (!cached.completed) this.stats.coalesced += 1;
       cached.lastAccessedAt = now;
       return cloneJudokaArray(await cached.request);
     }
-    if (cached) this.draws.delete(key);
+    if (cached) {
+      this.draws.delete(key);
+      this.stats.expirations += 1;
+    }
 
+    this.stats.misses += 1;
     // Keep a cache-owned copy so neither the fetcher nor any caller can mutate
     // the value shared by later cache hits.
     const request = fetcher().then(cloneJudokaArray);
@@ -91,13 +115,20 @@ export class BudokonCache {
     }
   }
 
+  getStats(): BudokonCacheStats {
+    return { ...this.stats };
+  }
+
   private isExpired(entry: CacheEntry, now: number): boolean {
     return now - entry.createdAt >= this.expirationMs;
   }
 
   private removeExpired(now: number): void {
     for (const [key, entry] of this.draws) {
-      if (entry.completed && this.isExpired(entry, now)) this.draws.delete(key);
+      if (entry.completed && this.isExpired(entry, now)) {
+        this.draws.delete(key);
+        this.stats.expirations += 1;
+      }
     }
   }
 
@@ -115,6 +146,7 @@ export class BudokonCache {
       // The limit is temporarily soft when every candidate is in flight.
       if (!leastRecentlyUsed) return;
       this.draws.delete(leastRecentlyUsed.key);
+      this.stats.evictions += 1;
     }
   }
 

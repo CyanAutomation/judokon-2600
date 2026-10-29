@@ -104,6 +104,86 @@ describe("tactical assessment API route", () => {
     expect(client.decide).toHaveBeenCalledOnce();
   });
 
+  it("reuses successful assessments for identical normalized features and model", async () => {
+    const values = new Map<string, unknown>();
+    const cache = {
+      get: vi.fn(async (key: string) => values.get(key)),
+      set: vi.fn(async (key: string, value: unknown) => { values.set(key, value); })
+    };
+    const client = { decide: vi.fn(async () => providerResult()) };
+    const handler = createTacticalAssessmentHandler({
+      getApiKey: () => "test-key",
+      getModel: () => "test/model",
+      client,
+      cache
+    });
+
+    const first = await handler(request({ features }));
+    const second = await handler(request({ features }));
+
+    expect(first.headers.get("cache-control")).toBe("no-store");
+    expect(second.headers.get("cache-control")).toBe("no-store");
+    expect(await first.json()).toEqual(await second.json());
+    expect(client.decide).toHaveBeenCalledOnce();
+    expect(cache.set).toHaveBeenCalledOnce();
+    expect(cache.set).toHaveBeenCalledWith(expect.any(String), { assessment: expect.any(Object) }, 300);
+  });
+
+  it("does not reuse an assessment after the selected model changes", async () => {
+    const values = new Map<string, unknown>();
+    const cache = {
+      get: vi.fn(async (key: string) => values.get(key)),
+      set: vi.fn(async (key: string, value: unknown) => { values.set(key, value); })
+    };
+    let model = "provider/model-a";
+    const client = { decide: vi.fn(async () => providerResult()) };
+    const handler = createTacticalAssessmentHandler({
+      getApiKey: () => "test-key",
+      getModel: () => model,
+      client,
+      cache
+    });
+
+    await handler(request({ features }));
+    model = "provider/model-b";
+    await handler(request({ features }));
+
+    expect(client.decide).toHaveBeenCalledTimes(2);
+  });
+
+  it("coalesces simultaneous identical assessments", async () => {
+    let resolveDecision!: (result: JevDecisionResult) => void;
+    const decision = new Promise<JevDecisionResult>(resolve => { resolveDecision = resolve; });
+    const cache = { get: vi.fn(async () => undefined), set: vi.fn(async () => undefined) };
+    const client = { decide: vi.fn(() => decision) };
+    const handler = createTacticalAssessmentHandler({ getApiKey: () => "test-key", client, cache });
+
+    const first = handler(request({ features }));
+    const second = handler(request({ features }));
+    await Promise.resolve();
+    await Promise.resolve();
+    resolveDecision(providerResult());
+    const responses = await Promise.all([first, second]);
+
+    expect(client.decide).toHaveBeenCalledOnce();
+    expect(await Promise.all(responses.map(response => response.json()))).toEqual([
+      { assessment: { overReliance: true, adaptation: true, missedOpportunity: true, momentumResponse: true } },
+      { assessment: { overReliance: true, adaptation: true, missedOpportunity: true, momentumResponse: true } }
+    ]);
+  });
+
+  it("does not cache provider failures", async () => {
+    const cache = { get: vi.fn(async () => undefined), set: vi.fn(async () => undefined) };
+    const client = { decide: vi.fn(async () => { throw new Error("provider timeout"); }) };
+    const handler = createTacticalAssessmentHandler({ getApiKey: () => "test-key", client, cache });
+
+    await handler(request({ features }));
+    await handler(request({ features }));
+
+    expect(client.decide).toHaveBeenCalledTimes(2);
+    expect(cache.set).not.toHaveBeenCalled();
+  });
+
   it("rejects oversized request bodies before calling the provider", async () => {
     const client = { decide: vi.fn() };
     const handler = createTacticalAssessmentHandler({
