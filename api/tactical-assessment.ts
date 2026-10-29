@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+import { getCache } from "@vercel/functions";
 import { JevProviderError, OpenRouterJevClient } from "../src/jev/openRouterClient.js";
 import type { JevDecisionClient } from "../src/jev/types.js";
 import {
@@ -13,9 +15,72 @@ export interface TacticalAssessmentHandlerOptions {
   getModel?: () => string | undefined;
   client?: JevDecisionClient;
   createClient?: (apiKey: string, model: string) => JevDecisionClient;
+  cache?: TacticalAssessmentCache;
+}
+
+export interface TacticalAssessmentCache {
+  get(key: string): Promise<unknown>;
+  set(key: string, value: unknown, ttlSeconds: number): Promise<void>;
+}
+
+interface AssessmentResponse {
+  status: number;
+  body: unknown;
 }
 
 const MAX_REQUEST_BODY_BYTES = 8 * 1024;
+const ASSESSMENT_CACHE_TTL_SECONDS = 300;
+const ASSESSMENT_CACHE_VERSION = "v1";
+
+class MemoryAssessmentCache implements TacticalAssessmentCache {
+  private readonly values = new Map<string, { value: unknown; expiresAt: number }>();
+
+  async get(key: string): Promise<unknown> {
+    const entry = this.values.get(key);
+    if (!entry) return undefined;
+    if (entry.expiresAt <= Date.now()) {
+      this.values.delete(key);
+      return undefined;
+    }
+    return entry.value;
+  }
+
+  async set(key: string, value: unknown, ttlSeconds: number): Promise<void> {
+    this.values.set(key, { value, expiresAt: Date.now() + ttlSeconds * 1_000 });
+    while (this.values.size > 100) {
+      const oldestKey = this.values.keys().next().value as string | undefined;
+      if (oldestKey === undefined) break;
+      this.values.delete(oldestKey);
+    }
+  }
+}
+
+function createDefaultAssessmentCache(): TacticalAssessmentCache {
+  const memory = new MemoryAssessmentCache();
+  if (process.env.VERCEL !== "1") return memory;
+
+  return {
+    async get(key) {
+      try {
+        const value = await getCache({ namespace: "judokon-tactical-assessments" }).get(key);
+        return value ?? await memory.get(key);
+      } catch {
+        return memory.get(key);
+      }
+    },
+    async set(key, value, ttlSeconds) {
+      await memory.set(key, value, ttlSeconds);
+      try {
+        await getCache({ namespace: "judokon-tactical-assessments" }).set(key, value, {
+          ttl: ttlSeconds,
+          name: "tactical-assessment"
+        });
+      } catch {
+        // Runtime Cache is unavailable outside supported Vercel environments.
+      }
+    }
+  };
+}
 
 function json(body: unknown, status = 200): Response {
   return Response.json(body, {
@@ -119,8 +184,25 @@ async function runAssessment(
   }
 }
 
+function assessmentCacheKey(features: TacticalFeatures, model: string): string {
+  const digest = createHash("sha256").update(JSON.stringify([ASSESSMENT_CACHE_VERSION, model, features])).digest("hex");
+  return `${ASSESSMENT_CACHE_VERSION}:${digest}`;
+}
+
+function isCachedAssessment(value: unknown): value is { assessment: unknown } {
+  return typeof value === "object" && value !== null && !Array.isArray(value) &&
+    Object.prototype.hasOwnProperty.call(value, "assessment");
+}
+
+function responseFrom(result: AssessmentResponse): Response {
+  return json(result.body, result.status);
+}
+
 /** Create the Vercel route handler with injectable provider configuration for tests. */
 export function createTacticalAssessmentHandler(options: TacticalAssessmentHandlerOptions = {}) {
+  const cache = options.cache ?? createDefaultAssessmentCache();
+  const inFlight = new Map<string, Promise<AssessmentResponse>>();
+
   return async function handleTacticalAssessment(request: Request): Promise<Response> {
     if (request.method !== "POST") return json({ assessment: null }, 405);
 
@@ -130,7 +212,40 @@ export function createTacticalAssessmentHandler(options: TacticalAssessmentHandl
     const featureResult = await readTacticalFeatures(request);
     if (!featureResult.ok) return json({ assessment: null }, featureResult.status);
 
-    return runAssessment(featureResult.features, apiKey, options);
+    const model = (options.getModel ?? (() => process.env.JEV_MODEL))()?.trim() || "~typesafe/jev-latest";
+    const key = assessmentCacheKey(featureResult.features, model);
+    try {
+      const cached = await cache.get(key);
+      if (isCachedAssessment(cached)) return json(cached);
+    } catch {
+      // A cache outage must not make the optional assessment unavailable.
+    }
+
+    const existing = inFlight.get(key);
+    if (existing) return responseFrom(await existing);
+
+    const pending = (async (): Promise<AssessmentResponse> => {
+      const response = await runAssessment(featureResult.features, apiKey, {
+        ...options,
+        getModel: () => model
+      });
+      const result = { status: response.status, body: await response.json() };
+      if (result.status === 200 && isCachedAssessment(result.body) && result.body.assessment !== null &&
+        !(typeof result.body === "object" && result.body !== null && "issue" in result.body)) {
+        try {
+          await cache.set(key, result.body, ASSESSMENT_CACHE_TTL_SECONDS);
+        } catch {
+          // Preserve the response even when the cache write fails.
+        }
+      }
+      return result;
+    })();
+    inFlight.set(key, pending);
+    try {
+      return responseFrom(await pending);
+    } finally {
+      if (inFlight.get(key) === pending) inFlight.delete(key);
+    }
   };
 }
 
