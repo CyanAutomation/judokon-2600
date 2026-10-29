@@ -184,6 +184,28 @@ describe("tactical assessment API route", () => {
     expect(cache.set).not.toHaveBeenCalled();
   });
 
+  it("does not cache low-confidence null assessments", async () => {
+    const values = new Map<string, unknown>();
+    const cache = {
+      get: vi.fn(async (key: string) => values.get(key)),
+      set: vi.fn(async (key: string, value: unknown) => { values.set(key, value); })
+    };
+    const client = {
+      decide: vi.fn()
+        .mockResolvedValueOnce(providerResult(2, 0.2))
+        .mockResolvedValueOnce(providerResult(2, 0.95))
+    };
+    const handler = createTacticalAssessmentHandler({ getApiKey: () => "test-key", client, cache });
+
+    const first = await handler(request({ features }));
+    const second = await handler(request({ features }));
+
+    expect(await first.json()).toEqual({ assessment: null });
+    expect((await second.json()).assessment).not.toBeNull();
+    expect(client.decide).toHaveBeenCalledTimes(2);
+    expect(cache.set).toHaveBeenCalledOnce();
+  });
+
   it("rejects oversized request bodies before calling the provider", async () => {
     const client = { decide: vi.fn() };
     const handler = createTacticalAssessmentHandler({
