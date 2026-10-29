@@ -230,7 +230,7 @@ export function createTacticalAssessmentHandler(options: TacticalAssessmentHandl
         getModel: () => model
       });
       const result = { status: response.status, body: await response.json() };
-      if (result.status === 200 && isCachedAssessment(result.body) &&
+      if (result.status === 200 && isCachedAssessment(result.body) && result.body.assessment !== null &&
         !(typeof result.body === "object" && result.body !== null && "issue" in result.body)) {
         try {
           await cache.set(key, result.body, ASSESSMENT_CACHE_TTL_SECONDS);
