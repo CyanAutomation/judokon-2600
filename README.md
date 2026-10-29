@@ -57,6 +57,8 @@ Judoka are fetched directly from the public [Budokon catalogue API](https://budo
 
 Reloading the same browser tab restores the last valid saved session, including its match, result, round history, replay seed, active weight class, and prefetched judoka. Only stable match states are saved: an in-progress stat selection and optional tactical assessment are not persisted. With no valid saved session, the app opens in setup.
 
+The Budokon draw cache is page-local and reuses identical requests for five minutes. To inspect its hit, miss, coalescing, expiry, and eviction counters in browser developer tools, run `window.judokonCacheStats()`. Tactical assessments with identical features and model are reused for five minutes in Vercel's regional Runtime Cache; see the [caching guide](docs/caching.md) for scope and operational details.
+
 While a round is open, a scout report shows the opponent's strongest stat (all tied stats when there is a tie). The opponent's exact values remain hidden until you select a stat.
 
 ## Roadmap

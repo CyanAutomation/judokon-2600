@@ -1,5 +1,5 @@
 import type { Judoka } from "./types";
-import { BudokonCache, type BudokonCacheOptions } from "./cache";
+import { BudokonCache, type BudokonCacheOptions, type BudokonCacheStats } from "./cache";
 import { BudokonRequestBuilder } from "./requestBuilder";
 import { BudokonResponseValidator } from "./responseValidator";
 import { normalizeDrawParameters, type DrawParameters } from "./drawParameters";
@@ -44,6 +44,10 @@ export class BudokonClient {
     return this.cache.getCached(key, () =>
       this.performDraw(parameters)
     );
+  }
+
+  getCacheStats(): BudokonCacheStats {
+    return this.cache.getStats();
   }
 
   /**
