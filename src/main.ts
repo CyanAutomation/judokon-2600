@@ -19,6 +19,14 @@ if (!app) throw new Error("Application root is missing");
 const root = app;
 const client = new BudokonClient();
 
+declare global {
+  interface Window {
+    judokonCacheStats?: () => ReturnType<BudokonClient["getCacheStats"]>;
+  }
+}
+
+window.judokonCacheStats = () => client.getCacheStats();
+
 // Initialize game state from localStorage and sessionStorage
 const state: GameState = createGameState();
 const savedMatch = loadSavedGameState();
