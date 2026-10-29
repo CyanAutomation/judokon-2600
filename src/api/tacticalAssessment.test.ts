@@ -1,10 +1,34 @@
 import { describe, expect, it, vi } from "vitest";
-import { createTacticalAssessmentHandler } from "../../api/tactical-assessment";
+import {
+  createTacticalAssessmentHandler as createRouteHandler,
+  type TacticalAssessmentCache,
+  type TacticalAssessmentHandlerOptions
+} from "../../api/tactical-assessment";
 import { JevProviderError } from "../jev/openRouterClient";
 import type { JevDecisionResult } from "../jev/types";
 import type { MatchHistoryItem } from "../game/game";
 import { extractTacticalFeatures } from "../game/tacticalAssessment";
 import { requestTacticalAssessment } from "./tacticalAssessment";
+
+function createIsolatedCache(): TacticalAssessmentCache {
+  const values = new Map<string, unknown>();
+  return {
+    async get(key) {
+      return values.get(key);
+    },
+    async set(key, value) {
+      values.set(key, value);
+    }
+  };
+}
+
+// Do not let Vercel Runtime Cache entries from another test run affect route assertions.
+function createTacticalAssessmentHandler(options: TacticalAssessmentHandlerOptions = {}) {
+  return createRouteHandler({
+    ...options,
+    cache: options.cache ?? createIsolatedCache()
+  });
+}
 
 const rounds: MatchHistoryItem[] = [
   { stat: "power", outcome: "opponent" },
