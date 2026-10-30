@@ -104,6 +104,10 @@ function summary(m: Match, state: GameState): string {
     { label: "Best this match", value: bestChoice },
   ];
   if (m.mode === "classic") items.push({ label: "Match progress", value: `Points won: ${details.playerWins}` });
+  if (details.championRecord) {
+    const { wins, losses, draws } = details.championRecord;
+    items.push({ label: "Champion progress", value: `${wins}–${losses}–${draws}` });
+  }
   const metrics = definitionList(items, "match-summary-list");
   const content = `<p class="eyebrow">Match summary</p>${metrics}`;
   return sectionPanel("match-summary", "Match summary", content);
