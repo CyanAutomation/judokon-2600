@@ -59,7 +59,7 @@ The follow-up scores use the same dimension order. Removed mock-only tests are s
 
 The October 2026 follow-up revised the next ten lowest-scoring cases from the current suite:
 
-- Removed the standalone `surface("aside", ...)` test because the rendered Scout report contract already checks its landmark in `main.test.ts`.
+- Removed the standalone `surface("aside", ...)` test because the rendered opponent intel landmark is checked in `main.test.ts`.
 - Removed the synthetic disabled-button click test; it exercised a programmatically dispatched event rather than a normal user click.
 - Replaced exact oscillator frequency, volume, envelope, and delay assertions with enabled/muted keyboard feedback and outcome feedback checks linked to `REQ-AUDIO-016`.
 - Reworked mode and division click-order cases to dispatch click and change events and assert the resulting setup stage under `REQ-UI-014`.
