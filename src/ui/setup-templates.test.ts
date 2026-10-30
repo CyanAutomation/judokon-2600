@@ -158,4 +158,26 @@ describe("setup templates", () => {
     expect(markup).toContain('id="save-seed"');
     expect(markup).toContain("replay the same matchups, as long as the Budokon judoka catalogue has not changed");
   });
+
+  it("places secondary setup utilities inside a collapsed Game settings disclosure", () => {
+    const root = document.createElement("div");
+    root.innerHTML = advanced(state());
+    const settings = root.querySelector<HTMLDetailsElement>("details.footer-settings");
+
+    expect(settings?.open).toBe(false);
+    expect(settings?.querySelector("summary")?.textContent).toBe("Game settings");
+    expect(settings?.querySelector("#seed-button")).not.toBeNull();
+    expect(settings?.querySelector("#sound-enabled")).not.toBeNull();
+  });
+
+  it("keeps prior setup choices compact and drops introductory copy after the first step", () => {
+    const root = document.createElement("div");
+    root.innerHTML = intro(state({ setupStep: "length", division: "weight", mode: "champion" }));
+
+    expect(root.querySelectorAll(".setup-context .setup-summary")).toHaveLength(2);
+    expect(root.querySelector(".setup-context [aria-label='Change game mode']")).not.toBeNull();
+    expect(root.querySelector(".setup-context [aria-label='Change division']")).not.toBeNull();
+    expect(root.querySelector(".intro-lede")).toBeNull();
+    expect(root.querySelector(".intro-footnote")).toBeNull();
+  });
 });

@@ -23,10 +23,11 @@ describe("Main Module - Render Functions", () => {
 
       renderApp(root, createMockGameState({ match }));
 
-      const concealedOpponent = root.querySelector(".fighter-card.opponent");
-      expect(concealedOpponent).not.toBeNull();
+      expect(root.querySelector(".fighter-card.opponent")).toBeNull();
+      const intel = root.querySelector(".scout-report");
+      expect(intel?.textContent).toContain("Ne-waza");
       for (const value of Object.values(opponent.stats)) {
-        expect(concealedOpponent?.textContent).not.toContain(String(value));
+        expect(intel?.textContent).not.toContain(String(value));
       }
 
       const result: MatchResult = {
@@ -52,8 +53,8 @@ describe("Main Module - Render Functions", () => {
 
       renderApp(root, createMockGameState({ match, result }));
 
-      expect(root.querySelector('[aria-label="Your judoka: Aiko Tanaka"]')?.textContent).toContain("Aiko Tanaka");
-      expect(root.querySelector('[aria-label="Your opponent: Mina Sato"]')?.textContent).toContain("Mina Sato");
+      expect(root.querySelector('[aria-label="Your judoka details"]')?.textContent).toContain("Aiko Tanaka");
+      expect(root.querySelector('[aria-label="Your opponent details"]')?.textContent).toContain("Mina Sato");
     });
 
     it.each([
@@ -68,7 +69,7 @@ describe("Main Module - Render Functions", () => {
 
       renderApp(root, state);
 
-      const playerCard = root.querySelector('[aria-label="Your judoka: Test Fighter"]');
+      const playerCard = root.querySelector('[aria-label="Your judoka details"]');
       const rarityBadge = playerCard?.querySelector(".rarity");
       expect(playerCard).not.toBeNull();
       expect(rarityBadge?.textContent).toBe(expectedLabel);
@@ -533,11 +534,12 @@ describe("Main Module - Render Integration", () => {
       const match = createMockMatch({ opponent });
       renderApp(root, createMockGameState({ match, result: null }));
 
-      const report = root.querySelector('[aria-label="Scout report"]');
+      const report = root.querySelector('[aria-label="Opponent intel"]');
       expect(report?.tagName).toBe("ASIDE");
-      expect(report?.getAttribute("aria-label")).toBe("Scout report");
+      expect(report?.getAttribute("aria-label")).toBe("Opponent intel");
       expect(report?.textContent).toContain("Technique");
       expect(report?.textContent).not.toContain("10");
+      expect(report?.querySelector("details.scout-tip")?.hasAttribute("open")).toBe(false);
     });
 
     it("[REQ-CHAMPION-005] shows run progress for Champion matches", () => {
@@ -553,6 +555,8 @@ describe("Main Module - Render Integration", () => {
       const progress = root.querySelector('[aria-label="Champion round progress"]');
       expect(progress?.textContent).toContain("1 round");
       expect(progress?.textContent).toContain("2–1–0");
+      expect(progress?.tagName).toBe("DETAILS");
+      expect((progress as HTMLDetailsElement | null)?.open).toBe(false);
       expect(progress?.textContent).toContain("5");
     });
 
