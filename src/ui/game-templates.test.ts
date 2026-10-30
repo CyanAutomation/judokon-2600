@@ -303,6 +303,35 @@ describe("game templates", () => {
     expect(root.querySelector(".match-summary")?.textContent).toContain("Technique · 1 win from 1 pick");
   });
 
+  it("retains the Champion run record in the completed match breakdown", () => {
+    const match: Match = {
+      player: judoka,
+      opponent: { ...judoka, id: "opponent", slug: "opponent" },
+      target: 2,
+      matchNumber: 4,
+      scores: { player: 2, opponent: 1 },
+      mode: "champion",
+      phase: "matchOver",
+      winner: "player",
+    };
+    const current = state({
+      match,
+      result: { match, outcome: "player", stat: "technique", playerValue: 9, opponentValue: 7 },
+      history: [
+        { stat: "power", outcome: "player", roundNumber: 1 },
+        { stat: "speed", outcome: "opponent", roundNumber: 2 },
+        { stat: "newaza", outcome: "draw", roundNumber: 3 },
+        { stat: "technique", outcome: "player", roundNumber: 4 },
+      ],
+    });
+    const root = document.createElement("div");
+    root.innerHTML = game(match, current, createHelpers(current));
+
+    const breakdown = root.querySelector(".match-summary");
+    expect(breakdown?.textContent).toContain("Champion progress");
+    expect(breakdown?.textContent).toContain("2–1–1");
+  });
+
   it("makes the horizontally scrolling round history keyboard focusable and described", () => {
     const match: Match = {
       player: judoka,
