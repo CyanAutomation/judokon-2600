@@ -15,7 +15,7 @@ import { pointRule, tieRule } from "./constants";
 export function footerUtilities(state: GameState): string {
   const soundEnabled = getSoundEnabled();
   const seedLabel = state.replaySeed ? `Replay seed: ${state.replaySeed}` : "Replay seed: Random";
-  return `<div class="footer-utilities" role="group" aria-label="Game settings">${utilityButton("seed-button", seedLabel)}${utilityButton("sound-enabled", `Sound: ${soundEnabled ? "On" : "Off"}`, soundEnabled)}</div>`;
+  return `<details class="footer-settings"><summary>Game settings</summary><div class="footer-utilities" role="group" aria-label="Game settings">${utilityButton("seed-button", seedLabel)}${utilityButton("sound-enabled", `Sound: ${soundEnabled ? "On" : "Off"}`, soundEnabled)}</div></details>`;
 }
 
 export function seedDialog(state: GameState): string {
@@ -75,7 +75,12 @@ function lengthChoices(state: GameState, cursor: number): string {
 }
 
 function setupSummary(label: string, value: string, target: "mode" | "division"): string {
-  return `<div class="setup-summary"><span>${esc(label)}: <strong>${esc(value)}</strong></span><button type="button" class="control control--quiet quiet setup-change" data-setup-step="${target}">Change</button></div>`;
+  const accessibleLabel = target === "mode" ? "game mode" : "division";
+  return `<div class="setup-summary"><span>${esc(label)}: <strong>${esc(value)}</strong></span><button type="button" class="control control--quiet quiet setup-change" aria-label="Change ${accessibleLabel}" data-setup-step="${target}">Edit</button></div>`;
+}
+
+function setupContext(...summaries: string[]): string {
+  return `<div class="setup-context">${summaries.join("")}</div>`;
 }
 
 function setupAction(content: string): string {
@@ -104,17 +109,17 @@ function setupPanel(state: GameState, helpers: Helpers): string {
     return `${setupProgress(state, step)}<fieldset class="setup-group setup-stage"><legend>Choose game mode</legend>${terminalMenu(modeChoices(state, cursor))}<small>${hint}</small></fieldset>`;
   }
   if (step === "division") {
-    return `${setupSummary("Game mode", helpers.modeLabel(), "mode")}${setupProgress(state, step)}<fieldset class="setup-group setup-stage"><legend>Choose division</legend>${terminalMenu(divisionChoices(state, cursor))}</fieldset>`;
+    return `${setupContext(setupSummary("Game mode", helpers.modeLabel(), "mode"))}${setupProgress(state, step)}<fieldset class="setup-group setup-stage"><legend>Choose division</legend>${terminalMenu(divisionChoices(state, cursor))}</fieldset>`;
   }
   if (step === "weight") {
     const options = [
       `<option value="random" ${state.weight === "random" ? "selected" : ""}>Random weight class</option>`,
       ...weights.map((weight) => `<option value="${weight}" ${state.weight === weight ? "selected" : ""}>${weight} kg</option>`)
     ].join("");
-    return `${setupSummary("Game mode", helpers.modeLabel(), "mode")}${setupSummary("Division", "Weight class", "division")}${setupProgress(state, step)}<fieldset class="setup-group setup-stage"><legend>Choose weight class</legend><label class="weight-picker" for="weight-class"><span>Match by weight class</span><select id="weight-class">${options}</select></label>${setupAction(primaryButton("confirm-weight", "Continue", "Enter"))}</fieldset>`;
+    return `${setupContext(setupSummary("Game mode", helpers.modeLabel(), "mode"), setupSummary("Division", "Weight class", "division"))}${setupProgress(state, step)}<fieldset class="setup-group setup-stage"><legend>Choose weight class</legend><label class="weight-picker" for="weight-class"><span>Match by weight class</span><select id="weight-class">${options}</select></label>${setupAction(primaryButton("confirm-weight", "Continue", "Enter"))}</fieldset>`;
   }
 
-  return `${setupSummary("Game mode", helpers.modeLabel(), "mode")}${setupSummary("Division", helpers.divisionLabel(), "division")}${setupProgress(state, step)}<fieldset class="setup-group setup-stage"><legend>Choose match length</legend>${terminalMenu(lengthChoices(state, cursor))}</fieldset><p class="setup-rule"><strong>${pointRule}</strong> ${tieRule}</p><p class="start-context">First to ${state.target} points</p>${setupAction(primaryButton("start", "Start match", "Enter", state.busy))}`;
+  return `${setupContext(setupSummary("Game mode", helpers.modeLabel(), "mode"), setupSummary("Division", helpers.divisionLabel(), "division"))}${setupProgress(state, step)}<fieldset class="setup-group setup-stage"><legend>Choose match length</legend>${terminalMenu(lengthChoices(state, cursor))}</fieldset><p class="setup-rule"><strong>${pointRule}</strong> ${tieRule}</p><p class="start-context">First to ${state.target} points</p>${setupAction(primaryButton("start", "Start match", "Enter", state.busy))}`;
 }
 
 /**
@@ -124,5 +129,8 @@ export function intro(state: GameState): string {
   const helpers = createHelpers(state);
   const step = state.setupStep ?? "mode";
   const statusMessage = status(state);
-  return `<section class="intro" data-setup-step="${step}" aria-labelledby="intro-title"><div class="intro-copy"><p class="eyebrow">Choose your challenge</p><h1 id="intro-title">Step into the <br/>judoka circuit.</h1><p class="intro-lede">Pick a game mode, then choose one of your judoka’s stats each round. ${pointRule}</p><p class="intro-status" role="status">${esc(statusMessage)}<span class="block-cursor" aria-hidden="true">█</span></p></div>${surface("section", "intro-mode-panel", "Match setup", `${helpers.eyebrow("Match setup")}${setupPanel(state, helpers)}`)}<p class="intro-footnote">Your last setup will be waiting here next time.</p></section>`;
+  const firstStepCopy = step === "mode"
+    ? `<p class="intro-lede">Pick a game mode, then choose one of your judoka’s stats each round. ${pointRule}</p><p class="intro-footnote">Your last setup will be waiting here next time.</p>`
+    : "";
+  return `<section class="intro" data-setup-step="${step}" aria-labelledby="intro-title"><div class="intro-copy"><p class="eyebrow">Choose your challenge</p><h1 id="intro-title">Step into the <br/>judoka circuit.</h1>${firstStepCopy}<p class="intro-status" role="status">${esc(statusMessage)}<span class="block-cursor" aria-hidden="true">█</span></p></div>${surface("section", "intro-mode-panel", "Match setup", `${helpers.eyebrow("Match setup")}${setupPanel(state, helpers)}`)}</section>`;
 }

@@ -18,7 +18,7 @@ describe("renderApp", () => {
     expect(root.querySelector("header p")?.textContent).toBe("Champion · -73 kg division · First to 5");
   });
 
-  it("[REQ-UI-008] shows the active round, score, and target in the header", () => {
+  it("[REQ-UI-008] keeps static round context in the header without repeating the scoreboard", () => {
     const root = document.createElement("div");
     const state = createMockGameState({
       mode: "champion",
@@ -33,9 +33,11 @@ describe("renderApp", () => {
     renderApp(root, state);
 
     expect(root.querySelector(".header-context-wide")?.textContent)
-      .toBe("Round 4 · Champion · Absolute · First to 5 · You: 2 · Opponent: 1");
+      .toBe("Round 4 · Champion · Absolute");
     expect(root.querySelector(".header-context-compact")?.textContent)
-      .toBe("Round 4 · Champion · Absolute · 2–1 · First to 5");
+      .toBe("Round 4 · Champion · Absolute");
+    expect(root.querySelector(".scoreboard")?.textContent).toContain("2");
+    expect(root.querySelector(".scoreboard")?.textContent).toContain("1");
   });
 
   it("[REQ-UI-009] shows draw progress on the setup screen", () => {
@@ -82,6 +84,17 @@ describe("renderApp", () => {
 
     expect(root.querySelector("#game-title")?.tagName).toBe("H1");
     expect(root.querySelector("#game-title")?.textContent).toBe("Round 4 match");
+  });
+
+  it("keeps the repeated idle selection status available to assistive technology", () => {
+    const root = document.createElement("div");
+    const state = createMockGameState({ match: createMockMatch({ phase: "selecting" }) });
+
+    renderApp(root, state);
+
+    expect(root.querySelector("#status")?.classList.contains("visually-hidden")).toBe(true);
+    expect(root.querySelector("#status")?.getAttribute("aria-live")).toBe("polite");
+    expect(root.querySelector("#decision-heading")?.textContent).toBe("Choose a stat");
   });
 
   it("shows optional tactical service failures without hiding the completed match summary", () => {

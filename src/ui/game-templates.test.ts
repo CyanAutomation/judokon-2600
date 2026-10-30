@@ -42,7 +42,7 @@ const judoka: Judoka = {
 };
 
 describe("game templates", () => {
-  it("explains how a stat choice is resolved before the stat buttons", () => {
+  it("puts the stat decision and opponent intel ahead of secondary guidance", () => {
     const match: Match = {
       player: judoka,
       opponent: { ...judoka, id: "opponent", slug: "opponent" },
@@ -56,13 +56,14 @@ describe("game templates", () => {
     const current = state({ match });
     const markup = game(match, current, createHelpers(current));
 
-    expect(markup).toContain("The higher number wins the point.");
-    expect(markup.indexOf("The higher number wins the point.")).toBeLessThan(markup.indexOf('aria-label="Stat selection"'));
-    expect(markup).toContain("Your opponent’s top stats:");
+    expect(markup).toContain("Choose a stat");
+    expect(markup).not.toContain("The higher number wins the point.");
+    expect(markup).toContain("Opponent top stats");
+    expect(markup).toContain('<details class="scout-tip">');
     expect(markup).toContain('class="surface panel scoreboard"');
   });
 
-  it("places the active stat choice before supporting fighter details", () => {
+  it("places the stat choices before collapsed fighter details and match history", () => {
     const match: Match = {
       player: judoka,
       opponent: { ...judoka, id: "opponent", slug: "opponent" },
@@ -78,14 +79,16 @@ describe("game templates", () => {
     root.innerHTML = game(match, current, createHelpers(current));
     const layout = root.querySelector(".battle-layout");
     const stats = root.querySelector('[aria-label="Stat selection"]');
-    const guide = root.querySelector(".decision-guide");
+    const guide = root.querySelector(".decision-heading");
     const scout = root.querySelector(".scout-report");
-    const player = root.querySelector(".fighter-card.player");
+    const player = root.querySelector("details.fighter-card.player");
 
     expect(layout?.getAttribute("data-phase")).toBe("selecting");
-    expect(guide!.compareDocumentPosition(stats!)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
-    expect(stats!.compareDocumentPosition(scout!)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
-    expect(scout!.compareDocumentPosition(player!)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(guide!.compareDocumentPosition(scout!)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(scout!.compareDocumentPosition(stats!)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(stats!.compareDocumentPosition(player!)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(root.querySelector(".decision-player")?.textContent).toContain("Test Judoka");
+    expect(player?.hasAttribute("open")).toBe(false);
   });
 
   it("uses the shared panel and live-region component for the opponent reveal", () => {
@@ -180,6 +183,7 @@ describe("game templates", () => {
     expect(markup).toContain("After a loss, you switched stats on 2 of 2 picks.");
     expect(markup).toContain("After a win or loss streak, you switched stats on 1 of 1 pick.");
     expect(markup).toContain("Dojo notes");
+    expect(markup).toContain('<details class="match-breakdown">');
     expect(markup).not.toContain("Optional tactical insight");
   });
 
@@ -229,7 +233,7 @@ describe("game templates", () => {
     expect(status(current)).toBe(`>> ${resultCopy}`);
   });
 
-  it("keeps the result, both judoka, and round history together before the decision controls", () => {
+  it("keeps the next action beside the result and defers fighter details and history", () => {
     const match: Match = {
       player: judoka,
       opponent: { ...judoka, id: "opponent", slug: "opponent", firstname: "Rival" },
@@ -255,15 +259,17 @@ describe("game templates", () => {
     resultView.innerHTML = markup;
 
     expect(result).toBeGreaterThan(-1);
-    expect(player).toBeGreaterThan(result);
+    expect(markup.indexOf('id="next"')).toBeGreaterThan(result);
+    expect(player).toBeGreaterThan(markup.indexOf('id="next"'));
     expect(opponent).toBeGreaterThan(player);
     expect(history).toBeGreaterThan(opponent);
     expect(markup).not.toContain('aria-label="Stat selection"');
-    expect(markup.indexOf('id="next"')).toBeLessThan(player);
+    expect(resultView.querySelector("details.fighter-card")?.hasAttribute("open")).toBe(false);
     expect(resultView.querySelector(".fighter-card.player .selected-stat")?.textContent).toContain("Power");
+    expect(resultView.querySelector("details.match-history")?.hasAttribute("open")).toBe(false);
   });
 
-  it("brings completed-match takeaways and replay actions before reference details", () => {
+  it("brings the result and replay actions forward, with a collapsed match breakdown", () => {
     const match: Match = {
       player: judoka,
       opponent: { ...judoka, id: "opponent", slug: "opponent" },
@@ -285,10 +291,45 @@ describe("game templates", () => {
 
     expect(root.querySelector(".battle-layout")?.getAttribute("data-phase")).toBe("matchOver");
     expect(root.querySelector('[aria-label="Stat selection"]')).toBeNull();
-    expect(markup.indexOf('class="surface panel match-summary"')).toBeLessThan(markup.indexOf('id="replay"'));
-    expect(markup.indexOf('id="replay"')).toBeLessThan(markup.indexOf('class="surface panel fighter-card player"'));
+    expect(markup.indexOf('id="replay"')).toBeGreaterThan(markup.indexOf('class="surface panel result-panel outcome-player"'));
+    expect(markup.indexOf('aria-label="Match takeaway"')).toBeLessThan(markup.indexOf('id="replay"'));
+    expect(markup.indexOf('id="replay"')).toBeLessThan(markup.indexOf('<details class="replay-details'));
+    expect(markup.indexOf('<details class="replay-details')).toBeLessThan(markup.indexOf('<details class="match-breakdown">'));
+    expect(root.querySelector(".match-takeaway")?.textContent).toContain("Technique · 1 win from 1 pick");
+    expect(root.querySelector("details.replay-details")?.hasAttribute("open")).toBe(false);
+    expect(root.querySelector("details.replay-details #copy-seed")).not.toBeNull();
+    expect(root.querySelector("details.match-breakdown")?.hasAttribute("open")).toBe(false);
     expect(root.querySelector(".match-summary")?.textContent).toContain("Best this match");
     expect(root.querySelector(".match-summary")?.textContent).toContain("Technique · 1 win from 1 pick");
+  });
+
+  it("retains the Champion run record in the completed match breakdown", () => {
+    const match: Match = {
+      player: judoka,
+      opponent: { ...judoka, id: "opponent", slug: "opponent" },
+      target: 2,
+      matchNumber: 4,
+      scores: { player: 2, opponent: 1 },
+      mode: "champion",
+      phase: "matchOver",
+      winner: "player",
+    };
+    const current = state({
+      match,
+      result: { match, outcome: "player", stat: "technique", playerValue: 9, opponentValue: 7 },
+      history: [
+        { stat: "power", outcome: "player", roundNumber: 1 },
+        { stat: "speed", outcome: "opponent", roundNumber: 2 },
+        { stat: "newaza", outcome: "draw", roundNumber: 3 },
+        { stat: "technique", outcome: "player", roundNumber: 4 },
+      ],
+    });
+    const root = document.createElement("div");
+    root.innerHTML = game(match, current, createHelpers(current));
+
+    const breakdown = root.querySelector(".match-summary");
+    expect(breakdown?.textContent).toContain("Champion progress");
+    expect(breakdown?.textContent).toContain("2–1–1");
   });
 
   it("makes the horizontally scrolling round history keyboard focusable and described", () => {
@@ -316,5 +357,6 @@ describe("game templates", () => {
 
     expect(history).not.toBeNull();
     expect(history?.tabIndex).toBe(0);
+    expect(history?.closest("details")?.hasAttribute("open")).toBe(false);
   });
 });
