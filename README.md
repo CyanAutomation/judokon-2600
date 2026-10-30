@@ -45,6 +45,8 @@ After each match, the summary recommends your best stat by most rounds won, then
 
 In **Champion** mode, you keep the same judoka while opponents rotate. The **Current streak** counts consecutive rounds won at the end of the run: each win extends it, while either a loss or a draw resets it to zero. Earlier wins remain part of the run record but do not count toward the current streak.
 
+The match screen foregrounds the score and current decision. Fighter details, round history, Champion run metrics, and the completed-match breakdown are available in collapsed disclosures. Replay seed and sound controls are under **Game settings** during setup.
+
 ### Tactical insight
 
 An optional post-match tactical insight interprets patterns in the player’s choices. The browser sends compact counts and outcome patterns to the same-origin `/api/tactical-assessment`; it does not send judoka IDs, stat values, replay seeds, local storage, or hidden opponent values. Application code assembles the insight text and omits low-confidence results; JEV supplies typed scores only. The deterministic summary remains authoritative, and the match remains playable when the optional insight is unavailable. On Vercel, configure `OPENROUTER_API_KEY`; `JEV_MODEL` optionally overrides the default `~typesafe/jev-latest`. See the [tactical insight deployment guide](docs/tactical-insight-deployment.md) for setup and verification.
@@ -59,7 +61,7 @@ Reloading the same browser tab restores the last valid saved session, including 
 
 The Budokon draw cache is page-local and reuses identical requests for five minutes. To inspect its hit, miss, coalescing, expiry, and eviction counters in browser developer tools, run `window.judokonCacheStats()`. Tactical assessments with identical features and model are reused for five minutes in Vercel's regional Runtime Cache; see the [caching guide](docs/caching.md) for scope and operational details.
 
-While a round is open, a scout report shows the opponent's strongest stat (all tied stats when there is a tie). The opponent's exact values remain hidden until you select a stat.
+While a round is open, a compact intel line shows the opponent's strongest stat (all tied stats when there is a tie). The opponent's exact values remain hidden until you select a stat. The scouting tip is optional and can be expanded beside the stat choices.
 
 ## Roadmap
 

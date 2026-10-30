@@ -9,7 +9,7 @@ import { actionGroup, buttonChoice, type ButtonChoiceConfig, definitionList, pri
 import { matchSummary, type Match, type MatchResult, strongestStats } from "../game/game";
 import { type GameState } from "../state";
 import { labels, type Helpers } from "./helpers";
-import { matchOutcomeCopy, pointRule, roundOutcomeCopy } from "./constants";
+import { matchOutcomeCopy, roundOutcomeCopy } from "./constants";
 import { escapeHtml as esc } from "./utils/escapeHtml";
 import { extractTacticalFeatures } from "../game/tacticalAssessment";
 
@@ -21,7 +21,7 @@ function fighter(j: Judoka, side: "player" | "opponent", state: GameState, helpe
   const value = state.result ? side === "player" ? state.result.playerValue : state.result.opponentValue : null;
   const chosen = state.result ? `<p class="selected-stat outcome-${state.result.outcome}"><span>${labels[state.result.stat]}</span><strong>${value}</strong></p>` : "";
   const rarity = j.rarity || "Unclassified";
-  return surface("section", `fighter-card ${side}`, `${label}: ${helpers.nameOf(j)}`, `${helpers.eyebrow(label)}<h2>${esc(helpers.nameOf(j))}</h2><p>${esc(helpers.detailOf(j))}</p>${chosen}<span class="badge rarity rarity-${esc(rarity.toLowerCase())}">${esc(rarity)}</span>`);
+  return `<details class="surface panel fighter-card ${side}" aria-label="${label} details"><summary class="fighter-summary"><span class="eyebrow">${label}</span><strong>${esc(helpers.nameOf(j))}</strong><span class="badge rarity rarity-${esc(rarity.toLowerCase())}">${esc(rarity)}</span></summary><div class="fighter-detail-body"><p>${esc(helpers.detailOf(j))}</p>${chosen}</div></details>`;
 }
 
 /**
@@ -57,9 +57,10 @@ function callout(m: Match, r: MatchResult, helpers: Helpers): string {
 /**
  * Generate match history strip
  */
-function historyStrip(state: GameState, helpers: Helpers): string {
+function historyStrip(state: GameState): string {
   if (!state.history.length) return "";
-  return `<section class="match-history" aria-label="Round history">${helpers.eyebrow("Round history")}<ol tabindex="0" aria-label="Round history. Use the left and right arrow keys to view all rounds.">${state.history.map((h) => `<li class="${h.outcome}"><span>R${h.roundNumber}</span><strong>${labels[h.stat]}</strong><span>${h.outcome === "player" ? "WIN" : h.outcome === "opponent" ? "LOSS" : "DRAW"}</span></li>`).join("")}</ol></section>`;
+  const count = state.history.length;
+  return `<details class="match-history reference-disclosure" aria-label="Round history"><summary>Round history · ${count} ${count === 1 ? "round" : "rounds"}</summary><ol tabindex="0" aria-label="Round history. Use the left and right arrow keys to view all rounds.">${state.history.map((h) => `<li class="${h.outcome}"><span>R${h.roundNumber}</span><strong>${labels[h.stat]}</strong><span>${h.outcome === "player" ? "WIN" : h.outcome === "opponent" ? "LOSS" : "DRAW"}</span></li>`).join("")}</ol></details>`;
 }
 
 /**
@@ -87,7 +88,7 @@ function championProgress(m: Match, state: GameState, helpers: Helpers): string 
     { label: "Opponents faced", value: String(m.matchNumber) },
   ], "champion-progress-list");
   const content = `${helpers.eyebrow("Champion run")}${metrics}`;
-  return sectionPanel("champion-progress", "Champion round progress", content);
+  return `<details class="champion-progress reference-disclosure" aria-label="Champion round progress"><summary>Champion run · ${streak} ${streak === 1 ? "round" : "rounds"} in a row</summary>${sectionPanel("champion-progress-panel", "Champion round progress", content)}</details>`;
 }
 
 /**
@@ -96,18 +97,28 @@ function championProgress(m: Match, state: GameState, helpers: Helpers): string 
 function summary(m: Match, state: GameState): string {
   if (m.phase !== "matchOver") return "";
   const details = matchSummary(m, state.history);
-  const progress = m.mode === "champion" ? `Run record: ${details.championRecord!.wins}–${details.championRecord!.losses}–${details.championRecord!.draws}` : `Points won: ${details.playerWins}`;
-  const bestChoice = details.bestStat
-    ? `${labels[details.bestStat]} · ${details.bestStatWins} ${details.bestStatWins === 1 ? "win" : "wins"} from ${details.bestStatSelections} ${details.bestStatSelections === 1 ? "pick" : "picks"}`
-    : "No stat won a point";
-  const metrics = definitionList([
+  const bestChoice = bestStatCopy(details);
+  const items = [
     { label: "Final score", value: details.score },
     { label: "Most-used stat", value: details.decisiveStat ? labels[details.decisiveStat] : "—" },
     { label: "Best this match", value: bestChoice },
-    { label: m.mode === "champion" ? "Champion progress" : "Match progress", value: progress },
-  ], "match-summary-list");
+  ];
+  if (m.mode === "classic") items.push({ label: "Match progress", value: `Points won: ${details.playerWins}` });
+  const metrics = definitionList(items, "match-summary-list");
   const content = `<p class="eyebrow">Match summary</p>${metrics}`;
   return sectionPanel("match-summary", "Match summary", content);
+}
+
+function bestStatCopy(details: ReturnType<typeof matchSummary>): string {
+  return details.bestStat
+    ? `${labels[details.bestStat]} · ${details.bestStatWins} ${details.bestStatWins === 1 ? "win" : "wins"} from ${details.bestStatSelections} ${details.bestStatSelections === 1 ? "pick" : "picks"}`
+    : "No stat won a point";
+}
+
+function matchTakeaway(m: Match, state: GameState): string {
+  if (m.phase !== "matchOver") return "";
+  const details = matchSummary(m, state.history);
+  return `<section class="match-takeaway" aria-label="Match takeaway"><span class="eyebrow">Best this match</span><strong>${esc(bestStatCopy(details))}</strong></section>`;
 }
 
 function overRelianceMessage(
@@ -198,15 +209,21 @@ export function game(m: Match, state: GameState, helpers: Helpers): string {
   const statChoices = `<section aria-label="Stat selection" class="stats">${stats}</section>`;
   const committing = state.pendingStat ? surface("section", "commitment", "Opponent thinking", `<span class="block-cursor" aria-hidden="true">█</span><div><strong>Your opponent is sizing you up…</strong><p>Let’s see how your ${labels[state.pendingStat as StatKey]} stacks up.</p></div>`, { ariaLive: "polite" }) : "";
   const resolved = state.result ? resultPanel(m, state.result, helpers) : "";
+  const takeaway = matchTakeaway(m, state);
   const postMatch = m.phase === "matchOver"
-    ? `<div class="post-match-summary">${summary(m, state)}${tacticalInsight(m, state)}</div>`
+    ? `<details class="match-breakdown"><summary>Match breakdown</summary><div class="post-match-summary">${summary(m, state)}${tacticalInsight(m, state)}</div></details>`
     : "";
-  const action = m.phase === "awaitingNext" ? primaryButton("next", "Next round", "Enter", state.busy) : m.phase === "matchOver" ? `${primaryButton("replay", "Replay match", "Enter")}${quietButton("copy-seed", "Copy replay seed", "Copy")}<p class="replay-seed">Replay seed: <code>${esc(state.activeSeed)}</code></p>${state.seedMessage ? `<p class="seed-message" role="status">${esc(state.seedMessage)}</p>` : ""}` : "";
-  const scout = state.result ? "" : surface("aside", "scout-report", "Scout report", `${helpers.eyebrow("Scout report")}<p>Your opponent’s top stats: <strong>${strongestStats(m.opponent).map((stat) => labels[stat]).join(" / ")}</strong>. Pick a stat to chase the point.</p>`);
-  const decisionGuide = m.phase === "selecting" && !state.pendingStat ? `<p class="decision-guide">Pick one of your judoka’s stats. ${pointRule}</p>` : "";
-  const opponent = state.result ? fighter(m.opponent, "opponent", state, helpers) : surface("section", "fighter-card opponent concealed", "Your opponent concealed", `${helpers.eyebrow("Your opponent")}<h2>Hidden judoka</h2><p>Their stats appear after your pick.</p>`);
+  const action = m.phase === "awaitingNext" ? primaryButton("next", "Next round", "Enter", state.busy) : m.phase === "matchOver" ? primaryButton("replay", "Replay match", "Enter") : "";
+  const replayTools = m.phase === "matchOver"
+    ? `<details class="replay-details reference-disclosure"><summary>Replay details</summary><div class="replay-tools">${quietButton("copy-seed", "Copy replay seed", "Copy")}<p class="replay-seed">Replay seed: <code>${esc(state.activeSeed)}</code></p></div></details>${state.seedMessage ? `<p class="seed-message" role="status">${esc(state.seedMessage)}</p>` : ""}`
+    : "";
+  const scout = state.result ? "" : `<aside class="scout-report" aria-label="Opponent intel"><p><span class="eyebrow">Opponent top stats</span><strong>${strongestStats(m.opponent).map((stat) => labels[stat]).join(" / ")}</strong></p><details class="scout-tip"><summary>Scouting tip</summary><p>Use this as a guide; the opponent’s exact values appear after your pick.</p></details></aside>`;
+  const decision = m.phase === "selecting"
+    ? `<section class="round-decision" aria-labelledby="decision-heading"><h2 id="decision-heading" class="decision-heading">Choose a stat</h2><p class="decision-player">Your judoka <strong>${esc(helpers.nameOf(m.player))}</strong></p>${scout}${statChoices}</section>`
+    : "";
   const player = fighter(m.player, "player", state, helpers);
-  const history = historyStrip(state, helpers);
+  const opponent = state.result ? fighter(m.opponent, "opponent", state, helpers) : "";
+  const history = historyStrip(state);
   const champion = championProgress(m, state, helpers);
   const actions = actionGroup(`${action}${quietButton("quit", m.phase === "matchOver" ? "Change settings" : "Quit match", "Esc / Q")}`, {
     label: "Match actions",
@@ -214,10 +231,10 @@ export function game(m: Match, state: GameState, helpers: Helpers): string {
   });
 
   const content = m.phase === "selecting"
-    ? `${decisionGuide}${statChoices}${committing}${scout}${player}${opponent}${champion}${history}`
+    ? `${decision}${committing}${player}${champion}${history}`
     : m.phase === "awaitingNext"
       ? `${resolved}${actions}${player}${opponent}${history}${champion}`
-      : `${resolved}${postMatch}${actions}${player}${opponent}${history}${champion}`;
+      : `${resolved}${takeaway}${actions}${replayTools}${postMatch}${player}${opponent}${history}${champion}`;
 
   return `${scoreboard(m, state.result)}<section class="battle-layout" data-phase="${m.phase}">${content}</section>`;
 }
