@@ -340,7 +340,8 @@ describe("optional post-match assessment", () => {
 
     expect(state.match?.phase).toBe("matchOver");
     expect(state.result?.outcome).toBe("player");
-    expect(state.errorMessage).toBe("Optional tactical insight is not configured. Your match summary is still available.");
+    expect(state.errorMessage).toBe("");
+    expect(state.tacticalIssue).toBe("Optional Dojo notes are unavailable. Your match summary is still available.");
     expect(render).toHaveBeenCalled();
   });
 });

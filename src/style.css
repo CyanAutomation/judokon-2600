@@ -676,6 +676,7 @@ summary:focus-visible,
 
 .footer-toolbar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
   width: 100%;
@@ -695,7 +696,8 @@ summary:focus-visible,
   white-space: nowrap;
 }
 
-.footer-settings { position: relative; flex: 0 0 auto; margin-left: auto; }
+.footer-settings { position: relative; flex: 0 0 auto; min-width: 0; margin-left: auto; }
+.footer-settings[open] { flex: 1 1 100%; margin-left: 0; }
 .footer-settings > summary { list-style: none; }
 .footer-settings > summary::-webkit-details-marker { display: none; }
 .footer-settings > summary::before { content: "+ "; color: var(--color-accent); }
@@ -703,21 +705,19 @@ summary:focus-visible,
 .footer-settings .footer-utilities { margin-left: 0; }
 .footer-settings:not([open]) .footer-utilities { display: none; }
 .footer-settings[open] .footer-utilities {
-  position: absolute;
-  z-index: 5;
-  right: 0;
-  bottom: calc(100% + var(--space-2));
+  position: static;
   display: grid;
-  width: max-content;
-  max-width: min(90vw, 22rem);
+  grid-template-columns: minmax(0, 1fr) max-content;
+  width: min(100%, 30rem);
+  max-width: 100%;
+  margin-top: var(--space-2);
   padding: var(--space-2);
   border: var(--border);
   background: var(--color-surface);
-  box-shadow: 0 0 0 4px var(--color-shadow);
 }
 
 .footer-utilities { display: flex; flex: 0 0 auto; flex-wrap: nowrap; gap: var(--space-2); width: max-content; margin-left: auto; }
-.utility-button { min-height: 2.45rem; padding: .45rem .65rem; white-space: nowrap; }
+.utility-button { min-height: 2.45rem; min-width: 0; padding: .45rem .65rem; white-space: normal; overflow-wrap: anywhere; }
 
 .modal-backdrop {
   position: fixed;
@@ -891,3 +891,79 @@ footer { border-top: var(--border); color: var(--color-muted); font-size: .88rem
     animation-iteration-count: 1 !important;
   }
 }
+
+/* Notifications reserve space below the application, never over its controls. */
+body {
+  height: var(--viewport-height, 100dvh);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+#app {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+}
+.app-scroll { flex: 1 1 0; min-height: 0; overflow: auto; scrollbar-gutter: stable; }
+.notification-dock {
+  flex: 0 0 auto;
+  max-height: 32%;
+  overflow: auto;
+  padding-inline: var(--space-3);
+  background: var(--color-canvas);
+}
+.notification-dock:has(.snackbar:not([hidden])) {
+  padding-block: var(--space-2);
+  padding-bottom: calc(var(--space-2) + env(safe-area-inset-bottom));
+  border-top: var(--border);
+}
+.snackbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: var(--space-2);
+  width: min(100%, 36rem);
+  margin-inline: auto;
+  padding: var(--space-3);
+  border: 1px solid var(--color-accent);
+  background: var(--color-surface-raised);
+  color: var(--color-text);
+  font-family: var(--font-mono);
+  animation: snackbar-rise 180ms ease-out;
+}
+.snackbar[hidden], .snackbar button[hidden] { display: none; }
+.snackbar-message { grid-column: 1; overflow-wrap: anywhere; }
+.snackbar [data-action] { grid-column: 2; }
+.snackbar [data-dismiss] { grid-column: 3; }
+.snackbar button { min-height: 2.75rem; padding: .4rem .65rem; }
+.notice-duration { display: grid; gap: var(--space-1); font-size: .85rem; }
+.notice-duration select { min-height: 2.75rem; width: 100%; }
+.tactical-issue { padding: var(--space-3); border: var(--border); color: var(--color-subtle); }
+.setup-action-dock { flex: 0 0 auto; max-height: 35%; overflow: auto; background: var(--color-canvas); }
+.setup-action-dock .setup-actions {
+  position: static;
+  margin: 0 auto;
+  padding-bottom: var(--space-3);
+  box-shadow: none;
+}
+@keyframes snackbar-rise {
+  from { transform: translateY(100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+@media (max-width: 560px) {
+  .intro-main--sticky-action { padding-bottom: var(--space-3); }
+  body:has(.setup-action-dock):not(:has(.snackbar:not([hidden]))) .setup-action-dock {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+@media (max-height: 500px) {
+  .snackbar { padding: var(--space-1) var(--space-2); gap: var(--space-1); }
+  .snackbar-message { font-size: .85rem; }
+  .notification-dock:has(.snackbar:not([hidden])) { padding-top: var(--space-1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .snackbar { animation: none; }
+}
+.footer-utilities .notice-duration { grid-column: 1 / -1; }

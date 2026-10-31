@@ -1,3 +1,4 @@
+import { layoutSetupActions } from "./layout";
 import type { GameState } from "../state";
 import { shortcutHint } from "./controls";
 import { footerUtilities, intro, seedDialog } from "./setup-templates";
@@ -44,6 +45,7 @@ function generateSettings(state: GameState): string {
 }
 
 export function renderApp(root: HTMLElement, state: GameState): void {
+  const settingsOpen = root.querySelector<HTMLDetailsElement>(".footer-settings")?.open;
   const helpers = createHelpers(state);
   const hint = generateHint(state);
   const stickySetupAction = !state.match && (state.setupStep === "weight" || state.setupStep === "length");
@@ -55,5 +57,10 @@ export function renderApp(root: HTMLElement, state: GameState): void {
 
   const settings = generateSettings(state);
   const dialog = !state.match ? seedDialog(state) : "";
-  root.innerHTML = `<header><div class="brand">JU-DO-KON! <span aria-hidden="true">·</span> CIRCUIT 2600</div><p>${headerContext(state, helpers)}</p></header><main id="game" tabindex="-1" class="${mainClass}">${content}</main><footer><div class="footer-toolbar"><span class="footer-hint">${hint}</span>${settings}</div></footer>${dialog}`;
+  root.innerHTML = `<div class="app-scroll"><header><div class="brand">JU-DO-KON! <span aria-hidden="true">·</span> CIRCUIT 2600</div><p>${headerContext(state, helpers)}</p></header><main id="game" tabindex="-1" class="${mainClass}">${content}</main><footer><div class="footer-toolbar"><span class="footer-hint">${hint}</span>${settings}</div></footer>${dialog}</div>`;
+  if (settingsOpen) {
+    const settings = root.querySelector<HTMLDetailsElement>(".footer-settings");
+    if (settings) settings.open = true;
+  }
+  layoutSetupActions(root);
 }

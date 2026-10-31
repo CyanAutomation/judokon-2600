@@ -28,3 +28,7 @@ These IDs give the UI and game tests a stable link to observable product behavio
 | REQ-UI-015 | Before starting, the final setup stage shows the selected target and scoring rule alongside a Start action. | [Gameplay flow](../README.md#gameplay) |
 | REQ-AUDIO-016 | Optional audio feedback is muted by default; when enabled, keyboard actions and match outcomes play feedback, and muting suppresses new feedback. | [Gameplay flow](../README.md#gameplay) |
 | REQ-GAME-017 | Replaying a completed match starts a fresh match with the active replay seed. | [Gameplay flow](../README.md#gameplay) |
+| REQ-UI-018 | Seed confirmations, valid session restoration, and visible Dojo-note arrival use one bottom-centre snack bar; essential gameplay and error information stays persistent. | [Notification plan](snackbar-plan.md) |
+| REQ-UI-019 | Snack bar expiry preserves gameplay DOM and focus, pauses on hover/focus/hidden tabs, supports extended/manual duration, and bounds/deduplicates queued notices. | [Notification plan](snackbar-plan.md) |
+| REQ-UI-020 | Notification and mobile action docks reserve real space; resizing preserves focused actions and notification shortcuts never dispatch gameplay commands. | [Notification plan](snackbar-plan.md) |
+| REQ-UI-021 | Late clipboard and tactical responses cannot notify a previous match; clipboard recovery and optional-service failures remain in their contextual disclosures. | [Notification plan](snackbar-plan.md) |

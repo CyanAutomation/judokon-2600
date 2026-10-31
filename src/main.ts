@@ -1,4 +1,7 @@
 import "./style.css";
+import { createSnackbar, type NoticeDuration } from "./ui/snackbar";
+import { layoutSetupActions } from "./ui/layout";
+import { matchBreakdownContent } from "./ui/game-templates";
 import { lengths } from "./ui/constants";
 import { injectSpeedInsights } from "@vercel/speed-insights";
 import { BudokonClient } from "./api/budokon";
@@ -17,6 +20,18 @@ import { requestTacticalAssessment } from "./api/tacticalAssessment";
 const app = document.querySelector<HTMLDivElement>("#app");
 if (!app) throw new Error("Application root is missing");
 const root = app;
+const notificationHost = document.createElement("div");
+notificationHost.id = "notifications";
+root.after(notificationHost);
+const notifications = createSnackbar(notificationHost);
+
+function fitViewport(): void {
+  document.documentElement.style.setProperty("--viewport-height", `${window.visualViewport?.height ?? window.innerHeight}px`);
+  layoutSetupActions(root);
+}
+window.addEventListener("resize", fitViewport);
+window.visualViewport?.addEventListener("resize", fitViewport);
+fitViewport();
 const client = new BudokonClient();
 
 declare global {
@@ -47,12 +62,26 @@ injectSpeedInsights();
 
 function render(): void {
   renderApp(root, state);
+  notifications.setSuspended(Boolean(state.seedModalOpen));
 }
 
 const deps: OrchestratorDeps = {
   client,
   render,
   assessTactics: requestTacticalAssessment,
+  notify: notice => notifications.show(notice),
+  clearNotices: () => notifications.clear(),
+  renderTactical: () => {
+    const region = root.querySelector<HTMLElement>(".post-match-summary");
+    if (region && state.match) region.innerHTML = matchBreakdownContent(state.match, state);
+  },
+  viewTactics: () => {
+    const breakdown = root.querySelector<HTMLDetailsElement>(".match-breakdown");
+    if (breakdown) breakdown.open = true;
+    const heading = root.querySelector<HTMLElement>("#dojo-notes-title");
+    heading?.focus({ preventScroll: true });
+    heading?.scrollIntoView({ block: "nearest" });
+  },
   onMatchReady: () => {
     const game = root.querySelector<HTMLElement>("#game");
     game?.focus();
@@ -132,6 +161,11 @@ root.addEventListener("click", (e) => {
 });
 
 root.addEventListener("change", (e) => {
+  const setting = e.target as HTMLSelectElement;
+  if (setting.id === "notice-duration") {
+    notifications.setDuration(setting.value as NoticeDuration);
+    return;
+  }
   handleChangeEvent(e, state, root, createChangeHandlers());
 
   const input = e.target as HTMLInputElement;
@@ -143,3 +177,6 @@ root.addEventListener("change", (e) => {
 document.addEventListener("keydown", handleKeyboardEvent);
 
 render();
+if (savedMatch && state.match) {
+  notifications.show({ key: "restored", message: `Match restored — round ${state.match.matchNumber}.`, duration: 6000 });
+}
