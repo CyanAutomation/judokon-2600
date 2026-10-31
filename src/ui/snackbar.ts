@@ -106,8 +106,9 @@ export function createSnackbar(host: HTMLElement) {
   return {
     show(notice: Notice) {
       if (disposed) return;
-      if (current?.key === notice.key) {
-        if (current.message === notice.message) return;
+      const replacingCurrent = current?.key === notice.key;
+      if (replacingCurrent) {
+        if (current?.message === notice.message) return;
         dismiss(true, false);
         queue.unshift(notice);
       } else {
@@ -115,8 +116,12 @@ export function createSnackbar(host: HTMLElement) {
         if (index >= 0) queue[index] = notice;
         else queue.push(notice);
       }
-      if (queue.length > 2) queue.shift();
       showNext();
+      if (queue.length > 2) {
+        // A suspended replacement stays first; ordinary overflow drops the oldest pending notice.
+        if (replacingCurrent) queue.pop();
+        else queue.shift();
+      }
     },
     clear() { queue = []; dismiss(); },
     setSuspended(value: boolean) {

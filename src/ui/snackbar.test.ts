@@ -87,6 +87,34 @@ describe("[REQ-UI-019] selective snack bars", () => {
     expect(host.querySelector<HTMLElement>('.snackbar')!.hidden).toBe(true);
   });
 
+  it.each([false, true])("protects a replacement when the queue is full (suspended: %s)", suspended => {
+    notices.show({ key: 'a', message: 'Original', duration: 4000 });
+    notices.show({ key: 'b', message: 'Queued B', duration: 4000 });
+    notices.show({ key: 'c', message: 'Queued C', duration: 4000 });
+    vi.advanceTimersByTime(1000);
+    notices.setSuspended(suspended);
+
+    notices.show({ key: 'a', message: 'Replacement', duration: 4000 });
+
+    if (suspended) {
+      expect(host.querySelector<HTMLElement>('.snackbar')!.hidden).toBe(true);
+      notices.setSuspended(false);
+    }
+    expect(message()).toBe('Replacement');
+    vi.advanceTimersByTime(3999);
+    expect(message()).toBe('Replacement');
+    vi.advanceTimersByTime(1);
+    expect(message()).toBe('Queued B');
+    vi.advanceTimersByTime(4000);
+    if (!suspended) {
+      // An immediately displayed replacement leaves both pending notices intact.
+      expect(message()).toBe('Queued C');
+      vi.advanceTimersByTime(4000);
+    }
+    // While suspended, retain the replacement and first pending notice within the two-item cap.
+    expect(host.querySelector<HTMLElement>('.snackbar')!.hidden).toBe(true);
+  });
+
   it("pauses expiry while the page is hidden", () => {
     notices.show({ key: 'copy', message: 'Copied.', duration: 4000 });
     vi.advanceTimersByTime(1000);
