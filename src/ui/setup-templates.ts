@@ -9,13 +9,16 @@ import { type GameState } from "../state";
 import { createHelpers, lengths, weights, type Helpers } from "./helpers";
 import { getSoundEnabled } from "./helpers/soundStorage";
 import { escapeHtml as esc } from "./utils/escapeHtml";
+import { getNoticeDuration } from "./snackbar";
 import { status } from "./helpers/status";
 import { pointRule, tieRule } from "./constants";
 
 export function footerUtilities(state: GameState): string {
   const soundEnabled = getSoundEnabled();
+  const duration = getNoticeDuration();
+  const notificationSettings = `<label class="notice-duration" for="notice-duration">Notification duration<select id="notice-duration">${[["normal", "Standard"], ["long", "Extended"], ["manual", "Until dismissed"]].map(([value, label]) => `<option value="${value}" ${duration === value ? "selected" : ""}>${label}</option>`).join("")}</select></label>`;
   const seedLabel = state.replaySeed ? `Replay seed: ${state.replaySeed}` : "Replay seed: Random";
-  return `<details class="footer-settings"><summary>Game settings</summary><div class="footer-utilities" role="group" aria-label="Game settings">${utilityButton("seed-button", seedLabel)}${utilityButton("sound-enabled", `Sound: ${soundEnabled ? "On" : "Off"}`, soundEnabled)}</div></details>`;
+  return `<details class="footer-settings"><summary>Game settings</summary><div class="footer-utilities" role="group" aria-label="Game settings">${utilityButton("seed-button", seedLabel)}${utilityButton("sound-enabled", `Sound: ${soundEnabled ? "On" : "Off"}`, soundEnabled)}${notificationSettings}</div></details>`;
 }
 
 export function seedDialog(state: GameState): string {
@@ -84,7 +87,7 @@ function setupContext(...summaries: string[]): string {
 }
 
 function setupAction(content: string): string {
-  return actionGroup(content, { label: "Setup actions", className: "setup-actions", mobileSticky: true });
+  return `<span class="setup-action-home" hidden></span>${actionGroup(content, { label: "Setup actions", className: "setup-actions", mobileSticky: true })}`;
 }
 
 function setupProgress(state: GameState, step: NonNullable<GameState["setupStep"]>): string {

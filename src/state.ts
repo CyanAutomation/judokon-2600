@@ -17,6 +17,8 @@ export interface GameState {
   result: MatchResult | null;
   /** Optional, non-persisted tactical signals from a completed match. */
   tacticalAssessment: TacticalAssessment | null;
+  /** Optional-service feedback; never a blocking game error or saved session field. */
+  tacticalIssue?: string;
   pendingStat: string | null;
   activeSeed: string;
   activeWeight: string | undefined;

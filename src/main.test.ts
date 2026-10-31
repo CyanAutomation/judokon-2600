@@ -327,6 +327,7 @@ describe("Main Module - Replay Seed Copying", () => {
     const state = createMockGameState({ activeSeed: "test-seed" });
     const writeText = vi.fn().mockResolvedValue(undefined);
     const render = vi.fn();
+    const notify = vi.fn();
     const originalClipboard = Object.getOwnPropertyDescriptor(navigator, "clipboard");
     Object.defineProperty(navigator, "clipboard", {
       configurable: true,
@@ -345,7 +346,7 @@ describe("Main Module - Replay Seed Copying", () => {
           copyReplaySeed: () => {
             copyOperation = copyReplaySeed(state, {
               client: new BudokonClient(),
-              render
+              render, notify
             });
             return copyOperation;
           },
@@ -360,8 +361,9 @@ describe("Main Module - Replay Seed Copying", () => {
 
       expect(writeText).toHaveBeenCalledOnce();
       expect(writeText).toHaveBeenCalledWith(state.activeSeed);
-      expect(state.seedMessage).toBe("Replay seed copied.");
-      expect(render).toHaveBeenCalledOnce();
+      expect(state.seedMessage).toBe("");
+      expect(notify).toHaveBeenCalledWith(expect.objectContaining({ message: "Replay seed copied." }));
+      expect(render).not.toHaveBeenCalled();
     } finally {
       if (originalClipboard) {
         Object.defineProperty(navigator, "clipboard", originalClipboard);

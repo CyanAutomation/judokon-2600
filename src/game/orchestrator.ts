@@ -15,10 +15,14 @@ import { weights, lengths } from "../ui/constants";
 import { getSoundEnabled, setSoundEnabledPersisted } from "../ui/helpers/soundStorage";
 import { extractTacticalFeatures, type TacticalAssessmentResult } from "./tacticalAssessment";
 
+import type { Notice } from "../ui/snackbar";
+import { tacticalMessages } from "../ui/tacticalMessages";
+
 const DRAW_BUFFER_SIZE = 6;
 export const MATCH_RESOLUTION_DELAY_MS = 650;
 let nextOperationId = 0;
 const currentOperations = new WeakMap<GameState, number>();
+const copyOperations = new WeakMap<GameState, symbol>();
 
 function beginOperation(state: GameState): number {
   const operationId = ++nextOperationId;
@@ -45,6 +49,10 @@ export interface OrchestratorDeps {
   client: BudokonClient;
   render: () => void;
   onMatchReady?: () => void;
+  notify?: (notice: Notice) => void;
+  clearNotices?: () => void;
+  renderTactical?: () => void;
+  viewTactics?: () => void;
   assessTactics?: (features: ReturnType<typeof extractTacticalFeatures>) => Promise<TacticalAssessmentResult>;
 }
 
@@ -82,6 +90,7 @@ export async function start(
 ): Promise<void> {
   if (state.busy) return;
 
+  deps.clearNotices?.();
   const operationId = beginOperation(state);
   const activeSeed = (seed ?? state.replaySeed.trim()) || crypto.randomUUID();
   state.target = points;
@@ -97,6 +106,7 @@ export async function start(
 
   state.pendingStat = null;
   state.tacticalAssessment = null;
+  state.tacticalIssue = "";
   state.history = [];
   state.result = null;
   state.drawBuffer = [];
@@ -129,6 +139,7 @@ function buildDrawErrorMessage(error: unknown): string {
  * Called after match setup, handles loading and error states
  */
 export async function draw(state: GameState, deps: OrchestratorDeps, operationId = beginOperation(state)): Promise<void> {
+  deps.clearNotices?.();
   state.busy = true;
   state.result = null;
   state.errorMessage = "";
@@ -192,6 +203,7 @@ async function prepareNextDrawBuffer(
 export async function next(state: GameState, match: Match, deps: OrchestratorDeps): Promise<void> {
   if (state.busy || state.match !== match || match.phase !== "awaitingNext") return;
 
+  deps.clearNotices?.();
   state.busy = true;
   state.result = null;
   state.errorMessage = "";
@@ -257,28 +269,25 @@ export function resolve(state: GameState, _match: Match, stat: StatKey, deps: Or
       const completedMatch = state.match;
       const operationId = beginOperation(state);
       const features = extractTacticalFeatures(completedMatch.scores, state.history);
-      // Do not await optional network work: deterministic resolution and UI are complete.
-      try {
-        void deps.assessTactics(features)
-          .then((result) => {
-            if (state.match !== completedMatch) return;
-            if (!isCurrentOperation(state, operationId)) return;
-            state.tacticalAssessment = result.assessment;
-            if (!result.assessment && result.issue) {
-              state.errorMessage = result.issue === "not_configured"
-                ? "Optional tactical insight is not configured. Your match summary is still available."
-                : result.issue === "invalid_api_key"
-                  ? "The tactical insight service rejected its API key. Your match summary is still available."
-                  : "The tactical insight service could not be reached. Your match summary is still available.";
-            }
-            deps.render();
-          })
-          .catch(() => {
-            // An unavailable assessment leaves the deterministic match summary in place.
+      const update = (result?: TacticalAssessmentResult) => {
+        if (state.match !== completedMatch || !isCurrentOperation(state, operationId)) return;
+        state.tacticalAssessment = result?.assessment ?? null;
+        state.tacticalIssue = !result || (!result.assessment && result.issue)
+          ? "Optional Dojo notes are unavailable. Your match summary is still available."
+          : "";
+        if (deps.renderTactical) deps.renderTactical();
+        else deps.render();
+        if (tacticalMessages(completedMatch, state).length) {
+          deps.notify?.({
+            key: "dojo-notes", message: "Dojo notes ready.", duration: 8000,
+            ...(deps.viewTactics ? { action: { label: "View", run: deps.viewTactics } } : {})
           });
-      } catch {
-        // A synchronous adapter failure is optional too; the deterministic summary remains.
-      }
+        }
+      };
+      // Optional network work never blocks deterministic resolution or steals focus.
+      try {
+        void deps.assessTactics(features).then(result => update(result), () => update());
+      } catch { update(); }
     }
 
     // Focus next/replay button for keyboard navigation
@@ -289,16 +298,38 @@ export function resolve(state: GameState, _match: Match, stat: StatKey, deps: Or
 
 /**
  * Copy the current replay seed to clipboard
- * Updates seedMessage for user feedback
+ * Uses transient success feedback and persistent manual-copy recovery
  */
 export async function copyReplaySeed(state: GameState, deps: OrchestratorDeps): Promise<void> {
+  const request = Symbol();
+  copyOperations.set(state, request);
+  const match = state.match;
+  const seed = state.activeSeed;
+  const operation = currentOperations.get(state);
+  const isCurrent = () => copyOperations.get(state) === request && state.match === match && state.activeSeed === seed && currentOperations.get(state) === operation;
   try {
-    await navigator.clipboard.writeText(state.activeSeed);
-    state.seedMessage = "Replay seed copied.";
+    await navigator.clipboard.writeText(seed);
+    if (!isCurrent()) return;
+    state.seedMessage = "";
+    // Keep the disclosure, selection, and focused copy button intact.
+    document.querySelector(".seed-message")?.remove();
+    deps.notify?.({ key: "copy-seed", message: "Replay seed copied.", duration: 4000 });
   } catch {
-    state.seedMessage = `Could not copy the replay seed "${state.activeSeed}". Copy manually.`;
+    if (!isCurrent()) return;
+    state.seedMessage = `Could not copy the replay seed "${seed}". Copy manually.`;
+    // Update only the local feedback; never collapse the manual-copy disclosure.
+    const tools = document.querySelector(".replay-tools");
+    if (tools) {
+      let feedback = tools.querySelector<HTMLElement>(".seed-message");
+      if (!feedback) {
+        feedback = document.createElement("p");
+        feedback.className = "seed-message";
+        feedback.setAttribute("role", "status");
+        tools.append(feedback);
+      }
+      feedback.textContent = state.seedMessage;
+    } else deps.render();
   }
-  deps.render();
 }
 
 function setupCursorForStep(state: GameState, step: SetupStep): number {
@@ -332,11 +363,13 @@ function setupFocusTarget(state: GameState, step: SetupStep): string {
  * Used when user quits or changes settings
  */
 export function clearAndExit(state: GameState, deps: OrchestratorDeps): void {
+  deps.clearNotices?.();
   beginOperation(state);
   state.busy = false;
   state.match = null;
   state.result = null;
   state.tacticalAssessment = null;
+  state.tacticalIssue = "";
   state.pendingStat = null;
   state.errorMessage = "";
   state.history = [];
@@ -400,6 +433,7 @@ export function handleSaveReplaySeed(state: GameState, seed: string, deps: Orche
   state.seedModalOpen = false;
   deps.render();
   document.querySelector<HTMLButtonElement>("#seed-button")?.focus();
+  deps.notify?.({ key: "save-seed", message: state.replaySeed ? "Replay seed set." : "Fresh matchups enabled.", duration: 4000 });
 }
 
 /**
