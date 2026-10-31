@@ -102,12 +102,26 @@ describe("renderApp", () => {
     const state = createMockGameState({
       match: createMockMatch({ phase: "matchOver", winner: "player", scores: { player: 3, opponent: 1 } }),
       result: { ...createMockMatchResult(), match: createMockMatch({ phase: "matchOver", winner: "player", scores: { player: 3, opponent: 1 } }) },
-      errorMessage: "The tactical insight service rejected its API key. Your match summary is still available."
+      tacticalIssue: "Optional Dojo notes are unavailable. Your match summary is still available."
     });
 
     renderApp(root, state);
 
-    expect(root.querySelector("#status")?.textContent).toContain("The tactical insight service rejected its API key.");
+    expect(root.querySelector("#status")?.textContent).not.toContain("unavailable");
+    expect(root.querySelector(".match-breakdown .tactical-issue")?.textContent).toContain("Optional Dojo notes are unavailable.");
     expect(root.querySelector('[aria-label="Match summary"]')).not.toBeNull();
   });
+});
+
+it("keeps Game settings open across seed dialog renders so focus can return", () => {
+  const root = document.createElement("div");
+  const state = createMockGameState({ match: null, seedModalOpen: false });
+  renderApp(root, state);
+  root.querySelector<HTMLDetailsElement>(".footer-settings")!.open = true;
+  state.seedModalOpen = true;
+  renderApp(root, state);
+  expect(root.querySelector<HTMLDetailsElement>(".footer-settings")!.open).toBe(true);
+  state.seedModalOpen = false;
+  renderApp(root, state);
+  expect(root.querySelector<HTMLDetailsElement>(".footer-settings")!.open).toBe(true);
 });

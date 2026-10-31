@@ -11,7 +11,7 @@ import { type GameState } from "../state";
 import { labels, type Helpers } from "./helpers";
 import { matchOutcomeCopy, roundOutcomeCopy } from "./constants";
 import { escapeHtml as esc } from "./utils/escapeHtml";
-import { extractTacticalFeatures } from "../game/tacticalAssessment";
+import { tacticalMessages } from "./tacticalMessages";
 
 /**
  * Generate fighter card HTML
@@ -125,62 +125,11 @@ function matchTakeaway(m: Match, state: GameState): string {
   return `<section class="match-takeaway" aria-label="Match takeaway"><span class="eyebrow">Best this match</span><strong>${esc(bestStatCopy(details))}</strong></section>`;
 }
 
-function overRelianceMessage(
-  enabled: boolean | undefined,
-  decisiveStat: StatKey | null,
-  features: ReturnType<typeof extractTacticalFeatures>
-): string | null {
-  if (!enabled || !decisiveStat || features.repeatedFailedSelections === 0) return null;
-  const record = features.selections[decisiveStat];
-  if (record.selected < 3 || record.losses <= record.wins) return null;
-  return `${labels[decisiveStat]} was your go-to, with ${record.wins} win${record.wins === 1 ? "" : "s"} from ${record.selected} picks.`;
-}
-
-function adaptationMessage(
-  enabled: boolean | undefined,
-  features: ReturnType<typeof extractTacticalFeatures>
-): string | null {
-  const { decisions, switches } = features.choicesAfterLosses;
-  if (!enabled || switches === 0) return null;
-  return `After a loss, you switched stats on ${switches} of ${decisions} ${decisions === 1 ? "pick" : "picks"}.`;
-}
-
-function missedOpportunityMessage(
-  enabled: boolean | undefined,
-  features: ReturnType<typeof extractTacticalFeatures>
-): string | null {
-  const candidate = features.missedOpportunityCandidate;
-  if (!enabled || !candidate) return null;
-  const favored = features.selections[candidate.favoredStat];
-  const alternative = features.selections[candidate.alternativeStat];
-  return `${labels[candidate.alternativeStat]} won ${alternative.wins} of ${alternative.selected} picks. Your go-to, ${labels[candidate.favoredStat]}, won ${favored.wins} of ${favored.selected}.`;
-}
-
-function momentumResponseMessage(
-  enabled: boolean | undefined,
-  features: ReturnType<typeof extractTacticalFeatures>
-): string | null {
-  const decisions = features.choicesAfterWinRuns.decisions + features.choicesAfterLossRuns.decisions;
-  const switches = features.choicesAfterWinRuns.switches + features.choicesAfterLossRuns.switches;
-  if (!enabled || decisions === 0 || switches === 0) return null;
-  return `After a win or loss streak, you switched stats on ${switches} of ${decisions} ${decisions === 1 ? "pick" : "picks"}.`;
-}
-
-/** Render code-authored feedback only for high-confidence JEV signals with matching facts. */
+/** Render code-authored feedback only for high-confidence signals with matching facts. */
 function tacticalInsight(m: Match, state: GameState): string {
-  const assessment = state.tacticalAssessment;
-  if (!assessment) return "";
-
-  const features = extractTacticalFeatures(m.scores, state.history);
-  const details = matchSummary(m, state.history);
-  const messages = [
-    overRelianceMessage(assessment.overReliance, details.decisiveStat, features),
-    adaptationMessage(assessment.adaptation, features),
-    missedOpportunityMessage(assessment.missedOpportunity, features),
-    momentumResponseMessage(assessment.momentumResponse, features)
-  ].filter((message): message is string => message !== null);
+  const messages = tacticalMessages(m, state);
   if (!messages.length) return "";
-  const content = `<p class="eyebrow">Dojo notes</p>${messages.map((message) => `<p>${esc(message)}</p>`).join("")}`;
+  const content = `<h2 id="dojo-notes-title" class="eyebrow" tabindex="-1">Dojo notes</h2>${messages.map((message) => `<p>${esc(message)}</p>`).join("")}`;
   return sectionPanel("tactical-insight", "Dojo notes", content);
 }
 
@@ -215,11 +164,11 @@ export function game(m: Match, state: GameState, helpers: Helpers): string {
   const resolved = state.result ? resultPanel(m, state.result, helpers) : "";
   const takeaway = matchTakeaway(m, state);
   const postMatch = m.phase === "matchOver"
-    ? `<details class="match-breakdown"><summary>Match breakdown</summary><div class="post-match-summary">${summary(m, state)}${tacticalInsight(m, state)}</div></details>`
+    ? `<details class="match-breakdown"><summary>Match breakdown</summary><div class="post-match-summary">${matchBreakdownContent(m, state)}</div></details>`
     : "";
   const action = m.phase === "awaitingNext" ? primaryButton("next", "Next round", "Enter", state.busy) : m.phase === "matchOver" ? primaryButton("replay", "Replay match", "Enter") : "";
   const replayTools = m.phase === "matchOver"
-    ? `<details class="replay-details reference-disclosure"><summary>Replay details</summary><div class="replay-tools">${quietButton("copy-seed", "Copy replay seed", "Copy")}<p class="replay-seed">Replay seed: <code>${esc(state.activeSeed)}</code></p></div></details>${state.seedMessage ? `<p class="seed-message" role="status">${esc(state.seedMessage)}</p>` : ""}`
+    ? `<details class="replay-details reference-disclosure"><summary>Replay details</summary><div class="replay-tools">${quietButton("copy-seed", "Copy replay seed", "Copy")}<p class="replay-seed">Replay seed: <code>${esc(state.activeSeed)}</code></p>${state.seedMessage ? `<p class="seed-message" role="status">${esc(state.seedMessage)}</p>` : ""}</div></details>`
     : "";
   const scout = state.result ? "" : `<aside class="scout-report" aria-label="Opponent intel"><p><span class="eyebrow">Opponent top stats</span><strong>${strongestStats(m.opponent).map((stat) => labels[stat]).join(" / ")}</strong></p><details class="scout-tip"><summary>Scouting tip</summary><p>Use this as a guide; the opponent’s exact values appear after your pick.</p></details></aside>`;
   const decision = m.phase === "selecting"
@@ -241,4 +190,10 @@ export function game(m: Match, state: GameState, helpers: Helpers): string {
       : `${resolved}${takeaway}${actions}${replayTools}${postMatch}${player}${opponent}${history}${champion}`;
 
   return `${scoreboard(m, state.result)}<section class="battle-layout" data-phase="${m.phase}">${content}</section>`;
+}
+
+/** Update this region independently when optional insight finishes. */
+export function matchBreakdownContent(m: Match, state: GameState): string {
+  const issue = state.tacticalIssue ? `<p class="tactical-issue">${esc(state.tacticalIssue)}</p>` : "";
+  return `${summary(m, state)}${tacticalInsight(m, state)}${issue}`;
 }
