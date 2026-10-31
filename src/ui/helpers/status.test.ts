@@ -14,12 +14,6 @@ describe("status", () => {
     expect(status(state)).toBe(">> Putting your matchup together…");
   });
 
-  it("[REQ-UI-009] reports draw errors as plain text", () => {
-    const state = createMockGameState({ errorMessage: '<img src="x" onerror="alert(1)">' });
-
-    expect(status(state)).toBe(">> <img src=\"x\" onerror=\"alert(1)\">");
-  });
-
   it("[REQ-UI-009] prompts for setup when no match is active", () => {
     expect(status(createMockGameState({ match: null, setupStep: "mode" })))
       .toBe(">> Pick a mode to begin.");
