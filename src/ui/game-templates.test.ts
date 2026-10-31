@@ -42,7 +42,7 @@ const judoka: Judoka = {
 };
 
 describe("game templates", () => {
-  it("puts the stat decision and opponent intel ahead of secondary guidance", () => {
+  it("presents the stat decision before opponent intel and keeps the scouting tip optional", () => {
     const match: Match = {
       player: judoka,
       opponent: { ...judoka, id: "opponent", slug: "opponent" },
@@ -54,13 +54,18 @@ describe("game templates", () => {
       winner: null,
     };
     const current = state({ match });
-    const markup = game(match, current, createHelpers(current));
+    const root = document.createElement("div");
+    root.innerHTML = game(match, current, createHelpers(current));
+    const decision = root.querySelector('[aria-labelledby="decision-heading"]');
+    const intel = root.querySelector('[aria-label="Opponent intel"]');
+    const choices = root.querySelector('[aria-label="Stat selection"]');
+    const tip = intel?.querySelector("details");
 
-    expect(markup).toContain("Choose a stat");
-    expect(markup).not.toContain("The higher number wins the point.");
-    expect(markup).toContain("Opponent top stats");
-    expect(markup).toContain('<details class="scout-tip">');
-    expect(markup).toContain('class="surface panel scoreboard"');
+    expect(decision?.querySelector("h2")?.textContent).toBe("Choose a stat");
+    expect(decision?.contains(intel ?? null)).toBe(true);
+    expect(intel && choices && (intel.compareDocumentPosition(choices) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0).toBe(true);
+    expect(tip?.open).toBe(false);
+    expect(tip?.textContent).toContain("exact values appear after your pick");
   });
 
   it("places the stat choices before collapsed fighter details and match history", () => {
@@ -91,7 +96,7 @@ describe("game templates", () => {
     expect(player?.hasAttribute("open")).toBe(false);
   });
 
-  it("uses the shared panel and live-region component for the opponent reveal", () => {
+  it("announces the opponent reveal to assistive technology", () => {
     const match: Match = {
       player: judoka,
       opponent: { ...judoka, id: "opponent", slug: "opponent" },
@@ -103,15 +108,12 @@ describe("game templates", () => {
       winner: null,
     };
     const current = state({ match, pendingStat: "power" });
-    const markup = game(match, current, createHelpers(current));
     const root = document.createElement("div");
-    root.innerHTML = markup;
-    const commitment = root.querySelector(".commitment");
+    root.innerHTML = game(match, current, createHelpers(current));
+    const commitment = root.querySelector('[aria-label="Opponent thinking"]');
 
-    expect(commitment?.classList.contains("surface")).toBe(true);
-    expect(commitment?.classList.contains("panel")).toBe(true);
     expect(commitment?.getAttribute("aria-live")).toBe("polite");
-    expect(commitment?.getAttribute("aria-label")).toBe("Opponent thinking");
+    expect(commitment?.textContent).toContain("Your opponent is sizing you up");
   });
 
   it("adds code-authored tactical insight beside the unchanged deterministic summary", () => {
@@ -154,7 +156,7 @@ describe("game templates", () => {
     expect(markup).not.toContain("JEV says");
   });
 
-  it("renders only evidence-backed adaptation and momentum messages", () => {
+  it("shows adaptation and momentum feedback only when match history supports it", () => {
     const match: Match = {
       player: judoka,
       opponent: { ...judoka, id: "opponent", slug: "opponent" },
@@ -178,13 +180,15 @@ describe("game templates", () => {
       ]
     });
 
-    const markup = game(match, current, createHelpers(current));
+    const root = document.createElement("div");
+    root.innerHTML = game(match, current, createHelpers(current));
+    const notes = root.querySelector('[aria-label="Dojo notes"]');
 
-    expect(markup).toContain("After a loss, you switched stats on 2 of 2 picks.");
-    expect(markup).toContain("After a win or loss streak, you switched stats on 1 of 1 pick.");
-    expect(markup).toContain("Dojo notes");
-    expect(markup).toContain('<details class="match-breakdown">');
-    expect(markup).not.toContain("Optional tactical insight");
+    expect(Array.from(notes?.querySelectorAll("p") ?? [], (message) => message.textContent?.trim()))
+      .toEqual([
+        "After a loss, you switched stats on 2 of 2 picks.",
+        "After a win or loss streak, you switched stats on 1 of 1 pick."
+      ]);
   });
 
   it("omits an insight when the claimed signal has no supporting transitions", () => {

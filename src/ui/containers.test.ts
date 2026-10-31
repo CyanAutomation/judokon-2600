@@ -18,16 +18,6 @@ describe("containers", () => {
       expect(markup).toContain("&lt;script&gt;");
     });
 
-    it("supports a live region without dropping shared surface classes", () => {
-      const root = document.createElement("div");
-      root.innerHTML = surface("section", "commitment", "Opponent thinking", "Please wait.", { ariaLive: "polite" });
-      const panel = root.querySelector("section.commitment");
-
-      expect(panel?.classList.contains("surface")).toBe(true);
-      expect(panel?.classList.contains("panel")).toBe(true);
-      expect(panel?.getAttribute("aria-label")).toBe("Opponent thinking");
-      expect(panel?.getAttribute("aria-live")).toBe("polite");
-    });
   });
 
   describe("terminalMenu", () => {

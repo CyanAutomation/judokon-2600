@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { handleClickEvent } from "./clickHandlers";
 import { handleChangeEvent } from "./changeHandlers";
 import type { StatKey } from "../api/types";
+import type { SetupStep } from "../state";
 import { createMockMatch, createMockGameState, createMockButton, createClickEvent, createChangeEvent } from "../test/mocks";
 
 describe("handleClickEvent", () => {
@@ -45,24 +46,26 @@ describe("handleClickEvent", () => {
     expect(saveReplaySeed).toHaveBeenCalledWith("dojo-42");
   });
 
-  it("confirms an already-selected mode choice when clicked", () => {
-    const setSetupStep = vi.fn();
+  it.each([
+    { setupStep: "mode", choice: "classic", dataKey: "introMode", nextStep: "division" },
+    { setupStep: "division", choice: "absolute", dataKey: "division", nextStep: "length" }
+  ] as const)("advances from the $setupStep step when its selected choice is clicked", ({ setupStep, choice, dataKey, nextStep }) => {
+    const state = createMockGameState({ match: null, setupStep, mode: "classic", division: "absolute" });
+    const input = document.createElement("input");
+    input.checked = true;
+    input.dataset[dataKey] = choice;
     const handlers = {
       start: vi.fn(),
       copyReplaySeed: vi.fn(),
       next: vi.fn(),
       resolve: vi.fn(),
       clearAndExit: vi.fn(),
-      setSetupStep
+      setSetupStep: (step: SetupStep) => { state.setupStep = step; }
     };
-    const state = createMockGameState({ match: null, setupStep: "mode", mode: "classic" });
-    const input = document.createElement("input");
-    input.checked = true;
-    input.dataset.introMode = "classic";
 
     handleClickEvent(createClickEvent(input), state, handlers);
 
-    expect(setSetupStep).toHaveBeenCalledWith("division");
+    expect(state.setupStep).toBe(nextStep);
   });
 
   it("[REQ-UI-014] advances setup after the newly selected mode changes", () => {
@@ -97,26 +100,6 @@ describe("handleClickEvent", () => {
     expect(state.setupStep).toBe("division");
     expect(changeHandlers.persistPreferences).toHaveBeenCalledOnce();
     expect(changeHandlers.render).toHaveBeenCalledOnce();
-  });
-
-  it("confirms an already-selected division choice when clicked", () => {
-    const setSetupStep = vi.fn();
-    const handlers = {
-      start: vi.fn(),
-      copyReplaySeed: vi.fn(),
-      next: vi.fn(),
-      resolve: vi.fn(),
-      clearAndExit: vi.fn(),
-      setSetupStep
-    };
-    const state = createMockGameState({ match: null, setupStep: "division", division: "weight" });
-    const input = document.createElement("input");
-    input.checked = true;
-    input.dataset.division = "weight";
-
-    handleClickEvent(createClickEvent(input), state, handlers);
-
-    expect(setSetupStep).toHaveBeenCalledWith("weight");
   });
 
   it("does not confirm the current setup choice while busy or after a match starts", () => {

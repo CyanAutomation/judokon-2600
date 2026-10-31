@@ -424,7 +424,7 @@ describe("Main Module - Replay Seed Copying", () => {
 
 describe("Main Module - Render Integration", () => {
   describe("Render function composition", () => {
-    it("creates header with status and shortcut hints", () => {
+    it("[REQ-KEYBOARD-008] shows the active round prompt and its keyboard actions", () => {
       const state = createMockGameState({
         match: createMockMatch({ phase: "selecting" })
       });
@@ -432,15 +432,13 @@ describe("Main Module - Render Integration", () => {
 
       renderApp(root, state);
 
-      const status = root.querySelector<HTMLElement>("header + main #status");
-      const shortcutHints = root.querySelectorAll<HTMLElement>("footer .shortcut-hint");
-      const statShortcut = Array.from(shortcutHints).find((hint) => hint.textContent === "1–5");
-      const visibleStatus = status?.cloneNode(true) as HTMLElement | undefined;
-      visibleStatus?.querySelectorAll('[aria-hidden="true"]').forEach((element) => element.remove());
+      const status = root.querySelector<HTMLElement>('main [role="status"]');
+      const footerHint = root.querySelector<HTMLElement>("footer .footer-hint");
 
-      expect(visibleStatus?.textContent?.trim()).toBe(">> Pick one of your stats.");
-      expect(statShortcut).toBeDefined();
-      expect(statShortcut?.parentElement?.textContent).toContain("Pick a stat");
+      expect(status?.textContent).toContain("Pick one of your stats.");
+      expect(footerHint?.textContent).toContain("1–5");
+      expect(footerHint?.textContent).toContain("Pick a stat");
+      expect(footerHint?.textContent).toContain("Esc / Q");
     });
 
     it.each([
