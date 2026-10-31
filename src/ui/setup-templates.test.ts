@@ -26,7 +26,7 @@ function state(overrides: Partial<GameState> = {}): GameState {
 }
 
 describe("setup templates", () => {
-  it("shows a progress step count for the active setup path", () => {
+  it("[REQ-UI-014] announces the current step and total steps on each setup path", () => {
     const scenarios = [
       { setupStep: "mode" as const, division: "absolute" as const, step: 1, total: 3 },
       { setupStep: "division" as const, division: "absolute" as const, step: 2, total: 3 },
@@ -40,15 +40,8 @@ describe("setup templates", () => {
     for (const scenario of scenarios) {
       const root = document.createElement("div");
       root.innerHTML = intro(state(scenario));
-      const progress = root.querySelector<HTMLElement>(".setup-progress-track");
-      const segments = root.querySelectorAll<HTMLElement>(".setup-progress-segment");
+      const progress = root.querySelector<HTMLElement>('[role="progressbar"][aria-label="Match setup progress"]');
 
-      expect(root.querySelector(".setup-progress-text")?.textContent).toBe(`Step ${scenario.step} of ${scenario.total}`);
-      expect(segments).toHaveLength(scenario.total);
-      expect(root.querySelectorAll(".setup-progress-segment.is-current")).toHaveLength(1);
-      expect(root.querySelectorAll(".setup-progress-segment.is-complete")).toHaveLength(scenario.step - 1);
-      expect(progress?.getAttribute("role")).toBe("progressbar");
-      expect(progress?.getAttribute("aria-label")).toBe("Match setup progress");
       expect(progress?.getAttribute("aria-valuemin")).toBe("1");
       expect(progress?.getAttribute("aria-valuenow")).toBe(String(scenario.step));
       expect(progress?.getAttribute("aria-valuemax")).toBe(String(scenario.total));

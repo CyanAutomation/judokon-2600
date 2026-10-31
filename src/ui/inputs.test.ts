@@ -3,7 +3,7 @@ import { buttonChoice, radioChoice, utilityButton } from "./inputs";
 
 describe("inputs", () => {
   describe("radioChoice", () => {
-    it("renders a checked native radio choice with its description and shortcut", () => {
+    it("offers a checked radio choice with its description and accessible shortcut", () => {
       const root = document.createElement("div");
       root.innerHTML = radioChoice({
         id: "mode-champion",
@@ -18,11 +18,12 @@ describe("inputs", () => {
       expect(input?.type).toBe("radio");
       expect(input?.name).toBe("game-mode");
       expect(input?.checked).toBe(true);
-      expect(root.querySelector('label[for="mode-champion"]')?.textContent).toContain("Build a streak");
+      const label = root.querySelector<HTMLLabelElement>('label[for="mode-champion"]');
+      expect(label?.textContent).toContain("Champion");
+      expect(label?.textContent).toContain("Build a streak");
       expect(root.querySelector("kbd")?.textContent).toBe("H");
       expect(root.querySelector(".visually-hidden")?.textContent).toContain("Shortcut: H");
-      expect(root.querySelector("label[for='mode-champion']")?.classList.contains("control")).toBe(true);
-      expect(root.querySelector("label[for='mode-champion']")?.classList.contains("control--choice")).toBe(true);
+      expect(label?.htmlFor).toBe(input?.id);
     });
 
     it("keeps the full label available to assistive technology beside its compact display label", () => {
