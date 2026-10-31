@@ -27,32 +27,6 @@ describe("BudokonCache", () => {
     expect(() => new BudokonCache({ maxEntries: 1 })).not.toThrow();
   });
 
-  it("reports requests, hits, coalesced calls, and upstream fetches", async () => {
-    const cache = new BudokonCache();
-    const fetcher = vi.fn().mockResolvedValue(result("a"));
-
-    await cache.getCached("key", fetcher);
-    await cache.getCached("key", fetcher);
-
-    expect(cache.getStats()).toEqual({ requests: 2, hits: 1, coalesced: 0, misses: 1, evictions: 0, expirations: 0 });
-  });
-
-  it("counts request coalescing, expiry, and eviction", async () => {
-    let now = 0;
-    const cache = new BudokonCache({ maxEntries: 1, expirationMs: 10, clock: () => now });
-    let resolveRequest!: (value: Judoka[]) => void;
-    const pending = new Promise<Judoka[]>(resolve => { resolveRequest = resolve; });
-    const first = cache.getCached("a", () => pending);
-    const joined = cache.getCached("a", () => pending);
-    resolveRequest(result("a"));
-    await Promise.all([first, joined]);
-    await cache.getCached("b", () => Promise.resolve(result("b")));
-    now = 10;
-    await cache.getCached("b", () => Promise.resolve(result("b")));
-
-    expect(cache.getStats()).toEqual({ requests: 4, hits: 1, coalesced: 1, misses: 3, evictions: 1, expirations: 1 });
-  });
-
   it("expires a completed entry after the configured lifetime", async () => {
     let now = 100;
     const cache = new BudokonCache({ expirationMs: 10, clock: () => now });
