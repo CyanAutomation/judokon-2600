@@ -22,7 +22,7 @@ export function isSeedModalEscape(e: KeyboardEvent, state: GameState): boolean {
  * Check if keyboard event should be processed by game handlers
  */
 export function shouldHandleKeyboardEvent(e: KeyboardEvent): boolean {
-  return !isEditableInput(e.target);
+  return !e.defaultPrevented && !((e.target as Element | null)?.closest?.(".snackbar, .notification-dock")) && !isEditableInput(e.target);
 }
 
 /**

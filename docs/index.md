@@ -28,6 +28,7 @@ The development server serves the SPA at port 5173. Tests run via Vitest (`npm r
 | `src/state.ts` | Game-state type definitions, persistence helpers, and setup-step tracking |
 | `src/ui/` | Rendering components, event handlers, input controls, templates for intro/match screens |
 | `docs/test-contracts.md` | Stable requirement IDs for user-visible UI and gameplay test contracts |
+| `docs/snackbar-plan.md` | Notification event policy, reserved layout, accessibility, and validation |
 | `docs/caching.md` | Cache policies, observability, and runtime cache behavior |
 | `package.json` | Dependency declarations and scripts (`dev`, `build`, `test`, `lint`, `check`) |
 | `tsconfig.app.json` | TypeScript compilation targets for the application bundle |
