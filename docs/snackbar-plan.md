@@ -1,6 +1,6 @@
 # Selective snack bar implementation plan
 
-Status: implemented locally; production deployment pending.
+Status: implemented in the current codebase.
 
 ## Assessment
 
