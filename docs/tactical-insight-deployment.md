@@ -31,6 +31,8 @@ Common responses from the handler:
 | `200` with an assessment or `assessment: null` | The request was handled; low-confidence results are omitted. |
 | `200` with `issue: "not_configured"` | `OPENROUTER_API_KEY` is missing. |
 | `400` | The request body is invalid. |
+| `405` | The request used a method other than `POST`. |
+| `413` | The request body exceeds the 8 KiB limit. |
 | `502` | The provider returned an invalid decision response. |
 | `503` with `issue: "invalid_api_key"` or `"unavailable"` | OpenRouter rejected the key or could not provide an assessment. |
 | `429` | The Vercel Firewall rate limit rejected the request. |
