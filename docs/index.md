@@ -33,7 +33,7 @@ The development server serves the SPA at port 5173. Tests run via Vitest (`npm r
 | `package.json` | Dependency declarations and scripts (`dev`, `build`, `test`, `lint`, `check`) |
 | `tsconfig.app.json` | TypeScript compilation targets for the application bundle |
 | `vite.config.ts` | Vite build config; Vitest environment set to jsdom |
-| `vercel.json` | Vercel deployment directives (framework, build/output paths, cache headers) |
+| `vercel.json` | Vercel deployment directives (framework, build command, output path, cache and security headers) |
 
 ## Key modules
 
