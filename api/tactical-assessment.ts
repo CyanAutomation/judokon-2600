@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { getCache } from "@vercel/functions";
-import { JevProviderError, OpenRouterJevClient } from "../src/jev/openRouterClient.js";
+import { DEFAULT_MODEL, JevProviderError, OpenRouterJevClient } from "../src/jev/openRouterClient.js";
 import type { JevDecisionClient } from "../src/jev/types.js";
 import {
   applyTacticalConfidencePolicy,
@@ -167,7 +167,7 @@ async function runAssessment(
   apiKey: string,
   options: TacticalAssessmentHandlerOptions
 ): Promise<Response> {
-  const model = (options.getModel ?? (() => process.env.JEV_MODEL))()?.trim() || "~typesafe/jev-latest";
+  const model = (options.getModel ?? (() => process.env.JEV_MODEL))()?.trim() || DEFAULT_MODEL;
   const client = options.client ?? (options.createClient ?? ((key, selectedModel) => new OpenRouterJevClient(key, selectedModel)))(apiKey, model);
 
   try {
@@ -212,7 +212,7 @@ export function createTacticalAssessmentHandler(options: TacticalAssessmentHandl
     const featureResult = await readTacticalFeatures(request);
     if (!featureResult.ok) return json({ assessment: null }, featureResult.status);
 
-    const model = (options.getModel ?? (() => process.env.JEV_MODEL))()?.trim() || "~typesafe/jev-latest";
+    const model = (options.getModel ?? (() => process.env.JEV_MODEL))()?.trim() || DEFAULT_MODEL;
     const key = assessmentCacheKey(featureResult.features, model);
     try {
       const cached = await cache.get(key);
