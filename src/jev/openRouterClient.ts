@@ -1,7 +1,7 @@
 import type { JevDecisionClient, JevDecisionResult, JevQuestion } from "./types.js";
 
 const OPENROUTER_DECISIONS_URL = "https://openrouter.ai/api/alpha/decisions";
-const DEFAULT_MODEL = "~typesafe/jev-latest";
+export const DEFAULT_MODEL = "~typesafe/jev-latest";
 const DEFAULT_TIMEOUT_MS = 3_500;
 
 type Fetcher = typeof fetch;
