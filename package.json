@@ -32,7 +32,7 @@
     "vitest": "^5.0.3"
   },
   "dependencies": {
-    "@vercel/functions": "^3.10.4",
+    "@vercel/functions": "^3.11.0",
     "@vercel/speed-insights": "^2.1.0"
   },
   "overrides": {
