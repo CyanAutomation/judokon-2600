@@ -108,9 +108,18 @@ describe("Kaseki workflow boundaries", () => {
 
   it("publishes a sanitized reason and a link for unsuccessful controller runs", () => {
     expect(sweepWorkflow).toContain('node scripts/kaseki-run-details.mjs "$response_file"');
-    expect(sweepWorkflow).toContain("failure_detail=%s\\n");
+    expect(sweepWorkflow).toContain("failure_detail<<%s\\n");
+    expect(sweepWorkflow).toContain("write_failure_detail_output() {");
+    expect(sweepWorkflow).toContain('while [[ "$detail" == *"$output_delimiter"* ]]');
+    expect(sweepWorkflow).toContain('printf \'| Failure detail | %s |\\n\' "$summary_failure_detail"');
+    expect(sweepWorkflow).toContain('summary_failure_detail="${summary_failure_detail//|/\\\\|}"');
+    expect(sweepWorkflow).toContain('summary_failure_detail="${summary_failure_detail//\\`/\\\\\\`}"');
+    expect(sweepWorkflow).toContain("See the step summary for sanitized controller details.");
     expect(sweepWorkflow).toContain("${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}");
-    expect(sweepWorkflow).toContain("$FAILURE_DETAIL");
+    expect(sweepWorkflow).toContain('summary_failure_detail="${FAILURE_DETAIL//');
+    expect(sweepWorkflow).not.toContain('echo "| Failure detail | $FAILURE_DETAIL |"');
+    expect(sweepWorkflow).not.toContain('echo "::error title=Kaseki run failed::Completed with exit code $exit_code. $failure_detail"');
+    expect(sweepWorkflow).not.toContain('echo "::error title=Kaseki run $status::$failure_detail"');
   });
 
   it("runs workflow checks for pull requests, pushes, and merge queue candidates", () => {
