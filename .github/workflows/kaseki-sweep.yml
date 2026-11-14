@@ -46,6 +46,11 @@ jobs:
       VALIDATION_COMMAND: npm run check
       POLLING_BUDGET_SECONDS: 11100
     steps:
+      - name: Monitor runner egress
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+
       - name: Check out the workflow commit
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -205,7 +210,9 @@ jobs:
                 exit_code="$(jq -er '.exitCode // 0 | numbers' "$response_file")"
                 if [[ "$exit_code" != "0" ]]; then
                   echo "status=failed (exit code $exit_code)" >> "$GITHUB_OUTPUT"
-                  echo "::error::Kaseki run completed with exit code $exit_code"
+                  failure_detail="$(node scripts/kaseki-run-details.mjs "$response_file")"
+                  printf 'failure_detail=%s\n' "$failure_detail" >> "$GITHUB_OUTPUT"
+                  echo "::error title=Kaseki run failed::Completed with exit code $exit_code. $failure_detail"
                   exit 1
                 fi
                 echo "status=$status" >> "$GITHUB_OUTPUT"
@@ -213,6 +220,9 @@ jobs:
                 ;;
               failed|cancelled)
                 echo "status=$status" >> "$GITHUB_OUTPUT"
+                failure_detail="$(node scripts/kaseki-run-details.mjs "$response_file")"
+                printf 'failure_detail=%s\n' "$failure_detail" >> "$GITHUB_OUTPUT"
+                echo "::error title=Kaseki run $status::$failure_detail"
                 exit 1
                 ;;
               queued|running)
@@ -234,6 +244,8 @@ jobs:
         env:
           RUN_ID: ${{ steps.submit.outputs.run_id || 'not submitted' }}
           FINAL_STATUS: ${{ steps.wait.outputs.status || 'not completed' }}
+          FAILURE_DETAIL: ${{ steps.wait.outputs.failure_detail || 'not provided' }}
+          WORKFLOW_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           {
             printf '## Kaseki %s sweep\n' "$SWEEP_NAME"
@@ -247,4 +259,7 @@ jobs:
             echo "| Publish mode | \`pr\` |"
             echo "| Kaseki run | \`$RUN_ID\` |"
             echo "| Final status | \`$FINAL_STATUS\` |"
+            echo "| Failure detail | $FAILURE_DETAIL |"
+            echo
+            printf 'Workflow logs: [%s](%s)\n' "$GITHUB_RUN_ID" "$WORKFLOW_RUN_URL"
           } >> "$GITHUB_STEP_SUMMARY"

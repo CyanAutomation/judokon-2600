@@ -11,6 +11,7 @@
     "build": "tsc -p tsconfig.api.json && tsc -p tsconfig.app.json && vite build",
     "preview": "vite preview",
     "test": "vitest run",
+    "test:e2e": "playwright test",
     "test:coverage": "vitest run --coverage",
     "fallow:coverage": "npm run test:coverage && npx fallow --coverage coverage/coverage-final.json",
     "test:watch": "vitest",
@@ -20,6 +21,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
+    "@playwright/test": "^1.65.1",
     "@types/node": "^26.6.6",
     "@vitest/coverage-v8": "^5.1.0",
     "eslint": "^10.14.0",
