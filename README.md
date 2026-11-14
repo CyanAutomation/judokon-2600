@@ -79,6 +79,16 @@ npm run check
 
 This runs lint, tests, local Markdown link and style checks, and the production build. The build type-checks both the API (`tsc -p tsconfig.api.json`) and application (`tsc -p tsconfig.app.json`), then produces the bundle with `vite build`.
 
+Run the Chromium browser smoke test with:
+
+```sh
+npx playwright install chromium
+npm run test:e2e
+```
+
+GitHub Actions installs Chromium and runs the same smoke test. On failure, it uploads the Playwright report and traces as a workflow artifact.
+Set `PLAYWRIGHT_CHROMIUM_EXECUTABLE` to use an already installed Chromium binary.
+
 To run the documentation checks on their own:
 
 ```sh
