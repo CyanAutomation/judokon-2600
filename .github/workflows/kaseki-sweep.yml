@@ -46,6 +46,11 @@ jobs:
       VALIDATION_COMMAND: npm run check
       POLLING_BUDGET_SECONDS: 11100
     steps:
+      - name: Monitor runner egress
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+
       - name: Check out the workflow commit
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -71,7 +76,7 @@ jobs:
           esac
 
       - name: Verify controller health
-        uses: CyanAutomation/kaseki-agent/.github/actions/verify-controller-health@30db5d15e117b8d8de13eb66766d48cf6b7d618b
+        uses: CyanAutomation/kaseki-agent/.github/actions/verify-controller-health@0400e036f8bd03d3c6a8ad1dd68ee74d85ac0aa6
         with:
           base-url: ${{ vars.KASEKI_BASE_URL }}
 
@@ -170,6 +175,19 @@ jobs:
           set -euo pipefail
           response_file="$(mktemp)"
           trap 'rm -f "$response_file"' EXIT
+          write_failure_detail_output() {
+            local detail="$1"
+            local output_delimiter
+            IFS= read -r output_delimiter < /proc/sys/kernel/random/uuid
+            while [[ "$detail" == *"$output_delimiter"* ]]; do
+              IFS= read -r output_delimiter < /proc/sys/kernel/random/uuid
+            done
+            {
+              printf 'failure_detail<<%s\n' "$output_delimiter"
+              printf '%s\n' "$detail"
+              printf '%s\n' "$output_delimiter"
+            } >> "$GITHUB_OUTPUT"
+          }
           deadline=$((SECONDS + POLLING_BUDGET_SECONDS))
           while (( SECONDS < deadline )); do
             if http_status="$(curl --fail-with-body --silent --show-error --retry 3 --retry-connrefused \
@@ -205,7 +223,9 @@ jobs:
                 exit_code="$(jq -er '.exitCode // 0 | numbers' "$response_file")"
                 if [[ "$exit_code" != "0" ]]; then
                   echo "status=failed (exit code $exit_code)" >> "$GITHUB_OUTPUT"
-                  echo "::error::Kaseki run completed with exit code $exit_code"
+                  failure_detail="$(node scripts/kaseki-run-details.mjs "$response_file")"
+                  write_failure_detail_output "$failure_detail"
+                  echo "::error title=Kaseki run failed::Completed with exit code $exit_code. See the step summary for sanitized controller details."
                   exit 1
                 fi
                 echo "status=$status" >> "$GITHUB_OUTPUT"
@@ -213,6 +233,9 @@ jobs:
                 ;;
               failed|cancelled)
                 echo "status=$status" >> "$GITHUB_OUTPUT"
+                failure_detail="$(node scripts/kaseki-run-details.mjs "$response_file")"
+                write_failure_detail_output "$failure_detail"
+                echo "::error title=Kaseki run $status::See the step summary for sanitized controller details."
                 exit 1
                 ;;
               queued|running)
@@ -234,7 +257,17 @@ jobs:
         env:
           RUN_ID: ${{ steps.submit.outputs.run_id || 'not submitted' }}
           FINAL_STATUS: ${{ steps.wait.outputs.status || 'not completed' }}
+          FAILURE_DETAIL: ${{ steps.wait.outputs.failure_detail || 'not provided' }}
+          WORKFLOW_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
+          summary_failure_detail="${FAILURE_DETAIL//$'\r'/ }"
+          summary_failure_detail="${summary_failure_detail//$'\n'/ }"
+          summary_failure_detail="${summary_failure_detail//\\/\\\\}"
+          summary_failure_detail="${summary_failure_detail//|/\\|}"
+          summary_failure_detail="${summary_failure_detail//\`/\\\`}"
+          summary_failure_detail="${summary_failure_detail//&/&amp;}"
+          summary_failure_detail="${summary_failure_detail//</\&lt;}"
+          summary_failure_detail="${summary_failure_detail//>/\&gt;}"
           {
             printf '## Kaseki %s sweep\n' "$SWEEP_NAME"
             echo
@@ -247,4 +280,7 @@ jobs:
             echo "| Publish mode | \`pr\` |"
             echo "| Kaseki run | \`$RUN_ID\` |"
             echo "| Final status | \`$FINAL_STATUS\` |"
+            printf '| Failure detail | %s |\n' "$summary_failure_detail"
+            echo
+            printf 'Workflow logs: [%s](%s)\n' "$GITHUB_RUN_ID" "$WORKFLOW_RUN_URL"
           } >> "$GITHUB_STEP_SUMMARY"
