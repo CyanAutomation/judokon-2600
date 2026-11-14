@@ -18,7 +18,7 @@ concurrency:
 jobs:
   docs_sweep:
     if: github.ref == 'refs/heads/main'
-    uses: ./.github/workflows/kaseki-sweep.yml
+    uses: $/.github/workflows/kaseki-sweep.yml
     with:
       sweep_name: documentation
       task_description: Keep README.md and docs/ accurate against the current implementation.
