@@ -44,6 +44,12 @@ describe("Kaseki workflow boundaries", () => {
     expect(readWorkflow("kaseki-dry.yaml")).toContain(
       "if: github.ref == 'refs/heads/main'",
     );
+
+    for (const caller of ["kaseki-docs.yaml", "kaseki-dry.yaml"]) {
+      expect(readWorkflow(caller)).toContain(
+        "uses: $/.github/workflows/kaseki-sweep.yml",
+      );
+    }
   });
 
   it("requires and explicitly passes the Kaseki token through both callers", () => {
@@ -89,5 +95,79 @@ describe("Kaseki workflow boundaries", () => {
     expect(sweepWorkflow).toMatch(/http_status" != 408/);
     expect(sweepWorkflow).toMatch(/http_status" != 429/);
     expect(sweepWorkflow).toContain("retrying status poll");
+  });
+
+  it("audits Kaseki runner egress before checkout", () => {
+    const hardenRunner = sweepWorkflow.indexOf("step-security/harden-runner@");
+    const checkout = sweepWorkflow.indexOf("actions/checkout@");
+
+    expect(hardenRunner).toBeGreaterThanOrEqual(0);
+    expect(sweepWorkflow).toContain("egress-policy: audit");
+    expect(hardenRunner).toBeLessThan(checkout);
+  });
+
+  it("publishes a sanitized reason and a link for unsuccessful controller runs", () => {
+    expect(sweepWorkflow).toContain('node scripts/kaseki-run-details.mjs "$response_file"');
+    expect(sweepWorkflow).toContain("failure_detail<<%s\\n");
+    expect(sweepWorkflow).toContain("write_failure_detail_output() {");
+    expect(sweepWorkflow).toContain('while [[ "$detail" == *"$output_delimiter"* ]]');
+    expect(sweepWorkflow).toContain('printf \'| Failure detail | %s |\\n\' "$summary_failure_detail"');
+    expect(sweepWorkflow).toContain('summary_failure_detail="${summary_failure_detail//|/\\\\|}"');
+    expect(sweepWorkflow).toContain('summary_failure_detail="${summary_failure_detail//\\`/\\\\\\`}"');
+    expect(sweepWorkflow).toContain("See the step summary for sanitized controller details.");
+    expect(sweepWorkflow).toContain("${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}");
+    expect(sweepWorkflow).toContain('summary_failure_detail="${FAILURE_DETAIL//');
+    expect(sweepWorkflow).not.toContain('echo "| Failure detail | $FAILURE_DETAIL |"');
+    expect(sweepWorkflow).not.toContain('echo "::error title=Kaseki run failed::Completed with exit code $exit_code. $failure_detail"');
+    expect(sweepWorkflow).not.toContain('echo "::error title=Kaseki run $status::$failure_detail"');
+  });
+
+  it("runs workflow checks for pull requests, pushes, and merge queue candidates", () => {
+    const codeql = readWorkflow("codeql.yml");
+    const lint = readWorkflow("workflow-lint.yml");
+    const dependencyReview = readWorkflow("dependency-review.yml");
+
+    for (const workflow of [codeql, lint, dependencyReview]) {
+      expect(workflow).toContain("merge_group:");
+      expect(workflow).toContain("types: [checks_requested]");
+    }
+
+    expect(dependencyReview).not.toContain("paths:");
+    expect(dependencyReview).toContain("github.event.merge_group.base_ref");
+    expect(dependencyReview).toContain("github.event.merge_group.head_ref");
+  });
+
+  it("pins CodeQL to the current v4 commit and Kaseki to an in-history action commit", () => {
+    const codeql = readWorkflow("codeql.yml");
+
+    expect(codeql).toContain(
+      "github/codeql-action/init@33d7b85da1a04171e211befe2c739303b9a4c066 # v4",
+    );
+    expect(codeql).toContain(
+      "github/codeql-action/analyze@33d7b85da1a04171e211befe2c739303b9a4c066 # v4",
+    );
+    expect(sweepWorkflow).toContain(
+      "CyanAutomation/kaseki-agent/.github/actions/verify-controller-health@0400e036f8bd03d3c6a8ad1dd68ee74d85ac0aa6",
+    );
+  });
+
+  it("sets a seven-day default cooldown for npm and GitHub Actions updates", () => {
+    const dependabot = readFileSync(
+      resolve(process.cwd(), ".github/dependabot.yml"),
+      "utf8",
+    );
+
+    expect(dependabot.match(/default-days: 7/g)).toHaveLength(2);
+  });
+
+  it("pins the zizmor action and reports findings as annotations without a write token", () => {
+    const lint = readWorkflow("workflow-lint.yml");
+
+    expect(lint).toContain(
+      "zizmorcore/zizmor-action@45d7276c9ca790aabd705e31ca99c6185c3e76dd # v0.8.1",
+    );
+    expect(lint).toContain("advanced-security: false");
+    expect(lint).toContain("annotations: true");
+    expect(lint).not.toMatch(/security-events:\s*write/);
   });
 });

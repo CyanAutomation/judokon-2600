@@ -2,12 +2,10 @@ name: Workflow Lint
 
 on:
   pull_request:
-    paths:
-      - .github/workflows/**
   push:
     branches: [main]
-    paths:
-      - .github/workflows/**
+  merge_group:
+    types: [checks_requested]
 
 permissions:
   contents: read
@@ -30,3 +28,8 @@ jobs:
           reporter: github-annotations
           filter_mode: nofilter
           fail_level: error
+      - name: Scan workflows with zizmor
+        uses: zizmorcore/zizmor-action@45d7276c9ca790aabd705e31ca99c6185c3e76dd # v0.8.1
+        with:
+          advanced-security: false
+          annotations: true
