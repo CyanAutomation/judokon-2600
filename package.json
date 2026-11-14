@@ -26,7 +26,7 @@
     "@vitest/coverage-v8": "^5.1.0",
     "eslint": "^10.14.0",
     "fallow": "^3.40.0",
-    "jsdom": "^30.1.3",
+    "jsdom": "^31.0.0",
     "markdownlint-cli2": "^0.24.0",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.72.1",
