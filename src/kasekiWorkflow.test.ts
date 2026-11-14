@@ -44,6 +44,12 @@ describe("Kaseki workflow boundaries", () => {
     expect(readWorkflow("kaseki-dry.yaml")).toContain(
       "if: github.ref == 'refs/heads/main'",
     );
+
+    for (const caller of ["kaseki-docs.yaml", "kaseki-dry.yaml"]) {
+      expect(readWorkflow(caller)).toContain(
+        "uses: $/.github/workflows/kaseki-sweep.yml",
+      );
+    }
   });
 
   it("requires and explicitly passes the Kaseki token through both callers", () => {
@@ -120,6 +126,29 @@ describe("Kaseki workflow boundaries", () => {
     expect(dependencyReview).not.toContain("paths:");
     expect(dependencyReview).toContain("github.event.merge_group.base_ref");
     expect(dependencyReview).toContain("github.event.merge_group.head_ref");
+  });
+
+  it("pins CodeQL to the current v4 commit and Kaseki to an in-history action commit", () => {
+    const codeql = readWorkflow("codeql.yml");
+
+    expect(codeql).toContain(
+      "github/codeql-action/init@33d7b85da1a04171e211befe2c739303b9a4c066 # v4",
+    );
+    expect(codeql).toContain(
+      "github/codeql-action/analyze@33d7b85da1a04171e211befe2c739303b9a4c066 # v4",
+    );
+    expect(sweepWorkflow).toContain(
+      "CyanAutomation/kaseki-agent/.github/actions/verify-controller-health@0400e036f8bd03d3c6a8ad1dd68ee74d85ac0aa6",
+    );
+  });
+
+  it("sets a seven-day default cooldown for npm and GitHub Actions updates", () => {
+    const dependabot = readFileSync(
+      resolve(process.cwd(), ".github/dependabot.yml"),
+      "utf8",
+    );
+
+    expect(dependabot.match(/default-days: 7/g)).toHaveLength(2);
   });
 
   it("pins the zizmor action and reports findings as annotations without a write token", () => {
