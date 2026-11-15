@@ -101,7 +101,7 @@ Generate coverage-backed health metrics with:
 npm run fallow:coverage
 ```
 
-This runs the test suite with coverage, then runs Fallow with the generated Istanbul report for exact CRAP scores. Fallow also treats `api/**/*.ts` as Vercel function entry points.
+This runs the test suite with coverage, then runs Fallow with the generated Istanbul report for exact CRAP scores. Fallow discovers this repository's `api/**/*.ts` Vercel function routes as entry points, so no manual entry glob is needed.
 
 The behavior IDs used by UI and game tests are documented in [Test behavior contracts](docs/test-contracts.md).
 

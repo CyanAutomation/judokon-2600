@@ -422,183 +422,181 @@ describe("Main Module - Replay Seed Copying", () => {
   });
 });
 
-describe("Main Module - Render Integration", () => {
-  describe("Render function composition", () => {
-    it("[REQ-KEYBOARD-008] shows the active round prompt and its keyboard actions", () => {
-      const state = createMockGameState({
-        match: createMockMatch({ phase: "selecting" })
-      });
-      const root = document.createElement("div");
-
-      renderApp(root, state);
-
-      const status = root.querySelector<HTMLElement>('main [role="status"]');
-      const footerHint = root.querySelector<HTMLElement>("footer .footer-hint");
-
-      expect(status?.textContent).toContain("Pick one of your stats.");
-      expect(footerHint?.textContent).toContain("1–5");
-      expect(footerHint?.textContent).toContain("Pick a stat");
-      expect(footerHint?.textContent).toContain("Esc / Q");
+describe("Render function composition", () => {
+  it("[REQ-KEYBOARD-008] shows the active round prompt and its keyboard actions", () => {
+    const state = createMockGameState({
+      match: createMockMatch({ phase: "selecting" })
     });
+    const root = document.createElement("div");
 
-    it.each([
-      {
-        phase: "intro",
-        state: createMockGameState({ match: null }),
-        actions: ["Choose a length", "Start"]
-      },
-      {
-        phase: "selecting",
-        state: createMockGameState({ match: createMockMatch({ phase: "selecting" }) }),
-        actions: ["Pick a stat", "Quit match"]
-      },
-      {
-        phase: "post-round",
-        state: createMockGameState({ match: createMockMatch({ phase: "awaitingNext" }) }),
-        actions: ["Next round", "Quit match"]
-      },
-      {
-        phase: "match-over",
-        state: createMockGameState({ match: createMockMatch({ phase: "matchOver", winner: "player" }) }),
-        actions: ["Replay match", "Change settings"]
-      }
-    ])("renders the $phase keyboard actions in the footer", ({ state, actions }) => {
-      const root = document.createElement("div");
+    renderApp(root, state);
 
-      renderApp(root, state);
+    const status = root.querySelector<HTMLElement>('main [role="status"]');
+    const footerHint = root.querySelector<HTMLElement>("footer .footer-hint");
 
-      const footer = root.querySelector("footer");
-      expect(footer).not.toBeNull();
-      for (const action of actions) expect(footer?.textContent).toContain(action);
-    });
-
-    it("exposes labeled setup utilities and a modal replay-seed dialog", () => {
-      const root = document.createElement("div");
-
-      renderApp(root, createMockGameState({ match: null, seedModalOpen: true }));
-
-      const settings = root.querySelector<HTMLElement>('[role="group"][aria-label="Game settings"]');
-      const seedButton = settings?.querySelector<HTMLButtonElement>("#seed-button");
-      const soundButton = settings?.querySelector<HTMLButtonElement>("#sound-enabled");
-      const dialog = root.querySelector<HTMLElement>('[role="dialog"][aria-modal="true"]');
-
-      expect(seedButton?.textContent).toContain("Replay seed");
-      expect(soundButton?.textContent).toContain("Sound:");
-      expect(soundButton?.getAttribute("aria-pressed")).toMatch(/^(true|false)$/);
-      expect(dialog?.getAttribute("aria-labelledby")).toBe("seed-dialog-title");
-      expect(dialog?.querySelector("#seed-dialog-title")?.textContent).toBe("Set a replay seed");
-      expect(root.querySelector("footer")?.contains(dialog ?? null)).toBe(false);
-    });
-
-    it("[REQ-UI-001] renders setup choices when no match is active", () => {
-      const root = document.createElement("div");
-      renderApp(root, createMockGameState({ match: null, setupStep: "mode" }));
-
-      expect(root.querySelector("#intro-title")).not.toBeNull();
-      expect(root.querySelector("fieldset legend")?.textContent).toBe("Choose game mode");
-      expect(root.querySelector('[aria-label="Stat selection"]')).toBeNull();
-    });
-
-    it("[REQ-UI-001] renders match controls when a match is active", () => {
-      const root = document.createElement("div");
-      renderApp(root, createMockGameState({ match: createMockMatch() }));
-
-      expect(root.querySelector('[aria-label^="Match score:"]')).not.toBeNull();
-      expect(root.querySelector('[aria-label="Stat selection"]')).not.toBeNull();
-      expect(root.querySelector("#intro-title")).toBeNull();
-    });
-
-    it("[REQ-UI-002] exposes the current score and target in the match scoreboard", () => {
-      const root = document.createElement("div");
-      const match = createMockMatch({ scores: { player: 2, opponent: 1 }, target: 3 });
-      renderApp(root, createMockGameState({ match }));
-
-      expect(root.querySelector('[aria-label="Match score: You 2, opponent 1. First to 3 points."]')).not.toBeNull();
-    });
-
-    it("[REQ-UI-003] reveals the selected stat and both values in the resolved round result", () => {
-      const root = document.createElement("div");
-      const match = createMockMatch({ phase: "awaitingNext" });
-      const result = { ...createMockMatchResult(), match };
-      renderApp(root, createMockGameState({ match, result }));
-
-      const panel = root.querySelector('[aria-label="Round result"]');
-      expect(panel?.textContent).toContain("You scored 8 with Power; Test Fighter scored 5.");
-    });
-
-    it("[REQ-UI-004] shows the opponent's strongest stat in the scout report before resolution", () => {
-      const root = document.createElement("div");
-      const opponent = createMockJudoka("opponent", {
-        stats: { power: 1, speed: 2, technique: 10, kumikata: 3, newaza: 4 }
-      });
-      const match = createMockMatch({ opponent });
-      renderApp(root, createMockGameState({ match, result: null }));
-
-      const report = root.querySelector('[aria-label="Opponent intel"]');
-      expect(report?.tagName).toBe("ASIDE");
-      expect(report?.getAttribute("aria-label")).toBe("Opponent intel");
-      expect(report?.textContent).toContain("Technique");
-      expect(report?.textContent).not.toContain("10");
-      expect(report?.querySelector("details.scout-tip")?.hasAttribute("open")).toBe(false);
-    });
-
-    it("[REQ-CHAMPION-005] shows run progress for Champion matches", () => {
-      const root = document.createElement("div");
-      const match = createMockMatch({ mode: "champion", matchNumber: 5 });
-      const history = [
-        { outcome: "player", stat: "power", roundNumber: 1 },
-        { outcome: "opponent", stat: "technique", roundNumber: 2 },
-        { outcome: "player", stat: "newaza", roundNumber: 3 }
-      ] as const;
-      renderApp(root, createMockGameState({ match, history: [...history] }));
-
-      const progress = root.querySelector('[aria-label="Champion round progress"]');
-      expect(progress?.textContent).toContain("1 round");
-      expect(progress?.textContent).toContain("2–1–0");
-      expect(progress?.tagName).toBe("DETAILS");
-      expect((progress as HTMLDetailsElement | null)?.open).toBe(false);
-      expect(progress?.textContent).toContain("5");
-    });
-
-    it("[REQ-CHAMPION-005] omits Champion run progress for Classic matches", () => {
-      const root = document.createElement("div");
-      renderApp(root, createMockGameState({ match: createMockMatch({ mode: "classic" }) }));
-
-      expect(root.querySelector('[aria-label="Champion round progress"]')).toBeNull();
-    });
+    expect(status?.textContent).toContain("Pick one of your stats.");
+    expect(footerHint?.textContent).toContain("1–5");
+    expect(footerHint?.textContent).toContain("Pick a stat");
+    expect(footerHint?.textContent).toContain("Esc / Q");
   });
 
-  describe("History strip rendering", () => {
-    it("[REQ-UI-006] omits the round-history region until a round has resolved", () => {
-      const root = document.createElement("div");
-      renderApp(root, createMockGameState({ match: createMockMatch(), history: [] }));
+  it.each([
+    {
+      phase: "intro",
+      state: createMockGameState({ match: null }),
+      actions: ["Choose a length", "Start"]
+    },
+    {
+      phase: "selecting",
+      state: createMockGameState({ match: createMockMatch({ phase: "selecting" }) }),
+      actions: ["Pick a stat", "Quit match"]
+    },
+    {
+      phase: "post-round",
+      state: createMockGameState({ match: createMockMatch({ phase: "awaitingNext" }) }),
+      actions: ["Next round", "Quit match"]
+    },
+    {
+      phase: "match-over",
+      state: createMockGameState({ match: createMockMatch({ phase: "matchOver", winner: "player" }) }),
+      actions: ["Replay match", "Change settings"]
+    }
+  ])("renders the $phase keyboard actions in the footer", ({ state, actions }) => {
+    const root = document.createElement("div");
 
-      expect(root.querySelector('[aria-label="Round history"]')).toBeNull();
-      expect(root.querySelector('[aria-label^="Match score:"]')).not.toBeNull();
+    renderApp(root, state);
+
+    const footer = root.querySelector("footer");
+    expect(footer).not.toBeNull();
+    for (const action of actions) expect(footer?.textContent).toContain(action);
+  });
+
+  it("exposes labeled setup utilities and a modal replay-seed dialog", () => {
+    const root = document.createElement("div");
+
+    renderApp(root, createMockGameState({ match: null, seedModalOpen: true }));
+
+    const settings = root.querySelector<HTMLElement>('[role="group"][aria-label="Game settings"]');
+    const seedButton = settings?.querySelector<HTMLButtonElement>("#seed-button");
+    const soundButton = settings?.querySelector<HTMLButtonElement>("#sound-enabled");
+    const dialog = root.querySelector<HTMLElement>('[role="dialog"][aria-modal="true"]');
+
+    expect(seedButton?.textContent).toContain("Replay seed");
+    expect(soundButton?.textContent).toContain("Sound:");
+    expect(soundButton?.getAttribute("aria-pressed")).toMatch(/^(true|false)$/);
+    expect(dialog?.getAttribute("aria-labelledby")).toBe("seed-dialog-title");
+    expect(dialog?.querySelector("#seed-dialog-title")?.textContent).toBe("Set a replay seed");
+    expect(root.querySelector("footer")?.contains(dialog ?? null)).toBe(false);
+  });
+
+  it("[REQ-UI-001] renders setup choices when no match is active", () => {
+    const root = document.createElement("div");
+    renderApp(root, createMockGameState({ match: null, setupStep: "mode" }));
+
+    expect(root.querySelector("#intro-title")).not.toBeNull();
+    expect(root.querySelector("fieldset legend")?.textContent).toBe("Choose game mode");
+    expect(root.querySelector('[aria-label="Stat selection"]')).toBeNull();
+  });
+
+  it("[REQ-UI-001] renders match controls when a match is active", () => {
+    const root = document.createElement("div");
+    renderApp(root, createMockGameState({ match: createMockMatch() }));
+
+    expect(root.querySelector('[aria-label^="Match score:"]')).not.toBeNull();
+    expect(root.querySelector('[aria-label="Stat selection"]')).not.toBeNull();
+    expect(root.querySelector("#intro-title")).toBeNull();
+  });
+
+  it("[REQ-UI-002] exposes the current score and target in the match scoreboard", () => {
+    const root = document.createElement("div");
+    const match = createMockMatch({ scores: { player: 2, opponent: 1 }, target: 3 });
+    renderApp(root, createMockGameState({ match }));
+
+    expect(root.querySelector('[aria-label="Match score: You 2, opponent 1. First to 3 points."]')).not.toBeNull();
+  });
+
+  it("[REQ-UI-003] reveals the selected stat and both values in the resolved round result", () => {
+    const root = document.createElement("div");
+    const match = createMockMatch({ phase: "awaitingNext" });
+    const result = { ...createMockMatchResult(), match };
+    renderApp(root, createMockGameState({ match, result }));
+
+    const panel = root.querySelector('[aria-label="Round result"]');
+    expect(panel?.textContent).toContain("You scored 8 with Power; Test Fighter scored 5.");
+  });
+
+  it("[REQ-UI-004] shows the opponent's strongest stat in the scout report before resolution", () => {
+    const root = document.createElement("div");
+    const opponent = createMockJudoka("opponent", {
+      stats: { power: 1, speed: 2, technique: 10, kumikata: 3, newaza: 4 }
     });
+    const match = createMockMatch({ opponent });
+    renderApp(root, createMockGameState({ match, result: null }));
 
-    it("displays all history entries with their outcome labels", () => {
-      const state = createMockGameState({
-        match: createMockMatch(),
-        history: [
-          { outcome: "player", stat: "power", roundNumber: 1 },
-          { outcome: "opponent", stat: "technique", roundNumber: 2 },
-          { outcome: "draw", stat: "speed", roundNumber: 3 }
-        ]
-      });
-      const root = document.createElement("div");
+    const report = root.querySelector('[aria-label="Opponent intel"]');
+    expect(report?.tagName).toBe("ASIDE");
+    expect(report?.getAttribute("aria-label")).toBe("Opponent intel");
+    expect(report?.textContent).toContain("Technique");
+    expect(report?.textContent).not.toContain("10");
+    expect(report?.querySelector("details.scout-tip")?.hasAttribute("open")).toBe(false);
+  });
 
-      renderApp(root, state);
+  it("[REQ-CHAMPION-005] shows run progress for Champion matches", () => {
+    const root = document.createElement("div");
+    const match = createMockMatch({ mode: "champion", matchNumber: 5 });
+    const history = [
+      { outcome: "player", stat: "power", roundNumber: 1 },
+      { outcome: "opponent", stat: "technique", roundNumber: 2 },
+      { outcome: "player", stat: "newaza", roundNumber: 3 }
+    ] as const;
+    renderApp(root, createMockGameState({ match, history: [...history] }));
 
-      const history = root.querySelector('[aria-label="Round history"]');
-      const entries = history?.querySelectorAll("li");
+    const progress = root.querySelector('[aria-label="Champion round progress"]');
+    expect(progress?.textContent).toContain("1 round");
+    expect(progress?.textContent).toContain("2–1–0");
+    expect(progress?.tagName).toBe("DETAILS");
+    expect((progress as HTMLDetailsElement | null)?.open).toBe(false);
+    expect(progress?.textContent).toContain("5");
+  });
 
-      expect(history).not.toBeNull();
-      expect(entries).toHaveLength(3);
-      expect(entries?.[0]?.textContent).toBe("R1PowerWIN");
-      expect(entries?.[1]?.textContent).toBe("R2TechniqueLOSS");
-      expect(entries?.[2]?.textContent).toBe("R3SpeedDRAW");
+  it("[REQ-CHAMPION-005] omits Champion run progress for Classic matches", () => {
+    const root = document.createElement("div");
+    renderApp(root, createMockGameState({ match: createMockMatch({ mode: "classic" }) }));
+
+    expect(root.querySelector('[aria-label="Champion round progress"]')).toBeNull();
+  });
+});
+
+describe("History strip rendering", () => {
+  it("[REQ-UI-006] omits the round-history region until a round has resolved", () => {
+    const root = document.createElement("div");
+    renderApp(root, createMockGameState({ match: createMockMatch(), history: [] }));
+
+    expect(root.querySelector('[aria-label="Round history"]')).toBeNull();
+    expect(root.querySelector('[aria-label^="Match score:"]')).not.toBeNull();
+  });
+
+  it("displays all history entries with their outcome labels", () => {
+    const state = createMockGameState({
+      match: createMockMatch(),
+      history: [
+        { outcome: "player", stat: "power", roundNumber: 1 },
+        { outcome: "opponent", stat: "technique", roundNumber: 2 },
+        { outcome: "draw", stat: "speed", roundNumber: 3 }
+      ]
     });
+    const root = document.createElement("div");
+
+    renderApp(root, state);
+
+    const history = root.querySelector('[aria-label="Round history"]');
+    const entries = history?.querySelectorAll("li");
+
+    expect(history).not.toBeNull();
+    expect(entries).toHaveLength(3);
+    expect(entries?.[0]?.textContent).toBe("R1PowerWIN");
+    expect(entries?.[1]?.textContent).toBe("R2TechniqueLOSS");
+    expect(entries?.[2]?.textContent).toBe("R3SpeedDRAW");
   });
 });
 
@@ -715,187 +713,185 @@ describe("Main Module - Event Handler Integration", () => {
   });
 });
 
-describe("Main Module - Complex Integration Scenarios", () => {
-  it("replays a deterministic buffer from the beginning after the prior buffer is exhausted", async () => {
-    const fetcher = vi.fn((_url: string, init?: RequestInit) => {
-      const { count, seed } = JSON.parse(init?.body as string) as { count: number; seed: string };
-      const drawn = Array.from({ length: count }, (_, index) => createMockJudoka(`${seed}-judoka-${index}`));
-      return Promise.resolve(new Response(JSON.stringify({ judoka: drawn }), { status: 200 }));
-    }) as unknown as typeof fetch;
-    const match = createMockMatch({ matchNumber: 3, mode: "classic", phase: "awaitingNext" });
-    const state = createMockGameState({ activeSeed: "replay-seed", drawBuffer: [], match });
-    const deps: OrchestratorDeps = { client: new BudokonClient(fetcher), render: vi.fn() };
+it("replays a deterministic buffer from the beginning after the prior buffer is exhausted", async () => {
+  const fetcher = vi.fn((_url: string, init?: RequestInit) => {
+    const { count, seed } = JSON.parse(init?.body as string) as { count: number; seed: string };
+    const drawn = Array.from({ length: count }, (_, index) => createMockJudoka(`${seed}-judoka-${index}`));
+    return Promise.resolve(new Response(JSON.stringify({ judoka: drawn }), { status: 200 }));
+  }) as unknown as typeof fetch;
+  const match = createMockMatch({ matchNumber: 3, mode: "classic", phase: "awaitingNext" });
+  const state = createMockGameState({ activeSeed: "replay-seed", drawBuffer: [], match });
+  const deps: OrchestratorDeps = { client: new BudokonClient(fetcher), render: vi.fn() };
 
-    await next(state, match, deps);
-    expect([state.match?.player.id, state.match?.opponent.id]).toEqual([
-      "replay-seed:buffer:4-judoka-0",
-      "replay-seed:buffer:4-judoka-1"
-    ]);
+  await next(state, match, deps);
+  expect([state.match?.player.id, state.match?.opponent.id]).toEqual([
+    "replay-seed:buffer:4-judoka-0",
+    "replay-seed:buffer:4-judoka-1"
+  ]);
 
-    state.drawBuffer.splice(0);
-    await next(state, match, deps);
+  state.drawBuffer.splice(0);
+  await next(state, match, deps);
 
-    expect([state.match?.player.id, state.match?.opponent.id]).toEqual([
-      "replay-seed:buffer:4-judoka-0",
-      "replay-seed:buffer:4-judoka-1"
-    ]);
-    expect(fetcher).toHaveBeenCalledTimes(1);
+  expect([state.match?.player.id, state.match?.opponent.id]).toEqual([
+    "replay-seed:buffer:4-judoka-0",
+    "replay-seed:buffer:4-judoka-1"
+  ]);
+  expect(fetcher).toHaveBeenCalledTimes(1);
+});
+
+it("advances, consumes the fetched buffer, and saves once when next is called concurrently", async () => {
+  let resolveDraw!: (fighters: Judoka[]) => void;
+  const drawPromise = new Promise<Judoka[]>((resolve) => {
+    resolveDraw = resolve;
   });
+  const client = new class extends BudokonClient {
+    override drawBatch(): Promise<Judoka[]> {
+      return drawPromise;
+    }
+  }();
+  const match = createMockMatch({ matchNumber: 2, mode: "classic", phase: "awaitingNext" });
+  const state = createMockGameState({ activeSeed: "concurrent", drawBuffer: [], match });
+  const deps: OrchestratorDeps = { client, render: vi.fn() };
+  const saveSpy = vi.spyOn(Storage.prototype, "setItem");
 
-  it("advances, consumes the fetched buffer, and saves once when next is called concurrently", async () => {
-    let resolveDraw!: (fighters: Judoka[]) => void;
-    const drawPromise = new Promise<Judoka[]>((resolve) => {
-      resolveDraw = resolve;
-    });
-    const client = new class extends BudokonClient {
-      override drawBatch(): Promise<Judoka[]> {
-        return drawPromise;
-      }
-    }();
-    const match = createMockMatch({ matchNumber: 2, mode: "classic", phase: "awaitingNext" });
-    const state = createMockGameState({ activeSeed: "concurrent", drawBuffer: [], match });
-    const deps: OrchestratorDeps = { client, render: vi.fn() };
-    const saveSpy = vi.spyOn(Storage.prototype, "setItem");
+  const first = next(state, match, deps);
+  const second = next(state, match, deps);
+  resolveDraw(Array.from({ length: 6 }, (_, index) => createMockJudoka(`buffer-${index}`)));
+  await Promise.all([first, second]);
 
-    const first = next(state, match, deps);
-    const second = next(state, match, deps);
-    resolveDraw(Array.from({ length: 6 }, (_, index) => createMockJudoka(`buffer-${index}`)));
-    await Promise.all([first, second]);
+  expect(state.match?.matchNumber).toBe(3);
+  expect([state.match?.player.id, state.match?.opponent.id]).toEqual(["buffer-0", "buffer-1"]);
+  expect(state.drawBuffer.map(({ id }) => id)).toEqual(["buffer-2", "buffer-3", "buffer-4", "buffer-5"]);
+  expect(saveSpy).toHaveBeenCalledTimes(1);
+  const [storageKey, serializedState] = saveSpy.mock.calls[0]!;
+  expect(storageKey).toBe("judokon.activeMatch.v1");
+  expect(JSON.parse(serializedState)).toMatchObject({
+    match: {
+      mode: "classic",
+      matchNumber: 3,
+      player: { id: "buffer-0" },
+      opponent: { id: "buffer-1" }
+    },
+    drawBuffer: [
+      { id: "buffer-2" },
+      { id: "buffer-3" },
+      { id: "buffer-4" },
+      { id: "buffer-5" }
+    ]
+  });
+});
 
-    expect(state.match?.matchNumber).toBe(3);
-    expect([state.match?.player.id, state.match?.opponent.id]).toEqual(["buffer-0", "buffer-1"]);
-    expect(state.drawBuffer.map(({ id }) => id)).toEqual(["buffer-2", "buffer-3", "buffer-4", "buffer-5"]);
-    expect(saveSpy).toHaveBeenCalledTimes(1);
-    const [storageKey, serializedState] = saveSpy.mock.calls[0]!;
-    expect(storageKey).toBe("judokon.activeMatch.v1");
-    expect(JSON.parse(serializedState)).toMatchObject({
-      match: {
-        mode: "classic",
-        matchNumber: 3,
-        player: { id: "buffer-0" },
-        opponent: { id: "buffer-1" }
+it("[REQ-GAME-013] starts a match from setup and resolves the first round", async () => {
+  vi.useFakeTimers();
+
+  const state = createMockGameState({ target: 5, lengthIndex: 1, mode: "classic" });
+  const root = document.createElement("div");
+  const player = createMockJudoka("integration-player", {
+    firstname: "Player",
+    stats: { power: 8, speed: 5, technique: 6, kumikata: 7, newaza: 6 }
+  });
+  const opponent = createMockJudoka("integration-opponent", {
+    firstname: "Opponent",
+    stats: { power: 5, speed: 6, technique: 7, kumikata: 8, newaza: 9 }
+  });
+  const client = new class extends BudokonClient {
+    override async drawBatch(_seed: string, count: number): Promise<Judoka[]> {
+      const buffer = Array.from({ length: Math.max(0, count - 2) }, (_, index) =>
+        createMockJudoka(`integration-buffer-${index}`)
+      );
+      return [player, opponent, ...buffer].slice(0, count);
+    }
+  }();
+  const render = () => renderApp(root, state);
+  const deps: OrchestratorDeps = { client, render };
+  let startOperation: Promise<void> | undefined;
+
+  root.addEventListener("click", event => {
+    handleClickEvent(event, state, {
+      start: () => {
+        startOperation = start(state, deps, undefined, "test-seed");
       },
-      drawBuffer: [
-        { id: "buffer-2" },
-        { id: "buffer-3" },
-        { id: "buffer-4" },
-        { id: "buffer-5" }
-      ]
+      resolve: stat => {
+        if (!state.match) throw new Error("Match must exist before resolving");
+        resolve(state, state.match, stat, deps);
+      },
+      copyReplaySeed: async () => undefined,
+      next: async () => undefined,
+      clearAndExit: () => undefined
     });
   });
 
-  it("[REQ-GAME-013] starts a match from setup and resolves the first round", async () => {
-    vi.useFakeTimers();
+  render();
+  const startButton = root.querySelector<HTMLButtonElement>("#start");
+  if (!startButton) throw new Error("Start button must render before it can be clicked");
+  startButton.click();
+  expect(startOperation).toBeDefined();
+  await startOperation;
 
-    const state = createMockGameState({ target: 5, lengthIndex: 1, mode: "classic" });
-    const root = document.createElement("div");
-    const player = createMockJudoka("integration-player", {
-      firstname: "Player",
-      stats: { power: 8, speed: 5, technique: 6, kumikata: 7, newaza: 6 }
-    });
-    const opponent = createMockJudoka("integration-opponent", {
-      firstname: "Opponent",
-      stats: { power: 5, speed: 6, technique: 7, kumikata: 8, newaza: 9 }
-    });
-    const client = new class extends BudokonClient {
-      override async drawBatch(_seed: string, count: number): Promise<Judoka[]> {
-        const buffer = Array.from({ length: Math.max(0, count - 2) }, (_, index) =>
-          createMockJudoka(`integration-buffer-${index}`)
-        );
-        return [player, opponent, ...buffer].slice(0, count);
+  expect(state.match).toMatchObject({
+    target: 5,
+    phase: "selecting",
+    player,
+    opponent
+  });
+
+  const powerButton = root.querySelector<HTMLButtonElement>('[data-stat="power"]');
+  if (!powerButton) throw new Error("Power stat button must render before it can be clicked");
+  powerButton.click();
+  expect(state.pendingStat).toBe("power");
+
+  vi.advanceTimersByTime(MATCH_RESOLUTION_DELAY_MS);
+
+  expect(state.result?.outcome).toBe("player");
+  expect(state.match?.scores).toEqual({ player: 1, opponent: 0 });
+  expect(state.history).toEqual([{ outcome: "player", stat: "power", roundNumber: 1 }]);
+  expect(state.match?.phase).toBe("awaitingNext");
+  expect(root.querySelector(".result-panel")).not.toBeNull();
+  expect(root.querySelector<HTMLButtonElement>("#next")).not.toBeNull();
+});
+
+it("handles multiple replays with different seeds", async () => {
+  vi.useFakeTimers();
+
+  let finishSecondDraw: (() => void) | undefined;
+  const drawSeeds: string[] = [];
+  const client = new class extends BudokonClient {
+    override async drawBatch(seed: string, count: number): Promise<Judoka[]> {
+      drawSeeds.push(seed);
+      const drawn = Array.from({ length: count }, (_, index) =>
+        createMockJudoka(`${seed}-judoka-${index}`)
+      );
+
+      if (seed === "seed-2") {
+        await new Promise<void>(resolveDraw => {
+          finishSecondDraw = resolveDraw;
+        });
       }
-    }();
-    const render = () => renderApp(root, state);
-    const deps: OrchestratorDeps = { client, render };
-    let startOperation: Promise<void> | undefined;
 
-    root.addEventListener("click", event => {
-      handleClickEvent(event, state, {
-        start: () => {
-          startOperation = start(state, deps, undefined, "test-seed");
-        },
-        resolve: stat => {
-          if (!state.match) throw new Error("Match must exist before resolving");
-          resolve(state, state.match, stat, deps);
-        },
-        copyReplaySeed: async () => undefined,
-        next: async () => undefined,
-        clearAndExit: () => undefined
-      });
-    });
+      return drawn;
+    }
+  }();
+  const state = createMockGameState();
+  const deps: OrchestratorDeps = { client, render: vi.fn() };
 
-    render();
-    const startButton = root.querySelector<HTMLButtonElement>("#start");
-    if (!startButton) throw new Error("Start button must render before it can be clicked");
-    startButton.click();
-    expect(startOperation).toBeDefined();
-    await startOperation;
+  await start(state, deps, state.target, "seed-1");
+  expect(drawSeeds).toEqual(["seed-1"]);
+  expect(state.activeSeed).toBe("seed-1");
 
-    expect(state.match).toMatchObject({
-      target: 5,
-      phase: "selecting",
-      player,
-      opponent
-    });
+  resolve(state, state.match!, "power", deps);
+  vi.advanceTimersByTime(MATCH_RESOLUTION_DELAY_MS);
+  expect(state.result).not.toBeNull();
+  expect(state.history).toHaveLength(1);
 
-    const powerButton = root.querySelector<HTMLButtonElement>('[data-stat="power"]');
-    if (!powerButton) throw new Error("Power stat button must render before it can be clicked");
-    powerButton.click();
-    expect(state.pendingStat).toBe("power");
+  const secondStart = start(state, deps, state.target, "seed-2");
 
-    vi.advanceTimersByTime(MATCH_RESOLUTION_DELAY_MS);
+  expect(drawSeeds).toEqual(["seed-1", "seed-2"]);
+  expect(state.activeSeed).toBe("seed-2");
+  expect(state.result).toBeNull();
+  expect(state.history).toEqual([]);
 
-    expect(state.result?.outcome).toBe("player");
-    expect(state.match?.scores).toEqual({ player: 1, opponent: 0 });
-    expect(state.history).toEqual([{ outcome: "player", stat: "power", roundNumber: 1 }]);
-    expect(state.match?.phase).toBe("awaitingNext");
-    expect(root.querySelector(".result-panel")).not.toBeNull();
-    expect(root.querySelector<HTMLButtonElement>("#next")).not.toBeNull();
-  });
-
-  it("handles multiple replays with different seeds", async () => {
-    vi.useFakeTimers();
-
-    let finishSecondDraw: (() => void) | undefined;
-    const drawSeeds: string[] = [];
-    const client = new class extends BudokonClient {
-      override async drawBatch(seed: string, count: number): Promise<Judoka[]> {
-        drawSeeds.push(seed);
-        const drawn = Array.from({ length: count }, (_, index) =>
-          createMockJudoka(`${seed}-judoka-${index}`)
-        );
-
-        if (seed === "seed-2") {
-          await new Promise<void>(resolveDraw => {
-            finishSecondDraw = resolveDraw;
-          });
-        }
-
-        return drawn;
-      }
-    }();
-    const state = createMockGameState();
-    const deps: OrchestratorDeps = { client, render: vi.fn() };
-
-    await start(state, deps, state.target, "seed-1");
-    expect(drawSeeds).toEqual(["seed-1"]);
-    expect(state.activeSeed).toBe("seed-1");
-
-    resolve(state, state.match!, "power", deps);
-    vi.advanceTimersByTime(MATCH_RESOLUTION_DELAY_MS);
-    expect(state.result).not.toBeNull();
-    expect(state.history).toHaveLength(1);
-
-    const secondStart = start(state, deps, state.target, "seed-2");
-
-    expect(drawSeeds).toEqual(["seed-1", "seed-2"]);
-    expect(state.activeSeed).toBe("seed-2");
-    expect(state.result).toBeNull();
-    expect(state.history).toEqual([]);
-
-    finishSecondDraw?.();
-    await secondStart;
-    expect(state.match?.player.id).toBe("seed-2-judoka-0");
-    expect(state.match?.opponent.id).toBe("seed-2-judoka-1");
-  });
+  finishSecondDraw?.();
+  await secondStart;
+  expect(state.match?.player.id).toBe("seed-2-judoka-0");
+  expect(state.match?.opponent.id).toBe("seed-2-judoka-1");
 });

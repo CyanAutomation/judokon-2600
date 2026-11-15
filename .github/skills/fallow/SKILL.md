@@ -15,7 +15,7 @@ Use Fallow for static codebase analysis and optional runtime-coverage analysis. 
 ## In this repository
 
 - Fallow is a locked project dev dependency. Run the local version with `npm exec -- fallow <arguments>`; do not fetch a new CLI version for routine analysis.
-- `.fallowrc.json` adds `api/**/*.ts` as entry points. Check the resolved config with `npm exec -- fallow config` before drawing reachability conclusions about a particular area.
+- The Fallow plugin discovers this repository's `api/**/*.ts` Vercel routes as entry points; `.fallowrc.json` only supplies the local schema. Check the resolved config with `npm exec -- fallow config` before drawing reachability conclusions about a particular area.
 - Fallow is not part of the GitHub CI quality job. `npm run check` runs the repository's lint, test, documentation, and build checks. `npm run fallow:coverage` also runs the test-coverage suite, then analyzes that coverage report.
 - The repository has no dedicated Fallow setup skill. If Fallow installation or configuration needs changing, inspect the locked package's supported setup guidance and current schema before editing configuration.
 

@@ -32,194 +32,192 @@ function completedMatch(history: MatchHistoryItem[], mode: GameMode = "classic")
   };
 }
 
-describe("Classic Battle game engine", () => {
-  it("identifies every strongest stat for a scout report", () => {
-    expect(strongestStats(player)).toEqual(["power"]);
-    expect(strongestStats({ ...player, stats: { ...player.stats, technique: 9 } })).toEqual(["power", "technique"]);
-  });
-  it("awards a point for a higher selected stat and progresses to the next match", () => {
-    const result = selectStat(createMatch(player, opponent, 3), "power");
-    expect(result.outcome).toBe("player");
-    expect(result.match.scores).toEqual({ player: 1, opponent: 0 });
-    expect(result.match.phase).toBe("awaitingNext");
-    expect(result.match.matchNumber).toBe(1);
-  });
-  it("does not award points for a draw", () => {
-    const result = selectStat(createMatch(player, opponent, 3), "speed");
-    expect(result.outcome).toBe("draw");
-    expect(result.match.scores).toEqual({ player: 0, opponent: 0 });
-  });
-  it("ends a match when its configured target is reached", () => {
-    const result = selectStat(createMatch(player, opponent, 1), "power");
-    expect(result.match.phase).toBe("matchOver");
-    expect(result.match.winner).toBe("player");
-  });
-  it("ends an unresolved match after the twenty-fifth played match", () => {
-    const result = selectStat(createMatch(player, opponent, 10, 25, { player: 3, opponent: 3 }), "speed");
-    expect(result.match.phase).toBe("matchOver");
-    expect(result.match.winner).toBe("draw");
-  });
-  it.each([
-    ["awaitingNext phase", selectStat(createMatch(player, opponent, 3), "power").match],
-    ["matchOver phase", selectStat(createMatch(player, opponent, 1), "power").match]
-  ])("rejects a stat choice in the %s", (_label, match) => {
-    expect(() => selectStat(match, "technique")).toThrow("match is not ready for a stat selection");
-  });
-  it("replaces both judoka between Classic matches", () => {
-    const resolved = selectStat(createMatch(player, opponent, 3, 7, { player: 1, opponent: 1 }), "power").match;
+it("identifies every strongest stat for a scout report", () => {
+  expect(strongestStats(player)).toEqual(["power"]);
+  expect(strongestStats({ ...player, stats: { ...player.stats, technique: 9 } })).toEqual(["power", "technique"]);
+});
+it("awards a point for a higher selected stat and progresses to the next match", () => {
+  const result = selectStat(createMatch(player, opponent, 3), "power");
+  expect(result.outcome).toBe("player");
+  expect(result.match.scores).toEqual({ player: 1, opponent: 0 });
+  expect(result.match.phase).toBe("awaitingNext");
+  expect(result.match.matchNumber).toBe(1);
+});
+it("does not award points for a draw", () => {
+  const result = selectStat(createMatch(player, opponent, 3), "speed");
+  expect(result.outcome).toBe("draw");
+  expect(result.match.scores).toEqual({ player: 0, opponent: 0 });
+});
+it("ends a match when its configured target is reached", () => {
+  const result = selectStat(createMatch(player, opponent, 1), "power");
+  expect(result.match.phase).toBe("matchOver");
+  expect(result.match.winner).toBe("player");
+});
+it("ends an unresolved match after the twenty-fifth played match", () => {
+  const result = selectStat(createMatch(player, opponent, 10, 25, { player: 3, opponent: 3 }), "speed");
+  expect(result.match.phase).toBe("matchOver");
+  expect(result.match.winner).toBe("draw");
+});
+it.each([
+  ["awaitingNext phase", selectStat(createMatch(player, opponent, 3), "power").match],
+  ["matchOver phase", selectStat(createMatch(player, opponent, 1), "power").match]
+])("rejects a stat choice in the %s", (_label, match) => {
+  expect(() => selectStat(match, "technique")).toThrow("match is not ready for a stat selection");
+});
+it("replaces both judoka between Classic matches", () => {
+  const resolved = selectStat(createMatch(player, opponent, 3, 7, { player: 1, opponent: 1 }), "power").match;
 
-    const next = nextMatch(resolved, nextPlayer, nextOpponent);
-    expect(next).toMatchObject({
-      player: nextPlayer,
-      opponent: nextOpponent,
-      target: 3,
-      matchNumber: 8,
-      scores: { player: 2, opponent: 1 },
-      mode: "classic",
-      phase: "selecting",
-      winner: null
-    });
+  const next = nextMatch(resolved, nextPlayer, nextOpponent);
+  expect(next).toMatchObject({
+    player: nextPlayer,
+    opponent: nextOpponent,
+    target: 3,
+    matchNumber: 8,
+    scores: { player: 2, opponent: 1 },
+    mode: "classic",
+    phase: "selecting",
+    winner: null
   });
-  it("keeps the player's judoka and replaces the opponent in Champion mode", () => {
-    const resolved = selectStat(createMatch(player, opponent, 3, 1, { player: 0, opponent: 0 }, "champion"), "power").match;
-    const bufferedOpponent = { ...nextOpponent, id: "buffered-opponent" };
+});
+it("keeps the player's judoka and replaces the opponent in Champion mode", () => {
+  const resolved = selectStat(createMatch(player, opponent, 3, 1, { player: 0, opponent: 0 }, "champion"), "power").match;
+  const bufferedOpponent = { ...nextOpponent, id: "buffered-opponent" };
 
-    const next = nextMatch(resolved, nextPlayer, bufferedOpponent);
-    expect(next).toMatchObject({
-      player,
-      opponent: bufferedOpponent,
-      target: 3,
-      matchNumber: 2,
-      scores: { player: 1, opponent: 0 },
-      mode: "champion",
-      phase: "selecting"
-    });
-    expect(next.player.id).toBe("player");
-    expect(next.opponent.id).toBe("buffered-opponent");
-    expect(next.opponent.id).not.toBe(opponent.id);
+  const next = nextMatch(resolved, nextPlayer, bufferedOpponent);
+  expect(next).toMatchObject({
+    player,
+    opponent: bufferedOpponent,
+    target: 3,
+    matchNumber: 2,
+    scores: { player: 1, opponent: 0 },
+    mode: "champion",
+    phase: "selecting"
   });
-  it("formats the score and identifies the most-selected decisive stat", () => {
-    const history: MatchHistoryItem[] = [
-      { outcome: "player", stat: "technique" },
-      { outcome: "player", stat: "power" },
-      { outcome: "draw", stat: "power" }
-    ];
-    const summary = matchSummary(completedMatch(history), history);
+  expect(next.player.id).toBe("player");
+  expect(next.opponent.id).toBe("buffered-opponent");
+  expect(next.opponent.id).not.toBe(opponent.id);
+});
+it("formats the score and identifies the most-selected decisive stat", () => {
+  const history: MatchHistoryItem[] = [
+    { outcome: "player", stat: "technique" },
+    { outcome: "player", stat: "power" },
+    { outcome: "draw", stat: "power" }
+  ];
+  const summary = matchSummary(completedMatch(history), history);
 
-    expect(summary).toMatchObject({
-      score: "2–0",
-      decisiveStat: "power",
-    });
+  expect(summary).toMatchObject({
+    score: "2–0",
+    decisiveStat: "power",
   });
-  it("does not identify a decisive stat when selections are tied", () => {
-    const history: MatchHistoryItem[] = [
-      { outcome: "player", stat: "power" },
-      { outcome: "opponent", stat: "technique" }
-    ];
+});
+it("does not identify a decisive stat when selections are tied", () => {
+  const history: MatchHistoryItem[] = [
+    { outcome: "player", stat: "power" },
+    { outcome: "opponent", stat: "technique" }
+  ];
 
-    expect(matchSummary(completedMatch(history), history).decisiveStat).toBeNull();
-  });
-  describe("matchSummary best-stat ranking (README gameplay contract)", () => {
-    it.each([
-      {
-        scenario: "a clear winner",
-        history: [
-          { outcome: "player", stat: "power" },
-          { outcome: "opponent", stat: "power" },
-          { outcome: "player", stat: "power" }
-        ] satisfies MatchHistoryItem[],
-        bestStat: "power",
-        bestStatWins: 2,
-        bestStatSelections: 3
-      },
-      {
-        scenario: "equal wins with different success rates",
-        history: [
-          { outcome: "player", stat: "power" },
-          { outcome: "opponent", stat: "power" },
-          { outcome: "player", stat: "speed" }
-        ] satisfies MatchHistoryItem[],
-        bestStat: "speed",
-        bestStatWins: 1,
-        bestStatSelections: 1
-      },
-      {
-        scenario: "a final tie resolved by displayed stat order",
-        history: [
-          { outcome: "player", stat: "speed" },
-          { outcome: "opponent", stat: "speed" },
-          { outcome: "player", stat: "power" },
-          { outcome: "opponent", stat: "power" }
-        ] satisfies MatchHistoryItem[],
-        bestStat: "power",
-        bestStatWins: 1,
-        bestStatSelections: 2
-      },
-      {
-        scenario: "no wins",
-        history: [
-          { outcome: "opponent", stat: "technique" },
-          { outcome: "draw", stat: "speed" }
-        ] satisfies MatchHistoryItem[],
-        bestStat: null,
-        bestStatWins: 0,
-        bestStatSelections: 0
-      }
-    ])("ranks the best stat for $scenario", ({ history, bestStat, bestStatWins, bestStatSelections }) => {
-      const summary = matchSummary(completedMatch(history), history);
-
-      expect(summary.bestStat).toBe(bestStat);
-      expect(summary.bestStatWins).toBe(bestStatWins);
-      expect(summary.bestStatSelections).toBe(bestStatSelections);
-    });
-  });
+  expect(matchSummary(completedMatch(history), history).decisiveStat).toBeNull();
+});
+describe("matchSummary best-stat ranking (README gameplay contract)", () => {
   it.each([
     {
-      scenario: "win–win",
-      outcomes: ["player", "player"] as const,
-      championStreak: 2
+      scenario: "a clear winner",
+      history: [
+        { outcome: "player", stat: "power" },
+        { outcome: "opponent", stat: "power" },
+        { outcome: "player", stat: "power" }
+      ] satisfies MatchHistoryItem[],
+      bestStat: "power",
+      bestStatWins: 2,
+      bestStatSelections: 3
     },
     {
-      scenario: "win–loss–win",
-      outcomes: ["player", "opponent", "player"] as const,
-      championStreak: 1
+      scenario: "equal wins with different success rates",
+      history: [
+        { outcome: "player", stat: "power" },
+        { outcome: "opponent", stat: "power" },
+        { outcome: "player", stat: "speed" }
+      ] satisfies MatchHistoryItem[],
+      bestStat: "speed",
+      bestStatWins: 1,
+      bestStatSelections: 1
     },
     {
-      scenario: "a streak ending in a loss",
-      outcomes: ["player", "player", "opponent"] as const,
-      championStreak: 0
+      scenario: "a final tie resolved by displayed stat order",
+      history: [
+        { outcome: "player", stat: "speed" },
+        { outcome: "opponent", stat: "speed" },
+        { outcome: "player", stat: "power" },
+        { outcome: "opponent", stat: "power" }
+      ] satisfies MatchHistoryItem[],
+      bestStat: "power",
+      bestStatWins: 1,
+      bestStatSelections: 2
     },
     {
-      scenario: "a streak ending in a draw",
-      outcomes: ["player", "player", "draw"] as const,
-      championStreak: 0
+      scenario: "no wins",
+      history: [
+        { outcome: "opponent", stat: "technique" },
+        { outcome: "draw", stat: "speed" }
+      ] satisfies MatchHistoryItem[],
+      bestStat: null,
+      bestStatWins: 0,
+      bestStatSelections: 0
     }
-  ])("[REQ-CHAMPION-005] calculates the current streak from trailing round outcomes: $scenario", ({ outcomes, championStreak }) => {
-    const history: MatchHistoryItem[] = outcomes.map((outcome) => ({ outcome, stat: "power" }));
-    const summary = matchSummary(completedMatch(history, "champion"), history);
-
-    expect(summary.championStreak).toBe(championStreak);
-    expect(summary.championRecord?.wins).toBe(outcomes.filter((outcome) => outcome === "player").length);
-  });
-
-  it("reports a Champion run's win, loss, and draw record", () => {
-    const history: MatchHistoryItem[] = [
-      { outcome: "player", stat: "technique" },
-      { outcome: "opponent", stat: "technique" },
-      { outcome: "draw", stat: "speed" }
-    ];
-
-    expect(matchSummary(completedMatch(history, "champion"), history)).toMatchObject({
-      playerWins: 1,
-      championRecord: { wins: 1, losses: 1, draws: 1 }
-    });
-  });
-
-  it("does not expose Champion-only progress for a Classic Battle", () => {
-    const history: MatchHistoryItem[] = [{ outcome: "player", stat: "power" }];
+  ])("ranks the best stat for $scenario", ({ history, bestStat, bestStatWins, bestStatSelections }) => {
     const summary = matchSummary(completedMatch(history), history);
 
-    expect(summary.championStreak).toBeNull();
-    expect(summary.championRecord).toBeNull();
+    expect(summary.bestStat).toBe(bestStat);
+    expect(summary.bestStatWins).toBe(bestStatWins);
+    expect(summary.bestStatSelections).toBe(bestStatSelections);
   });
+});
+it.each([
+  {
+    scenario: "win–win",
+    outcomes: ["player", "player"] as const,
+    championStreak: 2
+  },
+  {
+    scenario: "win–loss–win",
+    outcomes: ["player", "opponent", "player"] as const,
+    championStreak: 1
+  },
+  {
+    scenario: "a streak ending in a loss",
+    outcomes: ["player", "player", "opponent"] as const,
+    championStreak: 0
+  },
+  {
+    scenario: "a streak ending in a draw",
+    outcomes: ["player", "player", "draw"] as const,
+    championStreak: 0
+  }
+])("[REQ-CHAMPION-005] calculates the current streak from trailing round outcomes: $scenario", ({ outcomes, championStreak }) => {
+  const history: MatchHistoryItem[] = outcomes.map((outcome) => ({ outcome, stat: "power" }));
+  const summary = matchSummary(completedMatch(history, "champion"), history);
+
+  expect(summary.championStreak).toBe(championStreak);
+  expect(summary.championRecord?.wins).toBe(outcomes.filter((outcome) => outcome === "player").length);
+});
+
+it("reports a Champion run's win, loss, and draw record", () => {
+  const history: MatchHistoryItem[] = [
+    { outcome: "player", stat: "technique" },
+    { outcome: "opponent", stat: "technique" },
+    { outcome: "draw", stat: "speed" }
+  ];
+
+  expect(matchSummary(completedMatch(history, "champion"), history)).toMatchObject({
+    playerWins: 1,
+    championRecord: { wins: 1, losses: 1, draws: 1 }
+  });
+});
+
+it("does not expose Champion-only progress for a Classic Battle", () => {
+  const history: MatchHistoryItem[] = [{ outcome: "player", stat: "power" }];
+  const summary = matchSummary(completedMatch(history), history);
+
+  expect(summary.championStreak).toBeNull();
+  expect(summary.championRecord).toBeNull();
 });
