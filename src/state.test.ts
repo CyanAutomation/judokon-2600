@@ -11,253 +11,251 @@ import { createMockJudoka, createMockMatch, createMockMatchResult } from "./test
 
 // jsdom provides localStorage and sessionStorage automatically
 
-describe("State Management", () => {
-  beforeEach(() => {
-    localStorage.clear();
-    sessionStorage.clear();
-  });
+beforeEach(() => {
+  localStorage.clear();
+  sessionStorage.clear();
+});
 
-  afterEach(() => {
-    localStorage.clear();
-    sessionStorage.clear();
-  });
+afterEach(() => {
+  localStorage.clear();
+  sessionStorage.clear();
+});
 
-  describe("createGameState", () => {
-    it("[REQ-UI-013] opens fresh setup with the documented default choices", () => {
-      const state = createGameState();
-      expect(state).toMatchObject({
-        match: null,
-        division: "absolute",
-        mode: "classic",
-        weight: "random",
-        target: 3,
-        lengthIndex: 0,
-        setupStep: "mode",
-        setupCursor: 0
-      });
-    });
-
-    it("loads persisted division preference from localStorage", () => {
-      localStorage.setItem("judokon.divisionMode", "weight");
-      const state = createGameState();
-      expect(state.division).toBe("weight");
-    });
-
-    it("loads persisted game mode preference from localStorage", () => {
-      localStorage.setItem("judokon.gameMode", "champion");
-      const state = createGameState();
-      expect(state).toMatchObject({ mode: "champion", setupCursor: 1 });
-    });
-
-    it("loads persisted weight class preference from localStorage", () => {
-      localStorage.setItem("judokon.weightClass", "-73");
-      const state = createGameState();
-      expect(state.weight).toBe("-73");
-    });
-
-    it("loads all preferences together", () => {
-      localStorage.setItem("judokon.divisionMode", "weight");
-      localStorage.setItem("judokon.gameMode", "champion");
-      localStorage.setItem("judokon.weightClass", "-81");
-      const state = createGameState();
-      expect(state).toMatchObject({
-        division: "weight",
-        mode: "champion",
-        weight: "-81"
-      });
+describe("createGameState", () => {
+  it("[REQ-UI-013] opens fresh setup with the documented default choices", () => {
+    const state = createGameState();
+    expect(state).toMatchObject({
+      match: null,
+      division: "absolute",
+      mode: "classic",
+      weight: "random",
+      target: 3,
+      lengthIndex: 0,
+      setupStep: "mode",
+      setupCursor: 0
     });
   });
 
-  describe("persistPreferences", () => {
-    it("saves division preference to localStorage", () => {
-      const state = createGameState();
-      state.division = "weight";
-      persistPreferences(state);
-      expect(localStorage.getItem("judokon.divisionMode")).toBe("weight");
+  it("loads persisted division preference from localStorage", () => {
+    localStorage.setItem("judokon.divisionMode", "weight");
+    const state = createGameState();
+    expect(state.division).toBe("weight");
+  });
+
+  it("loads persisted game mode preference from localStorage", () => {
+    localStorage.setItem("judokon.gameMode", "champion");
+    const state = createGameState();
+    expect(state).toMatchObject({ mode: "champion", setupCursor: 1 });
+  });
+
+  it("loads persisted weight class preference from localStorage", () => {
+    localStorage.setItem("judokon.weightClass", "-73");
+    const state = createGameState();
+    expect(state.weight).toBe("-73");
+  });
+
+  it("loads all preferences together", () => {
+    localStorage.setItem("judokon.divisionMode", "weight");
+    localStorage.setItem("judokon.gameMode", "champion");
+    localStorage.setItem("judokon.weightClass", "-81");
+    const state = createGameState();
+    expect(state).toMatchObject({
+      division: "weight",
+      mode: "champion",
+      weight: "-81"
     });
+  });
+});
 
-    it("saves game mode preference to localStorage", () => {
-      const state = createGameState();
-      state.mode = "champion";
-      persistPreferences(state);
-      expect(localStorage.getItem("judokon.gameMode")).toBe("champion");
+describe("persistPreferences", () => {
+  it("saves division preference to localStorage", () => {
+    const state = createGameState();
+    state.division = "weight";
+    persistPreferences(state);
+    expect(localStorage.getItem("judokon.divisionMode")).toBe("weight");
+  });
+
+  it("saves game mode preference to localStorage", () => {
+    const state = createGameState();
+    state.mode = "champion";
+    persistPreferences(state);
+    expect(localStorage.getItem("judokon.gameMode")).toBe("champion");
+  });
+
+  it("saves weight class preference to localStorage", () => {
+    const state = createGameState();
+    state.weight = "-66";
+    persistPreferences(state);
+    expect(localStorage.getItem("judokon.weightClass")).toBe("-66");
+  });
+
+  it("performs round-trip preference save and load", () => {
+    const originalState = createGameState();
+    originalState.division = "weight";
+    originalState.mode = "champion";
+    originalState.weight = "-78";
+
+    persistPreferences(originalState);
+
+    const newState = createGameState();
+    expect(newState).toMatchObject({
+      division: "weight",
+      mode: "champion",
+      weight: "-78"
     });
+  });
+});
 
-    it("saves weight class preference to localStorage", () => {
-      const state = createGameState();
-      state.weight = "-66";
-      persistPreferences(state);
-      expect(localStorage.getItem("judokon.weightClass")).toBe("-66");
+describe("clearSavedMatch", () => {
+  it("removes saved match from sessionStorage", () => {
+    sessionStorage.setItem("judokon.activeMatch.v1", "test-data");
+    expect(sessionStorage.getItem("judokon.activeMatch.v1")).toBe("test-data");
+
+    clearSavedMatch();
+
+    expect(sessionStorage.getItem("judokon.activeMatch.v1")).toBeNull();
+  });
+
+});
+
+describe("saveGameState", () => {
+  it.each([
+    { scenario: "before the first round", hasResult: false, history: [] },
+    {
+      scenario: "after a resolved round",
+      hasResult: true,
+      history: [{ outcome: "player", stat: "power", roundNumber: 1 }]
+    }
+  ])("[REQ-GAME-010] restores an active match $scenario", ({ hasResult, history }) => {
+    const match = createMockMatch({
+      phase: hasResult ? "awaitingNext" : "selecting",
+      player: createMockJudoka("player", {
+        stats: { power: 8, speed: 5, technique: 5, kumikata: 5, newaza: 5 }
+      }),
+      opponent: createMockJudoka("opponent")
     });
+    const result = hasResult
+      ? { ...createMockMatchResult(), match, playerValue: 8, opponentValue: 5 }
+      : null;
+    const state = createGameState();
+    state.match = match;
+    state.result = result;
+    state.history = history as GameState["history"];
+    state.activeSeed = "replay-seed";
+    state.activeWeight = "-73";
+    state.drawBuffer = Array.from({ length: 4 }, (_, index) => createMockJudoka(`buffer-${index}`));
 
-    it("performs round-trip preference save and load", () => {
-      const originalState = createGameState();
-      originalState.division = "weight";
-      originalState.mode = "champion";
-      originalState.weight = "-78";
+    saveGameState(state);
 
-      persistPreferences(originalState);
-
-      const newState = createGameState();
-      expect(newState).toMatchObject({
-        division: "weight",
-        mode: "champion",
-        weight: "-78"
-      });
+    expect(loadSavedGameState()).toStrictEqual({
+      match,
+      result,
+      history,
+      activeSeed: "replay-seed",
+      activeWeight: "-73",
+      drawBuffer: state.drawBuffer
     });
   });
 
-  describe("clearSavedMatch", () => {
-    it("removes saved match from sessionStorage", () => {
-      sessionStorage.setItem("judokon.activeMatch.v1", "test-data");
-      expect(sessionStorage.getItem("judokon.activeMatch.v1")).toBe("test-data");
+  it("does not save when match is null", () => {
+    const state = createGameState();
+    state.match = null;
 
-      clearSavedMatch();
+    saveGameState(state);
 
-      expect(sessionStorage.getItem("judokon.activeMatch.v1")).toBeNull();
-    });
-
+    expect(sessionStorage.getItem("judokon.activeMatch.v1")).toBeNull();
   });
 
-  describe("saveGameState", () => {
-    it.each([
-      { scenario: "before the first round", hasResult: false, history: [] },
-      {
-        scenario: "after a resolved round",
-        hasResult: true,
-        history: [{ outcome: "player", stat: "power", roundNumber: 1 }]
-      }
-    ])("[REQ-GAME-010] restores an active match $scenario", ({ hasResult, history }) => {
-      const match = createMockMatch({
-        phase: hasResult ? "awaitingNext" : "selecting",
-        player: createMockJudoka("player", {
-          stats: { power: 8, speed: 5, technique: 5, kumikata: 5, newaza: 5 }
-        }),
-        opponent: createMockJudoka("opponent")
-      });
-      const result = hasResult
-        ? { ...createMockMatchResult(), match, playerValue: 8, opponentValue: 5 }
-        : null;
-      const state = createGameState();
-      state.match = match;
-      state.result = result;
-      state.history = history as GameState["history"];
-      state.activeSeed = "replay-seed";
-      state.activeWeight = "-73";
-      state.drawBuffer = Array.from({ length: 4 }, (_, index) => createMockJudoka(`buffer-${index}`));
+  it("[REQ-GAME-010] does not save an in-progress stat selection", () => {
+    const state = createGameState();
+    state.match = createMockMatch();
+    state.pendingStat = "power";
 
-      saveGameState(state);
+    saveGameState(state);
 
-      expect(loadSavedGameState()).toStrictEqual({
-        match,
-        result,
-        history,
-        activeSeed: "replay-seed",
-        activeWeight: "-73",
-        drawBuffer: state.drawBuffer
-      });
-    });
-
-    it("does not save when match is null", () => {
-      const state = createGameState();
-      state.match = null;
-
-      saveGameState(state);
-
-      expect(sessionStorage.getItem("judokon.activeMatch.v1")).toBeNull();
-    });
-
-    it("[REQ-GAME-010] does not save an in-progress stat selection", () => {
-      const state = createGameState();
-      state.match = createMockMatch();
-      state.pendingStat = "power";
-
-      saveGameState(state);
-
-      expect(sessionStorage.getItem("judokon.activeMatch.v1")).toBeNull();
-    });
-
-    it("[REQ-GAME-010] does not persist optional tactical assessment with replay state", () => {
-      const state = createGameState();
-      state.match = createMockMatch();
-      state.tacticalAssessment = { overReliance: true };
-
-      saveGameState(state);
-
-      const saved = sessionStorage.getItem("judokon.activeMatch.v1");
-      expect(saved).not.toBeNull();
-      expect(saved).not.toContain("tacticalAssessment");
-      expect(loadSavedGameState()).not.toHaveProperty("tacticalAssessment");
-    });
+    expect(sessionStorage.getItem("judokon.activeMatch.v1")).toBeNull();
   });
 
-  describe("loadSavedGameState", () => {
-    it("returns null when no saved match exists", () => {
-      const loaded = loadSavedGameState();
-      expect(loaded).toBeNull();
-    });
+  it("[REQ-GAME-010] does not persist optional tactical assessment with replay state", () => {
+    const state = createGameState();
+    state.match = createMockMatch();
+    state.tacticalAssessment = { overReliance: true };
 
-    it("returns null when saved data is invalid JSON", () => {
-      sessionStorage.setItem("judokon.activeMatch.v1", "invalid-json-{");
-      const loaded = loadSavedGameState();
-      expect(loaded).toBeNull();
-    });
+    saveGameState(state);
 
-    it("returns null when saved data is missing required fields", () => {
-      sessionStorage.setItem("judokon.activeMatch.v1", JSON.stringify({ version: 1 }));
-      const loaded = loadSavedGameState();
-      expect(loaded).toBeNull();
-    });
+    const saved = sessionStorage.getItem("judokon.activeMatch.v1");
+    expect(saved).not.toBeNull();
+    expect(saved).not.toContain("tacticalAssessment");
+    expect(loadSavedGameState()).not.toHaveProperty("tacticalAssessment");
+  });
+});
 
-    it("[REQ-GAME-010] restores a valid saved setup state with no active match", () => {
-      const saved = {
-        version: 1,
-        match: null,
-        result: null,
-        history: [],
-        activeSeed: "seed",
-        activeWeight: undefined,
-        drawBuffer: []
-      };
-      sessionStorage.setItem("judokon.activeMatch.v1", JSON.stringify(saved));
-      expect(loadSavedGameState()).toStrictEqual({
-        match: null,
-        result: null,
-        history: [],
-        activeSeed: "seed",
-        activeWeight: undefined,
-        drawBuffer: []
-      });
-    });
+describe("loadSavedGameState", () => {
+  it("returns null when no saved match exists", () => {
+    const loaded = loadSavedGameState();
+    expect(loaded).toBeNull();
   });
 
-  describe("Edge cases and error handling", () => {
-    it("[REQ-GAME-010] round-trips a long replay seed in saved session data", () => {
-      const state = createGameState();
-      state.match = createMockMatch();
-      const longSeed = "x".repeat(10000);
-      state.activeSeed = longSeed;
+  it("returns null when saved data is invalid JSON", () => {
+    sessionStorage.setItem("judokon.activeMatch.v1", "invalid-json-{");
+    const loaded = loadSavedGameState();
+    expect(loaded).toBeNull();
+  });
 
-      saveGameState(state);
-      const loaded = loadSavedGameState();
+  it("returns null when saved data is missing required fields", () => {
+    sessionStorage.setItem("judokon.activeMatch.v1", JSON.stringify({ version: 1 }));
+    const loaded = loadSavedGameState();
+    expect(loaded).toBeNull();
+  });
 
-      expect(loaded?.activeSeed).toBe(longSeed);
+  it("[REQ-GAME-010] restores a valid saved setup state with no active match", () => {
+    const saved = {
+      version: 1,
+      match: null,
+      result: null,
+      history: [],
+      activeSeed: "seed",
+      activeWeight: undefined,
+      drawBuffer: []
+    };
+    sessionStorage.setItem("judokon.activeMatch.v1", JSON.stringify(saved));
+    expect(loadSavedGameState()).toStrictEqual({
+      match: null,
+      result: null,
+      history: [],
+      activeSeed: "seed",
+      activeWeight: undefined,
+      drawBuffer: []
     });
+  });
+});
 
-    it("[REQ-GAME-010] restores fighter names exactly after saving a match", () => {
-      const state = createGameState();
-      const judoka = createMockJudoka("special");
-      judoka.firstname = "Test \"Quote\" & <Tag>";
-      judoka.surname = "O'Brien";
-      state.match = { ...createMockMatch(), player: judoka };
+describe("Edge cases and error handling", () => {
+  it("[REQ-GAME-010] round-trips a long replay seed in saved session data", () => {
+    const state = createGameState();
+    state.match = createMockMatch();
+    const longSeed = "x".repeat(10000);
+    state.activeSeed = longSeed;
 
-      saveGameState(state);
-      const loaded = loadSavedGameState();
+    saveGameState(state);
+    const loaded = loadSavedGameState();
 
-      expect(loaded?.match?.player).toMatchObject({
-        firstname: 'Test "Quote" & <Tag>',
-        surname: "O'Brien"
-      });
+    expect(loaded?.activeSeed).toBe(longSeed);
+  });
+
+  it("[REQ-GAME-010] restores fighter names exactly after saving a match", () => {
+    const state = createGameState();
+    const judoka = createMockJudoka("special");
+    judoka.firstname = "Test \"Quote\" & <Tag>";
+    judoka.surname = "O'Brien";
+    state.match = { ...createMockMatch(), player: judoka };
+
+    saveGameState(state);
+    const loaded = loadSavedGameState();
+
+    expect(loaded?.match?.player).toMatchObject({
+      firstname: 'Test "Quote" & <Tag>',
+      surname: "O'Brien"
     });
   });
 });

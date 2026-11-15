@@ -1,173 +1,171 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { describe, expect, it } from "vitest";
+import { expect, it } from "vitest";
 
 const readWorkflow = (file: string) =>
   readFileSync(resolve(process.cwd(), ".github/workflows", file), "utf8");
 
 const sweepWorkflow = readWorkflow("kaseki-sweep.yml");
 
-describe("Kaseki workflow boundaries", () => {
-  it("only runs the reusable sweep for the two main-branch schedule/manual callers", () => {
-    expect(sweepWorkflow).toMatch(/github\.ref == 'refs\/heads\/main'/);
-    expect(sweepWorkflow).toMatch(/github\.event_name == 'schedule'/);
-    expect(sweepWorkflow).toMatch(/github\.event_name == 'workflow_dispatch'/);
-    expect(sweepWorkflow).toMatch(
-      /github\.workflow_ref == format\('\{0\}\/\.github\/workflows\/kaseki-docs\.yaml@refs\/heads\/main', github\.repository\)/,
+it("only runs the reusable sweep for the two main-branch schedule/manual callers", () => {
+  expect(sweepWorkflow).toMatch(/github\.ref == 'refs\/heads\/main'/);
+  expect(sweepWorkflow).toMatch(/github\.event_name == 'schedule'/);
+  expect(sweepWorkflow).toMatch(/github\.event_name == 'workflow_dispatch'/);
+  expect(sweepWorkflow).toMatch(
+    /github\.workflow_ref == format\('\{0\}\/\.github\/workflows\/kaseki-docs\.yaml@refs\/heads\/main', github\.repository\)/,
+  );
+  expect(sweepWorkflow).toMatch(
+    /github\.workflow_ref == format\('\{0\}\/\.github\/workflows\/kaseki-dry\.yaml@refs\/heads\/main', github\.repository\)/,
+  );
+});
+
+it("accepts only each caller's intended changed-file allowlist", () => {
+  expect(sweepWorkflow).toContain('case "$SWEEP_NAME:$ALLOWLIST" in');
+  expect(sweepWorkflow).toContain(
+    "'documentation:README.md,docs/**/*.md'|'DRY:src/**/*,api/**/*,scripts/**/*,test/**/*,tests/**/*')",
+  );
+});
+
+it("passes the sweep name to the summary as data rather than shell source", () => {
+  expect(sweepWorkflow).toContain("SWEEP_NAME: ${{ inputs.sweep_name }}");
+  expect(sweepWorkflow).toContain(
+    'printf \'## Kaseki %s sweep\\n\' "$SWEEP_NAME"',
+  );
+  expect(sweepWorkflow).not.toContain(
+    'echo "## Kaseki ${{ inputs.sweep_name }} sweep"',
+  );
+});
+
+it("keeps both callers restricted to main", () => {
+  expect(readWorkflow("kaseki-docs.yaml")).toContain(
+    "if: github.ref == 'refs/heads/main'",
+  );
+  expect(readWorkflow("kaseki-dry.yaml")).toContain(
+    "if: github.ref == 'refs/heads/main'",
+  );
+
+  for (const caller of ["kaseki-docs.yaml", "kaseki-dry.yaml"]) {
+    expect(readWorkflow(caller)).toContain(
+      "uses: $/.github/workflows/kaseki-sweep.yml",
     );
-    expect(sweepWorkflow).toMatch(
-      /github\.workflow_ref == format\('\{0\}\/\.github\/workflows\/kaseki-dry\.yaml@refs\/heads\/main', github\.repository\)/,
+  }
+});
+
+it("requires and explicitly passes the Kaseki token through both callers", () => {
+  expect(sweepWorkflow).toMatch(
+    /workflow_call:[\s\S]*?secrets:\s+KASEKI_API_TOKEN:[\s\S]*?required: true/,
+  );
+
+  for (const caller of ["kaseki-docs.yaml", "kaseki-dry.yaml"]) {
+    const workflow = readWorkflow(caller);
+    expect(workflow).toMatch(
+      /secrets:\s+KASEKI_API_TOKEN:\s+\$\{\{ secrets\.KASEKI_API_TOKEN \}\}/,
     );
-  });
+    expect(workflow).not.toContain("secrets: inherit");
+  }
+});
 
-  it("accepts only each caller's intended changed-file allowlist", () => {
-    expect(sweepWorkflow).toContain('case "$SWEEP_NAME:$ALLOWLIST" in');
-    expect(sweepWorkflow).toContain(
-      "'documentation:README.md,docs/**/*.md'|'DRY:src/**/*,api/**/*,scripts/**/*,test/**/*,tests/**/*')",
-    );
-  });
+it("always submits sweeps as normal pull requests", () => {
+  expect(sweepWorkflow).toContain('publishMode: "pr"');
+  expect(sweepWorkflow).not.toMatch(/publishMode:\s*["']draft/i);
+});
 
-  it("passes the sweep name to the summary as data rather than shell source", () => {
-    expect(sweepWorkflow).toContain("SWEEP_NAME: ${{ inputs.sweep_name }}");
-    expect(sweepWorkflow).toContain(
-      'printf \'## Kaseki %s sweep\\n\' "$SWEEP_NAME"',
-    );
-    expect(sweepWorkflow).not.toContain(
-      'echo "## Kaseki ${{ inputs.sweep_name }} sweep"',
-    );
-  });
+it("routes workflow and Dependabot configuration changes to the repository owner", () => {
+  const codeowners = readFileSync(
+    resolve(process.cwd(), ".github/CODEOWNERS"),
+    "utf8",
+  );
+  const entries = codeowners
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0 && !line.startsWith("#"))
+    .map((line) => {
+      const [pattern, ...owners] = line.split(/\s+/);
+      return { pattern, owners };
+    });
 
-  it("keeps both callers restricted to main", () => {
-    expect(readWorkflow("kaseki-docs.yaml")).toContain(
-      "if: github.ref == 'refs/heads/main'",
-    );
-    expect(readWorkflow("kaseki-dry.yaml")).toContain(
-      "if: github.ref == 'refs/heads/main'",
-    );
+  expect(entries).toContainEqual({ pattern: "/.github/workflows/", owners: ["@cyanautomation"] });
+  expect(entries).toContainEqual({ pattern: "/.github/dependabot.yml", owners: ["@cyanautomation"] });
+});
 
-    for (const caller of ["kaseki-docs.yaml", "kaseki-dry.yaml"]) {
-      expect(readWorkflow(caller)).toContain(
-        "uses: $/.github/workflows/kaseki-sweep.yml",
-      );
-    }
-  });
+it("retries transient status poll failures without swallowing permanent client errors", () => {
+  expect(sweepWorkflow).toMatch(/if http_status="\$\(curl/);
+  expect(sweepWorkflow).toContain("--write-out '%{http_code}'");
+  expect(sweepWorkflow).toMatch(/http_status" != 408/);
+  expect(sweepWorkflow).toMatch(/http_status" != 429/);
+  expect(sweepWorkflow).toContain("retrying status poll");
+});
 
-  it("requires and explicitly passes the Kaseki token through both callers", () => {
-    expect(sweepWorkflow).toMatch(
-      /workflow_call:[\s\S]*?secrets:\s+KASEKI_API_TOKEN:[\s\S]*?required: true/,
-    );
+it("audits Kaseki runner egress before checkout", () => {
+  const hardenRunner = sweepWorkflow.indexOf("step-security/harden-runner@");
+  const checkout = sweepWorkflow.indexOf("actions/checkout@");
 
-    for (const caller of ["kaseki-docs.yaml", "kaseki-dry.yaml"]) {
-      const workflow = readWorkflow(caller);
-      expect(workflow).toMatch(
-        /secrets:\s+KASEKI_API_TOKEN:\s+\$\{\{ secrets\.KASEKI_API_TOKEN \}\}/,
-      );
-      expect(workflow).not.toContain("secrets: inherit");
-    }
-  });
+  expect(hardenRunner).toBeGreaterThanOrEqual(0);
+  expect(sweepWorkflow).toContain("egress-policy: audit");
+  expect(hardenRunner).toBeLessThan(checkout);
+});
 
-  it("always submits sweeps as normal pull requests", () => {
-    expect(sweepWorkflow).toContain('publishMode: "pr"');
-    expect(sweepWorkflow).not.toMatch(/publishMode:\s*["']draft/i);
-  });
+it("publishes a sanitized reason and a link for unsuccessful controller runs", () => {
+  expect(sweepWorkflow).toContain('node scripts/kaseki-run-details.mjs "$response_file"');
+  expect(sweepWorkflow).toContain("failure_detail<<%s\\n");
+  expect(sweepWorkflow).toContain("write_failure_detail_output() {");
+  expect(sweepWorkflow).toContain('while [[ "$detail" == *"$output_delimiter"* ]]');
+  expect(sweepWorkflow).toContain('printf \'| Failure detail | %s |\\n\' "$summary_failure_detail"');
+  expect(sweepWorkflow).toContain('summary_failure_detail="${summary_failure_detail//|/\\\\|}"');
+  expect(sweepWorkflow).toContain('summary_failure_detail="${summary_failure_detail//\\`/\\\\\\`}"');
+  expect(sweepWorkflow).toContain("See the step summary for sanitized controller details.");
+  expect(sweepWorkflow).toContain("${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}");
+  expect(sweepWorkflow).toContain('summary_failure_detail="${FAILURE_DETAIL//');
+  expect(sweepWorkflow).not.toContain('echo "| Failure detail | $FAILURE_DETAIL |"');
+  expect(sweepWorkflow).not.toContain('echo "::error title=Kaseki run failed::Completed with exit code $exit_code. $failure_detail"');
+  expect(sweepWorkflow).not.toContain('echo "::error title=Kaseki run $status::$failure_detail"');
+});
 
-  it("routes workflow and Dependabot configuration changes to the repository owner", () => {
-    const codeowners = readFileSync(
-      resolve(process.cwd(), ".github/CODEOWNERS"),
-      "utf8",
-    );
-    const entries = codeowners
-      .split(/\r?\n/)
-      .map((line) => line.trim())
-      .filter((line) => line.length > 0 && !line.startsWith("#"))
-      .map((line) => {
-        const [pattern, ...owners] = line.split(/\s+/);
-        return { pattern, owners };
-      });
+it("runs workflow checks for pull requests, pushes, and merge queue candidates", () => {
+  const codeql = readWorkflow("codeql.yml");
+  const lint = readWorkflow("workflow-lint.yml");
+  const dependencyReview = readWorkflow("dependency-review.yml");
 
-    expect(entries).toContainEqual({ pattern: "/.github/workflows/", owners: ["@cyanautomation"] });
-    expect(entries).toContainEqual({ pattern: "/.github/dependabot.yml", owners: ["@cyanautomation"] });
-  });
+  for (const workflow of [codeql, lint, dependencyReview]) {
+    expect(workflow).toContain("merge_group:");
+    expect(workflow).toContain("types: [checks_requested]");
+  }
 
-  it("retries transient status poll failures without swallowing permanent client errors", () => {
-    expect(sweepWorkflow).toMatch(/if http_status="\$\(curl/);
-    expect(sweepWorkflow).toContain("--write-out '%{http_code}'");
-    expect(sweepWorkflow).toMatch(/http_status" != 408/);
-    expect(sweepWorkflow).toMatch(/http_status" != 429/);
-    expect(sweepWorkflow).toContain("retrying status poll");
-  });
+  expect(dependencyReview).not.toContain("paths:");
+  expect(dependencyReview).toContain("github.event.merge_group.base_ref");
+  expect(dependencyReview).toContain("github.event.merge_group.head_ref");
+});
 
-  it("audits Kaseki runner egress before checkout", () => {
-    const hardenRunner = sweepWorkflow.indexOf("step-security/harden-runner@");
-    const checkout = sweepWorkflow.indexOf("actions/checkout@");
+it("pins CodeQL to the current v4 commit and Kaseki to an in-history action commit", () => {
+  const codeql = readWorkflow("codeql.yml");
 
-    expect(hardenRunner).toBeGreaterThanOrEqual(0);
-    expect(sweepWorkflow).toContain("egress-policy: audit");
-    expect(hardenRunner).toBeLessThan(checkout);
-  });
+  expect(codeql).toContain(
+    "github/codeql-action/init@33d7b85da1a04171e211befe2c739303b9a4c066 # v4",
+  );
+  expect(codeql).toContain(
+    "github/codeql-action/analyze@33d7b85da1a04171e211befe2c739303b9a4c066 # v4",
+  );
+  expect(sweepWorkflow).toContain(
+    "CyanAutomation/kaseki-agent/.github/actions/verify-controller-health@0400e036f8bd03d3c6a8ad1dd68ee74d85ac0aa6",
+  );
+});
 
-  it("publishes a sanitized reason and a link for unsuccessful controller runs", () => {
-    expect(sweepWorkflow).toContain('node scripts/kaseki-run-details.mjs "$response_file"');
-    expect(sweepWorkflow).toContain("failure_detail<<%s\\n");
-    expect(sweepWorkflow).toContain("write_failure_detail_output() {");
-    expect(sweepWorkflow).toContain('while [[ "$detail" == *"$output_delimiter"* ]]');
-    expect(sweepWorkflow).toContain('printf \'| Failure detail | %s |\\n\' "$summary_failure_detail"');
-    expect(sweepWorkflow).toContain('summary_failure_detail="${summary_failure_detail//|/\\\\|}"');
-    expect(sweepWorkflow).toContain('summary_failure_detail="${summary_failure_detail//\\`/\\\\\\`}"');
-    expect(sweepWorkflow).toContain("See the step summary for sanitized controller details.");
-    expect(sweepWorkflow).toContain("${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}");
-    expect(sweepWorkflow).toContain('summary_failure_detail="${FAILURE_DETAIL//');
-    expect(sweepWorkflow).not.toContain('echo "| Failure detail | $FAILURE_DETAIL |"');
-    expect(sweepWorkflow).not.toContain('echo "::error title=Kaseki run failed::Completed with exit code $exit_code. $failure_detail"');
-    expect(sweepWorkflow).not.toContain('echo "::error title=Kaseki run $status::$failure_detail"');
-  });
+it("sets a seven-day default cooldown for npm and GitHub Actions updates", () => {
+  const dependabot = readFileSync(
+    resolve(process.cwd(), ".github/dependabot.yml"),
+    "utf8",
+  );
 
-  it("runs workflow checks for pull requests, pushes, and merge queue candidates", () => {
-    const codeql = readWorkflow("codeql.yml");
-    const lint = readWorkflow("workflow-lint.yml");
-    const dependencyReview = readWorkflow("dependency-review.yml");
+  expect(dependabot.match(/default-days: 7/g)).toHaveLength(2);
+});
 
-    for (const workflow of [codeql, lint, dependencyReview]) {
-      expect(workflow).toContain("merge_group:");
-      expect(workflow).toContain("types: [checks_requested]");
-    }
+it("pins the zizmor action and reports findings as annotations without a write token", () => {
+  const lint = readWorkflow("workflow-lint.yml");
 
-    expect(dependencyReview).not.toContain("paths:");
-    expect(dependencyReview).toContain("github.event.merge_group.base_ref");
-    expect(dependencyReview).toContain("github.event.merge_group.head_ref");
-  });
-
-  it("pins CodeQL to the current v4 commit and Kaseki to an in-history action commit", () => {
-    const codeql = readWorkflow("codeql.yml");
-
-    expect(codeql).toContain(
-      "github/codeql-action/init@33d7b85da1a04171e211befe2c739303b9a4c066 # v4",
-    );
-    expect(codeql).toContain(
-      "github/codeql-action/analyze@33d7b85da1a04171e211befe2c739303b9a4c066 # v4",
-    );
-    expect(sweepWorkflow).toContain(
-      "CyanAutomation/kaseki-agent/.github/actions/verify-controller-health@0400e036f8bd03d3c6a8ad1dd68ee74d85ac0aa6",
-    );
-  });
-
-  it("sets a seven-day default cooldown for npm and GitHub Actions updates", () => {
-    const dependabot = readFileSync(
-      resolve(process.cwd(), ".github/dependabot.yml"),
-      "utf8",
-    );
-
-    expect(dependabot.match(/default-days: 7/g)).toHaveLength(2);
-  });
-
-  it("pins the zizmor action and reports findings as annotations without a write token", () => {
-    const lint = readWorkflow("workflow-lint.yml");
-
-    expect(lint).toContain(
-      "zizmorcore/zizmor-action@45d7276c9ca790aabd705e31ca99c6185c3e76dd # v0.8.1",
-    );
-    expect(lint).toContain("advanced-security: false");
-    expect(lint).toContain("annotations: true");
-    expect(lint).not.toMatch(/security-events:\s*write/);
-  });
+  expect(lint).toContain(
+    "zizmorcore/zizmor-action@45d7276c9ca790aabd705e31ca99c6185c3e76dd # v0.8.1",
+  );
+  expect(lint).toContain("advanced-security: false");
+  expect(lint).toContain("annotations: true");
+  expect(lint).not.toMatch(/security-events:\s*write/);
 });

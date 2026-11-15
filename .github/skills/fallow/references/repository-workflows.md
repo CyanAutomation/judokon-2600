@@ -5,7 +5,7 @@ This page records only repository-specific commands and interpretation guidance.
 ## Repository configuration
 
 - The project locks Fallow as a development dependency. Use `npm exec -- fallow`; do not use an unpinned `npx` invocation for routine analysis.
-- `.fallowrc.json` adds `api/**/*.ts` as entry points. Inspect the resolved setup with `npm exec -- fallow config` before trusting reachability results in API routes.
+- The Fallow plugin discovers this repository's `api/**/*.ts` Vercel routes as entry points; `.fallowrc.json` only supplies the local schema. Inspect the resolved setup with `npm exec -- fallow config` before trusting reachability results in API routes.
 - Fallow is not part of GitHub CI. `npm run check` runs lint, tests, Markdown checks, and the production build. `npm run fallow:coverage` runs the tests with coverage and then analyzes the generated Istanbul report.
 
 ## Common local workflows
