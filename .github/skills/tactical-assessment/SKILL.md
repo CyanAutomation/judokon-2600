@@ -5,13 +5,13 @@ description: Change or investigate judokon-2600's optional tactical-assessment f
 
 # Tactical assessment
 
-This is an optional post-match feature. The deterministic match result is authoritative and must remain available if the assessment is slow, malformed, unconfigured, or unavailable.
+This is an optional post-match feature. The deterministic match result is authoritative and must remain available if the assessment is slow, malformed, unconfigured, or unavailable. Use the code and [deployment guide](../../../docs/tactical-insight-deployment.md) as the source of truth for configuration, response codes, and current timeout values; this skill describes invariants to preserve.
 
 ## Architecture
 
 - `src/game/tacticalFeatures.ts` derives compact features from the player's recorded stat choices and round outcomes.
 - `src/game/tacticalTypes.ts` defines the shared feature and result contracts; `src/game/tacticalJudgment.ts` validates typed scores and applies the confidence policy.
-- `src/api/tacticalAssessment.ts` calls the same-origin route with a 5-second client timeout and converts failures into an optional result.
+- `src/api/tacticalAssessment.ts` calls the same-origin route and converts failures into an optional result.
 - `api/tactical-assessment.ts` validates and sanitizes the request, calls JEV through `src/jev/openRouterClient.ts`, and maps provider failures to safe response codes.
 - `src/ui/game-templates.ts` turns accepted signal booleans into application-authored text. Keep explanatory copy in application code; JEV supplies typed scores only.
 
@@ -26,13 +26,13 @@ Read [the deployment guide](../../../docs/tactical-insight-deployment.md) before
 
 ## Failure and response behavior
 
-- The route accepts `POST` only and bounds request bodies at 8 KiB. Keep malformed or oversized input from reaching the provider.
-- The provider request has a 3.5-second timeout; the browser request has a 5-second timeout. Preserve cancellation and cleanup behavior when changing either boundary.
+- The route accepts `POST` only and bounds request bodies. Keep malformed or oversized input from reaching the provider; consult the implementation for current limits.
+- Preserve timeout bounds, cancellation, and cleanup behavior. Consult the implementation for current timeout values before changing either boundary.
 - A missing key, invalid provider credentials, provider outage, malformed decision, or low-confidence result must leave the match summary intact. Maintain the existing `assessment: null` / optional `issue` contract and avoid turning an optional-service failure into a failed match.
 - JEV returns typed score answers, which are validated and filtered by the app's score and confidence thresholds. Do not expose free-form provider prose as game advice.
 
 ## Tests and deployment
 
-Use test-first changes at the affected boundary. Extend the nearby tests for feature extraction/sanitization, the route and browser client, orchestration fallback, or rendered post-match text as appropriate. Cover both the new behavior and the invariant that the deterministic summary survives assessment failure. Do not add tests that only assert wording or mirror implementation details.
+Use test-first changes at the affected boundary. Extend tests for feature extraction/sanitization, the route and browser client, orchestration fallback, or rendered post-match behavior as appropriate. Cover both the new behavior and the invariant that the deterministic summary survives assessment failure. Follow the [`judokon-testing` skill](../judokon-testing/SKILL.md); do not add tests that only assert wording or mirror implementation details.
 
 `npm run dev` serves the game but not the Vercel Function. For a real provider-path check, follow the Preview deployment steps in the deployment guide. Configure `OPENROUTER_API_KEY` only as a server-side Vercel environment variable; `JEV_MODEL` is an optional server-side override.

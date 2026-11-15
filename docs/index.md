@@ -30,6 +30,7 @@ The development server serves the SPA at port 5173. Tests run via Vitest (`npm r
 | `docs/test-contracts.md` | Stable requirement IDs for user-visible UI and gameplay test contracts |
 | `docs/snackbar-plan.md` | Notification event policy, reserved layout, accessibility, and validation |
 | `docs/caching.md` | Cache policies, observability, and runtime cache behavior |
+| `.github/skills/` | Repository-specific contributor guidance: [general contribution](../.github/skills/judokon-contributor/SKILL.md), [UI accessibility](../.github/skills/judokon-ui-accessibility/SKILL.md), [testing](../.github/skills/judokon-testing/SKILL.md), [tactical assessment](../.github/skills/tactical-assessment/SKILL.md), [GitHub Actions](../.github/skills/github-actions-workflows/SKILL.md), and [Fallow](../.github/skills/fallow/SKILL.md) |
 | `package.json` | Dependency declarations and scripts (`dev`, `build`, `test`, `lint`, `check`) |
 | `tsconfig.app.json` | TypeScript compilation targets for the application bundle |
 | `vite.config.ts` | Vite build config; Vitest environment set to jsdom |
