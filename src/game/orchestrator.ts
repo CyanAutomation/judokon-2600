@@ -15,7 +15,7 @@ import { weights, lengths } from "../ui/constants";
 import { getSoundEnabled, setSoundEnabledPersisted } from "../ui/helpers/soundStorage";
 import { extractTacticalFeatures, type TacticalAssessmentResult } from "./tacticalAssessment";
 
-import type { Notice } from "../ui/snackbar";
+import type { Notice } from "../ui/noticeTypes";
 import { tacticalMessages } from "../ui/tacticalMessages";
 
 const DRAW_BUFFER_SIZE = 6;

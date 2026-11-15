@@ -9,7 +9,7 @@ import { type GameState } from "../state";
 import { createHelpers, lengths, weights, type Helpers } from "./helpers";
 import { getSoundEnabled } from "./helpers/soundStorage";
 import { escapeHtml as esc } from "./utils/escapeHtml";
-import { getNoticeDuration } from "./snackbar";
+import { getNoticeDuration } from "./noticePreferences";
 import { status } from "./helpers/status";
 import { pointRule, tieRule } from "./constants";
 
