@@ -14,16 +14,22 @@ describe("inputs", () => {
         checked: true,
       });
       const input = root.querySelector<HTMLInputElement>("#mode-champion");
-
-      expect(input?.type).toBe("radio");
-      expect(input?.name).toBe("game-mode");
-      expect(input?.checked).toBe(true);
       const label = root.querySelector<HTMLLabelElement>('label[for="mode-champion"]');
-      expect(label?.textContent).toContain("Champion");
-      expect(label?.textContent).toContain("Build a streak");
-      expect(root.querySelector("kbd")?.textContent).toBe("H");
-      expect(root.querySelector(".visually-hidden")?.textContent).toContain("Shortcut: H");
-      expect(label?.htmlFor).toBe(input?.id);
+      const shortcut = root.querySelector("kbd");
+      const shortcutDescription = root.querySelector(".visually-hidden");
+
+      expect(input).not.toBeNull();
+      expect(label).not.toBeNull();
+      expect(shortcut).not.toBeNull();
+      expect(shortcutDescription).not.toBeNull();
+      expect(input!.type).toBe("radio");
+      expect(input!.name).toBe("game-mode");
+      expect(input!.checked).toBe(true);
+      expect(label!.textContent).toContain("Champion");
+      expect(label!.textContent).toContain("Build a streak");
+      expect(shortcut!.textContent).toBe("H");
+      expect(shortcutDescription!.textContent).toContain("Shortcut: H");
+      expect(label!.htmlFor).toBe(input!.id);
     });
 
     it("keeps the full label available to assistive technology beside its compact display label", () => {

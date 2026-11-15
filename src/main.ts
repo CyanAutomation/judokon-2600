@@ -1,7 +1,8 @@
 import "./style.css";
-import { createSnackbar, type NoticeDuration } from "./ui/snackbar";
+import { createSnackbar } from "./ui/snackbar";
+import type { NoticeDuration } from "./ui/noticeTypes";
 import { layoutSetupActions } from "./ui/layout";
-import { matchBreakdownContent } from "./ui/game-templates";
+import { matchBreakdownContent } from "./ui/match-templates";
 import { lengths } from "./ui/constants";
 import { injectSpeedInsights } from "@vercel/speed-insights";
 import { BudokonClient } from "./api/budokon";

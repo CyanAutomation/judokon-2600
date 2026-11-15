@@ -54,273 +54,308 @@ function providerResult(score = 2, confidence = 0.9): JevDecisionResult {
   return { answers };
 }
 
-describe("tactical assessment API route", () => {
-  it("returns deterministic-summary fallback without an API key", async () => {
-    const client = { decide: vi.fn() };
-    const handler = createTacticalAssessmentHandler({ getApiKey: () => undefined, client });
+it("returns deterministic-summary fallback without an API key", async () => {
+  const client = { decide: vi.fn() };
+  const handler = createTacticalAssessmentHandler({ getApiKey: () => undefined, client });
 
-    const incoming = request({ features });
-    const response = await handler(incoming);
-    expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ assessment: null, issue: "not_configured" });
-    expect(client.decide).not.toHaveBeenCalled();
+  const incoming = request({ features });
+  const response = await handler(incoming);
+  expect(response.status).toBe(200);
+  expect(await response.json()).toEqual({ assessment: null, issue: "not_configured" });
+  expect(client.decide).not.toHaveBeenCalled();
+});
+
+it("returns not-configured before reading an oversized request body", async () => {
+  const handler = createTacticalAssessmentHandler({ getApiKey: () => undefined });
+  const incoming = new Request("https://judokon.example/api/tactical-assessment", {
+    method: "POST",
+    headers: { "Content-Length": "8193" },
+    body: "{}"
   });
 
-  it("returns not-configured before reading an oversized request body", async () => {
-    const handler = createTacticalAssessmentHandler({ getApiKey: () => undefined });
-    const incoming = new Request("https://judokon.example/api/tactical-assessment", {
-      method: "POST",
-      headers: { "Content-Length": "8193" },
-      body: "{}"
-    });
+  const response = await handler(incoming);
 
-    const response = await handler(incoming);
+  expect(response.status).toBe(200);
+  expect(await response.json()).toEqual({ assessment: null, issue: "not_configured" });
+  expect(incoming.bodyUsed).toBe(false);
+});
 
-    expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ assessment: null, issue: "not_configured" });
-    expect(incoming.bodyUsed).toBe(false);
+it("does not construct a provider client for a whitespace-only API key", async () => {
+  const createClient = vi.fn();
+  const handler = createTacticalAssessmentHandler({
+    getApiKey: () => "   \t",
+    createClient
   });
 
-  it("does not construct a provider client for a whitespace-only API key", async () => {
-    const createClient = vi.fn();
-    const handler = createTacticalAssessmentHandler({
-      getApiKey: () => "   \t",
-      createClient
-    });
+  const response = await handler(request({ features }));
 
-    const response = await handler(request({ features }));
+  expect(response.status).toBe(200);
+  expect(await response.json()).toEqual({ assessment: null, issue: "not_configured" });
+  expect(createClient).not.toHaveBeenCalled();
+});
 
-    expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ assessment: null, issue: "not_configured" });
-    expect(createClient).not.toHaveBeenCalled();
+it("returns a safe reason when the provider rejects an expired API key", async () => {
+  const handler = createTacticalAssessmentHandler({
+    getApiKey: () => "expired-secret",
+    client: { decide: vi.fn(async () => { throw new JevProviderError("JEV provider returned HTTP 401", 401); }) }
   });
 
-  it("returns a safe reason when the provider rejects an expired API key", async () => {
-    const handler = createTacticalAssessmentHandler({
-      getApiKey: () => "expired-secret",
-      client: { decide: vi.fn(async () => { throw new JevProviderError("JEV provider returned HTTP 401", 401); }) }
-    });
+  const response = await handler(request({ features }));
+  const body = await response.json();
 
-    const response = await handler(request({ features }));
-    const body = await response.json();
+  expect(response.status).toBe(503);
+  expect(body).toEqual({ assessment: null, issue: "invalid_api_key" });
+  expect(JSON.stringify(body)).not.toContain("expired-secret");
+});
 
-    expect(response.status).toBe(503);
-    expect(body).toEqual({ assessment: null, issue: "invalid_api_key" });
-    expect(JSON.stringify(body)).not.toContain("expired-secret");
+it("passes only allow-listed match features to the injected JEV client", async () => {
+  let receivedState: unknown;
+  const client = { decide: vi.fn(async (state: unknown) => {
+    receivedState = state;
+    return providerResult();
+  }) };
+  const handler = createTacticalAssessmentHandler({ getApiKey: () => "test-key", client });
+  const response = await handler(request({
+    features,
+    opponent: { stats: { power: 999, hidden: "secret" } },
+    replaySeed: "private-seed"
+  }));
+
+  expect(response.status).toBe(200);
+  expect(receivedState).toEqual(features);
+  expect(JSON.stringify(receivedState)).not.toMatch(/hidden|secret|999|private-seed/);
+  expect(client.decide).toHaveBeenCalledOnce();
+});
+
+it("reuses successful assessments for identical normalized features and model", async () => {
+  const values = new Map<string, unknown>();
+  const cache = {
+    get: vi.fn(async (key: string) => values.get(key)),
+    set: vi.fn(async (key: string, value: unknown) => { values.set(key, value); })
+  };
+  const client = { decide: vi.fn(async () => providerResult()) };
+  const handler = createTacticalAssessmentHandler({
+    getApiKey: () => "test-key",
+    getModel: () => "test/model",
+    client,
+    cache
   });
 
-  it("passes only allow-listed match features to the injected JEV client", async () => {
-    let receivedState: unknown;
-    const client = { decide: vi.fn(async (state: unknown) => {
-      receivedState = state;
-      return providerResult();
-    }) };
-    const handler = createTacticalAssessmentHandler({ getApiKey: () => "test-key", client });
-    const response = await handler(request({
-      features,
-      opponent: { stats: { power: 999, hidden: "secret" } },
-      replaySeed: "private-seed"
-    }));
+  const first = await handler(request({ features }));
+  const second = await handler(request({ features }));
 
-    expect(response.status).toBe(200);
-    expect(receivedState).toEqual(features);
-    expect(JSON.stringify(receivedState)).not.toMatch(/hidden|secret|999|private-seed/);
-    expect(client.decide).toHaveBeenCalledOnce();
-  });
+  expect(first.headers.get("cache-control")).toBe("no-store");
+  expect(second.headers.get("cache-control")).toBe("no-store");
+  expect(await first.json()).toEqual(await second.json());
+  expect(client.decide).toHaveBeenCalledOnce();
+  expect(cache.set).toHaveBeenCalledOnce();
+  expect(cache.set).toHaveBeenCalledWith(expect.any(String), { assessment: expect.any(Object) }, 300);
+});
 
-  it("reuses successful assessments for identical normalized features and model", async () => {
-    const values = new Map<string, unknown>();
-    const cache = {
-      get: vi.fn(async (key: string) => values.get(key)),
-      set: vi.fn(async (key: string, value: unknown) => { values.set(key, value); })
-    };
+  it("uses its default in-memory cache for repeated assessments", async () => {
+    vi.stubEnv("VERCEL", "0");
     const client = { decide: vi.fn(async () => providerResult()) };
-    const handler = createTacticalAssessmentHandler({
-      getApiKey: () => "test-key",
-      getModel: () => "test/model",
-      client,
-      cache
-    });
+    const handler = createRouteHandler({ getApiKey: () => "test-key", client });
+    try {
+      const first = await handler(request({ features }));
+      const second = await handler(request({ features }));
 
-    const first = await handler(request({ features }));
-    const second = await handler(request({ features }));
-
-    expect(first.headers.get("cache-control")).toBe("no-store");
-    expect(second.headers.get("cache-control")).toBe("no-store");
-    expect(await first.json()).toEqual(await second.json());
-    expect(client.decide).toHaveBeenCalledOnce();
-    expect(cache.set).toHaveBeenCalledOnce();
-    expect(cache.set).toHaveBeenCalledWith(expect.any(String), { assessment: expect.any(Object) }, 300);
-  });
-
-  it("does not reuse an assessment after the selected model changes", async () => {
-    const values = new Map<string, unknown>();
-    const cache = {
-      get: vi.fn(async (key: string) => values.get(key)),
-      set: vi.fn(async (key: string, value: unknown) => { values.set(key, value); })
-    };
-    let model = "provider/model-a";
-    const client = { decide: vi.fn(async () => providerResult()) };
-    const handler = createTacticalAssessmentHandler({
-      getApiKey: () => "test-key",
-      getModel: () => model,
-      client,
-      cache
-    });
-
-    await handler(request({ features }));
-    model = "provider/model-b";
-    await handler(request({ features }));
-
-    expect(client.decide).toHaveBeenCalledTimes(2);
-  });
-
-  it("coalesces simultaneous identical assessments", async () => {
-    let resolveDecision!: (result: JevDecisionResult) => void;
-    const decision = new Promise<JevDecisionResult>(resolve => { resolveDecision = resolve; });
-    const cache = { get: vi.fn(async () => undefined), set: vi.fn(async () => undefined) };
-    const client = { decide: vi.fn(() => decision) };
-    const handler = createTacticalAssessmentHandler({ getApiKey: () => "test-key", client, cache });
-
-    const first = handler(request({ features }));
-    const second = handler(request({ features }));
-    await Promise.resolve();
-    await Promise.resolve();
-    resolveDecision(providerResult());
-    const responses = await Promise.all([first, second]);
-
-    expect(client.decide).toHaveBeenCalledOnce();
-    expect(await Promise.all(responses.map(response => response.json()))).toEqual([
-      { assessment: { overReliance: true, adaptation: true, missedOpportunity: true, momentumResponse: true } },
-      { assessment: { overReliance: true, adaptation: true, missedOpportunity: true, momentumResponse: true } }
-    ]);
-  });
-
-  it("does not cache provider failures", async () => {
-    const cache = { get: vi.fn(async () => undefined), set: vi.fn(async () => undefined) };
-    const client = { decide: vi.fn(async () => { throw new Error("provider timeout"); }) };
-    const handler = createTacticalAssessmentHandler({ getApiKey: () => "test-key", client, cache });
-
-    await handler(request({ features }));
-    await handler(request({ features }));
-
-    expect(client.decide).toHaveBeenCalledTimes(2);
-    expect(cache.set).not.toHaveBeenCalled();
-  });
-
-  it("does not cache low-confidence null assessments", async () => {
-    const values = new Map<string, unknown>();
-    const cache = {
-      get: vi.fn(async (key: string) => values.get(key)),
-      set: vi.fn(async (key: string, value: unknown) => { values.set(key, value); })
-    };
-    const client = {
-      decide: vi.fn()
-        .mockResolvedValueOnce(providerResult(2, 0.2))
-        .mockResolvedValueOnce(providerResult(2, 0.95))
-    };
-    const handler = createTacticalAssessmentHandler({ getApiKey: () => "test-key", client, cache });
-
-    const first = await handler(request({ features }));
-    const second = await handler(request({ features }));
-
-    expect(await first.json()).toEqual({ assessment: null });
-    expect((await second.json()).assessment).not.toBeNull();
-    expect(client.decide).toHaveBeenCalledTimes(2);
-    expect(cache.set).toHaveBeenCalledOnce();
-  });
-
-  it("rejects oversized request bodies before calling the provider", async () => {
-    const client = { decide: vi.fn() };
-    const handler = createTacticalAssessmentHandler({
-      getApiKey: () => "test-key",
-      client
-    });
-
-    const response = await handler(request({ features, padding: "x".repeat(10_000) }));
-
-    expect(response.status).toBe(413);
-    expect(await response.json()).toEqual({ assessment: null });
-    expect(client.decide).not.toHaveBeenCalled();
-  });
-
-  it("rejects malformed JSON, absent bodies, and invalid or oversized content lengths", async () => {
-    const handler = createTacticalAssessmentHandler({
-      getApiKey: () => "test-key",
-      client: { decide: vi.fn() }
-    });
-    const url = "https://judokon.example/api/tactical-assessment";
-    const cases: Array<[string, Request, number]> = [
-      ["malformed JSON", new Request(url, { method: "POST", body: "{" }), 400],
-      ["missing body", new Request(url, { method: "POST" }), 400],
-      ["invalid content length", new Request(url, {
-        method: "POST",
-        headers: { "Content-Length": "not-a-number" },
-        body: "{}"
-      }), 400],
-      ["declared oversized body", new Request(url, {
-        method: "POST",
-        headers: { "Content-Length": "8193" },
-        body: "{}"
-      }), 413]
-    ];
-
-    for (const [description, incoming, expectedStatus] of cases) {
-      const response = await handler(incoming);
-      expect(response.status, description).toBe(expectedStatus);
+      expect(await first.json()).toEqual(await second.json());
+      expect(client.decide).toHaveBeenCalledOnce();
+    } finally {
+      vi.unstubAllEnvs();
     }
   });
 
-  it("returns a bad-request response when reading the request body fails", async () => {
+  it("keeps the provider result when cache reads and writes fail", async () => {
+    const cache = {
+      get: vi.fn(async () => { throw new Error("cache unavailable"); }),
+      set: vi.fn(async () => { throw new Error("cache unavailable"); })
+    };
+    const client = { decide: vi.fn(async () => providerResult()) };
     const handler = createTacticalAssessmentHandler({
       getApiKey: () => "test-key",
-      client: { decide: vi.fn() }
+      client,
+      cache
     });
-    const body = new ReadableStream<Uint8Array>({
-      start(controller) {
-        controller.error(new Error("body read failed"));
-      }
+
+    const response = await handler(request({ features }));
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      assessment: { overReliance: true, adaptation: true, missedOpportunity: true, momentumResponse: true }
     });
-    const incoming = new Request("https://judokon.example/api/tactical-assessment", {
+    expect(cache.get).toHaveBeenCalledOnce();
+    expect(cache.set).toHaveBeenCalledOnce();
+  });
+
+it("does not reuse an assessment after the selected model changes", async () => {
+  const values = new Map<string, unknown>();
+  const cache = {
+    get: vi.fn(async (key: string) => values.get(key)),
+    set: vi.fn(async (key: string, value: unknown) => { values.set(key, value); })
+  };
+  let model = "provider/model-a";
+  const client = { decide: vi.fn(async () => providerResult()) };
+  const handler = createTacticalAssessmentHandler({
+    getApiKey: () => "test-key",
+    getModel: () => model,
+    client,
+    cache
+  });
+
+  await handler(request({ features }));
+  model = "provider/model-b";
+  await handler(request({ features }));
+
+  expect(client.decide).toHaveBeenCalledTimes(2);
+});
+
+it("coalesces simultaneous identical assessments", async () => {
+  let resolveDecision!: (result: JevDecisionResult) => void;
+  const decision = new Promise<JevDecisionResult>(resolve => { resolveDecision = resolve; });
+  const cache = { get: vi.fn(async () => undefined), set: vi.fn(async () => undefined) };
+  const client = { decide: vi.fn(() => decision) };
+  const handler = createTacticalAssessmentHandler({ getApiKey: () => "test-key", client, cache });
+
+  const first = handler(request({ features }));
+  const second = handler(request({ features }));
+  await Promise.resolve();
+  await Promise.resolve();
+  resolveDecision(providerResult());
+  const responses = await Promise.all([first, second]);
+
+  expect(client.decide).toHaveBeenCalledOnce();
+  expect(await Promise.all(responses.map(response => response.json()))).toEqual([
+    { assessment: { overReliance: true, adaptation: true, missedOpportunity: true, momentumResponse: true } },
+    { assessment: { overReliance: true, adaptation: true, missedOpportunity: true, momentumResponse: true } }
+  ]);
+});
+
+it("does not cache provider failures", async () => {
+  const cache = { get: vi.fn(async () => undefined), set: vi.fn(async () => undefined) };
+  const client = { decide: vi.fn(async () => { throw new Error("provider timeout"); }) };
+  const handler = createTacticalAssessmentHandler({ getApiKey: () => "test-key", client, cache });
+
+  await handler(request({ features }));
+  await handler(request({ features }));
+
+  expect(client.decide).toHaveBeenCalledTimes(2);
+  expect(cache.set).not.toHaveBeenCalled();
+});
+
+it("does not cache low-confidence null assessments", async () => {
+  const values = new Map<string, unknown>();
+  const cache = {
+    get: vi.fn(async (key: string) => values.get(key)),
+    set: vi.fn(async (key: string, value: unknown) => { values.set(key, value); })
+  };
+  const client = {
+    decide: vi.fn()
+      .mockResolvedValueOnce(providerResult(2, 0.2))
+      .mockResolvedValueOnce(providerResult(2, 0.95))
+  };
+  const handler = createTacticalAssessmentHandler({ getApiKey: () => "test-key", client, cache });
+
+  const first = await handler(request({ features }));
+  const second = await handler(request({ features }));
+
+  expect(await first.json()).toEqual({ assessment: null });
+  expect((await second.json()).assessment).not.toBeNull();
+  expect(client.decide).toHaveBeenCalledTimes(2);
+  expect(cache.set).toHaveBeenCalledOnce();
+});
+
+it("rejects oversized request bodies before calling the provider", async () => {
+  const client = { decide: vi.fn() };
+  const handler = createTacticalAssessmentHandler({
+    getApiKey: () => "test-key",
+    client
+  });
+
+  const response = await handler(request({ features, padding: "x".repeat(10_000) }));
+
+  expect(response.status).toBe(413);
+  expect(await response.json()).toEqual({ assessment: null });
+  expect(client.decide).not.toHaveBeenCalled();
+});
+
+it("rejects malformed JSON, absent bodies, and invalid or oversized content lengths", async () => {
+  const handler = createTacticalAssessmentHandler({
+    getApiKey: () => "test-key",
+    client: { decide: vi.fn() }
+  });
+  const url = "https://judokon.example/api/tactical-assessment";
+  const cases: Array<[string, Request, number]> = [
+    ["malformed JSON", new Request(url, { method: "POST", body: "{" }), 400],
+    ["missing body", new Request(url, { method: "POST" }), 400],
+    ["invalid content length", new Request(url, {
       method: "POST",
-      body,
-      duplex: "half"
-    } as RequestInit);
+      headers: { "Content-Length": "not-a-number" },
+      body: "{}"
+    }), 400],
+    ["declared oversized body", new Request(url, {
+      method: "POST",
+      headers: { "Content-Length": "8193" },
+      body: "{}"
+    }), 413]
+  ];
 
+  for (const [description, incoming, expectedStatus] of cases) {
     const response = await handler(incoming);
+    expect(response.status, description).toBe(expectedStatus);
+  }
+});
 
-    expect(response.status).toBe(400);
-    expect(await response.json()).toEqual({ assessment: null });
+it("returns a bad-request response when reading the request body fails", async () => {
+  const handler = createTacticalAssessmentHandler({
+    getApiKey: () => "test-key",
+    client: { decide: vi.fn() }
   });
-
-  it("returns no insight for low confidence and degrades provider errors", async () => {
-    const lowConfidence = createTacticalAssessmentHandler({
-      getApiKey: () => "test-key",
-      client: { decide: vi.fn(async () => providerResult(2, 0.2)) }
-    });
-    const low = await lowConfidence(request({ features }));
-    expect(await low.json()).toEqual({ assessment: null });
-
-    const failed = createTacticalAssessmentHandler({
-      getApiKey: () => "test-key",
-      client: { decide: vi.fn(async () => { throw new Error("provider timeout"); }) }
-    });
-    const failedResponse = await failed(request({ features }));
-    expect(failedResponse.status).toBe(503);
-    expect(await failedResponse.json()).toEqual({ assessment: null, issue: "unavailable" });
+  const body = new ReadableStream<Uint8Array>({
+    start(controller) {
+      controller.error(new Error("body read failed"));
+    }
   });
+  const incoming = new Request("https://judokon.example/api/tactical-assessment", {
+    method: "POST",
+    body,
+    duplex: "half"
+  } as RequestInit);
 
-  it("rejects malformed provider answers and invalid request shapes", async () => {
-    const malformed = createTacticalAssessmentHandler({
-      getApiKey: () => "test-key",
-      client: { decide: vi.fn(async () => ({ answers: { overReliance: { type: "noul", noul: 1 } } } as unknown as JevDecisionResult)) }
-    });
-    expect((await malformed(request({ features }))).status).toBe(502);
+  const response = await handler(incoming);
 
-    const configured = createTacticalAssessmentHandler({ getApiKey: () => "test-key" });
-    expect((await configured(request({ features: { ...features, rounds: 50 } }))).status).toBe(400);
-    expect((await configured(new Request("https://judokon.example/api/tactical-assessment", { method: "GET" }))).status).toBe(405);
+  expect(response.status).toBe(400);
+  expect(await response.json()).toEqual({ assessment: null });
+});
+
+it("returns no insight for low confidence and degrades provider errors", async () => {
+  const lowConfidence = createTacticalAssessmentHandler({
+    getApiKey: () => "test-key",
+    client: { decide: vi.fn(async () => providerResult(2, 0.2)) }
   });
+  const low = await lowConfidence(request({ features }));
+  expect(await low.json()).toEqual({ assessment: null });
+
+  const failed = createTacticalAssessmentHandler({
+    getApiKey: () => "test-key",
+    client: { decide: vi.fn(async () => { throw new Error("provider timeout"); }) }
+  });
+  const failedResponse = await failed(request({ features }));
+  expect(failedResponse.status).toBe(503);
+  expect(await failedResponse.json()).toEqual({ assessment: null, issue: "unavailable" });
+});
+
+it("rejects malformed provider answers and invalid request shapes", async () => {
+  const malformed = createTacticalAssessmentHandler({
+    getApiKey: () => "test-key",
+    client: { decide: vi.fn(async () => ({ answers: { overReliance: { type: "noul", noul: 1 } } } as unknown as JevDecisionResult)) }
+  });
+  expect((await malformed(request({ features }))).status).toBe(502);
+
+  const configured = createTacticalAssessmentHandler({ getApiKey: () => "test-key" });
+  expect((await configured(request({ features: { ...features, rounds: 50 } }))).status).toBe(400);
+  expect((await configured(new Request("https://judokon.example/api/tactical-assessment", { method: "GET" }))).status).toBe(405);
 });
 
 describe("browser assessment client", () => {
