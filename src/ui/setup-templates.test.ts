@@ -164,6 +164,16 @@ describe("setup templates", () => {
     expect(card?.htmlFor).toBe("length-3");
   });
 
+  it("[REQ-KEYBOARD-008] disables match length and Start controls while a draw is in progress", () => {
+    const root = document.createElement("div");
+    root.innerHTML = intro(state({ setupStep: "length", busy: true }));
+    const choices = Array.from(root.querySelectorAll<HTMLInputElement>('input[name="match-length"]'));
+
+    expect(choices).toHaveLength(3);
+    expect(choices.every(choice => choice.disabled)).toBe(true);
+    expect(root.querySelector<HTMLButtonElement>("#start")?.disabled).toBe(true);
+  });
+
   it("renders an accessible seed dialog when requested", () => {
     const markup = advanced(state({ seedModalOpen: true, seedDraft: "dojo-42" }));
 
