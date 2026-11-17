@@ -9,4 +9,3 @@ describe("Budokon transport selection", () => {
     expect(budokonTransportFor("build", "production")).toBe("live");
   });
 });
-

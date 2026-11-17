@@ -101,4 +101,3 @@ describe("Budokon draw simulator", () => {
     expect(unsupportedMethod.status).toBe(405);
   });
 });
-
