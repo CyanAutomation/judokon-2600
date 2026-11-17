@@ -7,11 +7,15 @@
     "skipLibCheck": true,
     "moduleResolution": "Bundler",
     "verbatimModuleSyntax": true,
+    "baseUrl": ".",
     "noEmit": true,
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "noFallthroughCasesInSwitch": true
+    "noFallthroughCasesInSwitch": true,
+    "paths": {
+      "budokon-transport": ["src/api/liveTransport.ts"]
+    }
   },
   "include": ["src"]
 }

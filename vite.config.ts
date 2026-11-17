@@ -1,7 +1,19 @@
 import { defineConfig } from "vitest/config";
 import { VitePWA } from "vite-plugin-pwa";
+import { fileURLToPath } from "node:url";
+import { budokonTransportFor } from "./src/dev/budokon-simulator/transportSelection.ts";
 
-export default defineConfig(({ command }) => ({
+export default defineConfig(({ command, mode }) => ({
+  resolve: {
+    alias: {
+      "budokon-transport": fileURLToPath(new URL(
+        budokonTransportFor(command, mode) === "simulator"
+          ? "./src/dev/budokon-simulator/transport.ts"
+          : "./src/api/liveTransport.ts",
+        import.meta.url
+      ))
+    }
+  },
   plugins: command === "build" ? [VitePWA({
     strategies: "injectManifest",
     srcDir: "src",
