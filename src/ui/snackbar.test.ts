@@ -27,22 +27,29 @@ it("expires independently without replacing or moving focus from gameplay", () =
   expect(document.activeElement?.id).toBe('origin');
 });
 
-it("[REQ-UI-024] keeps round announcements in a persistent polite region across app renders", async () => {
+it("[REQ-UI-024] keeps round announcements separate from transient snackbar announcements", async () => {
   const app = document.createElement("div");
   app.id = "app-under-test";
   host.before(app);
   const state = createMockGameState({ match: createMockMatch(), result: createMockMatchResult() });
   renderApp(app, state);
-  const liveRegion = host.querySelector('[role="status"]');
+  const gameStatus = host.querySelector('[data-game-status]');
 
   notices.announce("Round 1: Power, 8 to 5. You take the point.");
   await Promise.resolve();
   renderApp(app, state);
   renderApp(app, state);
+  notices.show({ key: "copy", message: "Copied.", duration: 4000 });
 
-  expect(liveRegion?.getAttribute("aria-live")).toBe("polite");
-  expect(liveRegion?.textContent).toBe("Round 1: Power, 8 to 5. You take the point.");
-  expect(host.querySelector<HTMLElement>(".snackbar")?.hidden).toBe(true);
+  expect(gameStatus?.getAttribute("aria-live")).toBe("polite");
+  expect(gameStatus?.textContent).toBe("Round 1: Power, 8 to 5. You take the point.");
+  expect(host.querySelector('[data-notice-status]')?.textContent).toBe("Copied.");
+  expect(host.querySelectorAll('[role="status"]')).toHaveLength(2);
+
+  vi.advanceTimersByTime(4000);
+
+  expect(gameStatus?.textContent).toBe("Round 1: Power, 8 to 5. You take the point.");
+  expect(host.querySelector('[data-notice-status]')?.textContent).toBe("");
 });
 
 it("keeps the focused game control visible when the dock reduces the scroll area", () => {
@@ -84,7 +91,7 @@ it("deduplicates, bounds the queue and discards all stale events on clear", () =
   notices.clear();
   vi.advanceTimersByTime(20000);
   expect(host.querySelector<HTMLElement>('.snackbar')!.hidden).toBe(true);
-  expect(host.querySelector('[role=status]')!.textContent).toBe('');
+  expect(host.querySelector('[data-notice-status]')!.textContent).toBe('');
 });
 
 it("holds background events while a dialog is open", () => {
@@ -175,7 +182,7 @@ it("dismisses with Escape and restores origin focus without firing a game key", 
 it("keeps actions out of announcements and honors deliberate action focus", () => {
   const view = vi.fn(() => document.querySelector<HTMLElement>('#game')!.focus());
   notices.show({ key: 'notes', message: 'Dojo notes ready.', duration: 8000, action: { label: 'View', run: view } });
-  expect(host.querySelector('[role=status]')!.textContent).toBe('Dojo notes ready.');
+  expect(host.querySelector('[data-notice-status]')!.textContent).toBe('Dojo notes ready.');
   host.querySelector<HTMLButtonElement>('[data-action]')!.click();
   expect(view).toHaveBeenCalledOnce();
   expect(document.activeElement?.id).toBe('game');
