@@ -49,6 +49,10 @@ window.judokonCacheStats = () => client.getCacheStats();
 // Initialize game state from localStorage and sessionStorage
 const state: GameState = createGameState();
 const announceStatusChange = createStatusAnnouncer(message => notifications.announce(message), status(state));
+let waitingWorker: ServiceWorker | null = null;
+let updateNoticeShown = false;
+let updateReloadRequested = false;
+let updateReloadStarted = false;
 const savedMatch = loadSavedGameState();
 if (savedMatch) {
   state.match = savedMatch.match ?? null;
@@ -69,6 +73,31 @@ function render(): void {
   renderApp(root, state);
   notifications.setSuspended(Boolean(state.seedModalOpen));
   announceStatusChange(status(state));
+  showPendingUpdateIfSafe();
+}
+
+function showPendingUpdateIfSafe(): void {
+  if (!waitingWorker || updateNoticeShown || (state.match && state.match.phase !== "matchOver")) return;
+  updateNoticeShown = true;
+  notifications.show({
+    key: "app-update",
+    message: "A new version is available.",
+    duration: 8000,
+    action: {
+      label: "Reload",
+      run: () => {
+        if (!waitingWorker || updateReloadRequested) return;
+        updateReloadRequested = true;
+        waitingWorker.postMessage({ type: "SKIP_WAITING" });
+      }
+    }
+  });
+}
+
+function handleUpdateControllerChange(): void {
+  if (!updateReloadRequested || updateReloadStarted) return;
+  updateReloadStarted = true;
+  window.location.reload();
 }
 
 const deps: OrchestratorDeps = {
@@ -184,7 +213,16 @@ root.addEventListener("change", (e) => {
 document.addEventListener("keydown", handleKeyboardEvent);
 
 render();
-void registerAppServiceWorker(() => {});
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.addEventListener("controllerchange", handleUpdateControllerChange);
+  void registerAppServiceWorker(worker => {
+    waitingWorker = worker;
+    updateNoticeShown = false;
+    updateReloadRequested = false;
+    updateReloadStarted = false;
+    showPendingUpdateIfSafe();
+  });
+}
 if (savedMatch && state.match) {
   notifications.show({ key: "restored", message: `Match restored — round ${state.match.matchNumber}.`, duration: 6000 });
 }
