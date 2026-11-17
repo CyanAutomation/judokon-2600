@@ -121,12 +121,12 @@ export async function start(
 /**
  * Build error message from draw operation error
  */
-function buildDrawErrorMessage(error: unknown, operation: "start" | "continue"): string {
+function buildDrawErrorMessage(error: unknown, operation: "start" | "continue", wasOfflineAtRequestStart: boolean): string {
   if (error instanceof Error && error.message.startsWith("No compatible")) {
     return `${error.message}. Choose Absolute or another division.`;
   }
   if (error instanceof Error) {
-    if (!navigator.onLine && error.message.startsWith("Unable to connect to the Budokon API")) {
+    if ((wasOfflineAtRequestStart || !navigator.onLine) && error.message.startsWith("Unable to connect to the Budokon API")) {
       return operation === "start" ? OFFLINE_DRAW_MESSAGE : OFFLINE_NEXT_ROUND_MESSAGE;
     }
     if (/^(Budokon API|Unable to connect to the Budokon API|Too many draw requests)/.test(error.message)) {
@@ -148,6 +148,7 @@ export async function draw(state: GameState, deps: OrchestratorDeps, operationId
   deps.render();
   deps.clearNotices?.();
 
+  let wasOfflineAtRequestStart = false;
   try {
     // A setup change or a newer draw must not alter the request already in flight.
     const seed = state.activeSeed;
@@ -155,6 +156,7 @@ export async function draw(state: GameState, deps: OrchestratorDeps, operationId
     const mode = state.mode;
     const activeWeight = state.activeWeight;
     const operationState = { ...state, activeWeight };
+    wasOfflineAtRequestStart = !navigator.onLine;
     const drawn = await drawBatch(seed, DRAW_BUFFER_SIZE, 2, operationState, deps.client);
     if (!isCurrentOperation(state, operationId)) return;
     const [a, b, ...remaining] = drawn;
@@ -165,7 +167,7 @@ export async function draw(state: GameState, deps: OrchestratorDeps, operationId
     if (!isCurrentOperation(state, operationId)) return;
     state.match = null;
     state.drawBuffer = [];
-    state.errorMessage = buildDrawErrorMessage(e, "start");
+    state.errorMessage = buildDrawErrorMessage(e, "start", wasOfflineAtRequestStart);
   } finally {
     if (isCurrentOperation(state, operationId)) {
       state.busy = false;
@@ -212,9 +214,11 @@ export async function next(state: GameState, match: Match, deps: OrchestratorDep
   deps.render();
   deps.clearNotices?.();
 
+  let wasOfflineAtRequestStart = false;
   try {
     const matchSeed = `${state.activeSeed}:buffer:${match.matchNumber + 1}`;
     let drawBuffer = [...state.drawBuffer];
+    wasOfflineAtRequestStart = !navigator.onLine;
 
     if (match.mode === "champion") {
       drawBuffer = await prepareNextDrawBuffer(
@@ -234,7 +238,7 @@ export async function next(state: GameState, match: Match, deps: OrchestratorDep
     state.drawBuffer = drawBuffer;
     saveGameState(state);
   } catch (e) {
-    state.errorMessage = buildDrawErrorMessage(e, "continue");
+    state.errorMessage = buildDrawErrorMessage(e, "continue", wasOfflineAtRequestStart);
     saveGameState(state);
   } finally {
     state.busy = false;
