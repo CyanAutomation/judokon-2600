@@ -23,7 +23,7 @@ Open [http://localhost:5173](http://localhost:5173) to play locally. The Vite de
 
 ### Setup and scoring
 
-Setup unfolds in four steps:
+Setup unfolds in four steps. **Quick start** uses the selected setup immediately (Classic, Absolute, and first-to-3 for a fresh profile); the four-step flow remains available for changing each option:
 
 - Choose a mode: **Classic** or **Champion**.
 - Choose a division: **Absolute** open-weight or **Weight** class. Weight division offers the 14 catalogue classes `-48`, `-52`, `-57`, `-60`, `-63`, `-66`, `-70`, `-73`, `-78`, `-81`, `-90`, `-100`, `+78`, and `+100`.
@@ -37,17 +37,17 @@ A selected stat is compared with the opponent's hidden value; the higher value e
 - During setup, choose a mode with `C` (**Classic**) / `H` (**Champion**) and a division with `A` (**Absolute**) / `W` (**Weight**). Cycle match length with the arrow keys or `1`–`3`; if you chose Weight division, confirm its class with `Enter`, then confirm match length with `Enter` or `Space` to start.
 - During a match, choose a stat with `1`–`5` (`power`, `speed`, `technique`, `kumikata`, `newaza`). Press `Enter` or `Space` to advance or replay, and quit with `Esc` or `Q`.
 - Stat choices display as **Power**, **Speed**, **Technique**, **Kumi-kata**, and **Ne-waza**.
-- Optional keyboard ticks and outcome beeps are available in **Game settings**. They are muted by default and the preference is stored in `localStorage`. When enabled, keyboard actions and match outcomes play audio feedback; muting suppresses new feedback.
+- Optional keyboard ticks and outcome beeps are muted by default. Toggle sound in **Game settings** during setup or with the **Sound** button in the match footer. The preference is stored in `localStorage`; when enabled, keyboard actions and match outcomes play audio feedback, and muting suppresses new feedback.
 
 ### Match summary and Champion mode
 
 After each match, the summary recommends your best stat by most rounds won, then highest win rate, then earliest position in the displayed order (`power`, `speed`, `technique`, `kumikata`, `newaza`). It reports both wins and total selections; if no stat won a round, no recommendation is shown.
 
-In **Champion** mode, you keep the same judoka while opponents rotate. The **Current streak** counts consecutive rounds won at the end of the run: each win extends it, while either a loss or a draw resets it to zero. Earlier wins remain part of the run record but do not count toward the current streak.
+In **Champion** mode, you keep the same judoka while a rotating line-up of opponents changes each match. The **Current streak** counts consecutive rounds won at the end of the run: each win extends it, while either a loss or a draw resets it to zero. Earlier wins remain part of the run record but do not count toward the current streak.
 
-The match screen foregrounds the score and current decision. Fighter details, round history, Champion run metrics, and the completed-match breakdown are available in collapsed disclosures. Replay seed and sound controls are under **Game settings** during setup.
+The match screen foregrounds the score and current decision. During stat selection, paired fighter cards show your judoka’s full details and keep the opponent’s stat values hidden. Picking a stat reveals the opponent’s values. The **What do these stats mean?** disclosure explains Kumi-kata (grip fighting) and Ne-waza (ground work). After each round, the chosen stat and both values appear on the cards before the next action. Round history shows each round’s opponent, stat, values, and outcome during the current run. Saved sessions retain the existing compact history fields. Champion run metrics and the completed-match breakdown remain available in collapsed disclosures. Replay seed and notification-duration controls are under **Game settings** during setup; sound remains available during matches.
 
-Selective snack bars rise from the bottom centre for replay-seed confirmations, restored matches, and newly available Dojo notes. They occupy a separate area below gameplay and mobile setup controls, so they never cover a stat choice or action. Confirmations last four seconds, restoration notices six seconds, and Dojo-note notices eight seconds. Hovering, focusing a notification, or switching away from the tab pauses its timer. **Game settings → Notification duration** offers Standard, Extended (three times as long), or Until dismissed. Notifications use polite screen-reader announcements and respect reduced motion; scores, round results, scouting information, and actionable errors remain persistent.
+Selective snack bars rise from the bottom centre for replay-seed confirmations, restored matches, newly available Dojo notes, and quitting a match. A quit notice offers **Undo quit** for eight seconds and restores the match. The dock sits below gameplay and mobile setup controls, so it does not cover a stat choice or action. Confirmations last four seconds, restoration notices six seconds, and Dojo-note and quit notices eight seconds. Hovering, focusing a notification, or switching away from the tab pauses its timer. **Game settings → Notification duration** offers Standard, Extended (three times as long), or Until dismissed. A persistent polite live region announces status changes once; scores, round results, scouting information, and actionable errors remain visible in the app.
 
 ### Tactical insight
 
@@ -63,7 +63,7 @@ Reloading the same browser tab restores the last valid saved session, including 
 
 The Budokon draw cache is page-local and reuses identical requests for five minutes. To inspect its hit, miss, coalescing, expiry, and eviction counters in browser developer tools, run `window.judokonCacheStats()`. Tactical assessments with identical features and model are reused for five minutes in Vercel's regional Runtime Cache; see the [caching guide](docs/caching.md) for scope and operational details.
 
-While a round is open, a compact intel line shows the opponent's strongest stat (all tied stats when there is a tie). The opponent's exact values remain hidden until you select a stat. The scouting tip is optional and can be expanded beside the stat choices.
+While a round is open, a compact intel line shows the opponent's two highest-ranked stats. Ties follow the displayed stat order, and exact values stay hidden until you select a stat. Your own best stat is marked **Your best** on the stat choices. The scouting tip is optional and can be expanded beside the choices.
 
 ## Roadmap
 

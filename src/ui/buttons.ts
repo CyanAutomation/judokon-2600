@@ -34,6 +34,6 @@ export function primaryButton(id: string, label: string, shortcut: string, disab
   return `<button type="button" class="control control--primary action-button primary-action" id="${escapeHtml(id)}" ${disabled ? "disabled" : ""}><span>${escapeHtml(label)}</span>${shortcutHint(shortcut)}</button>`;
 }
 
-export function quietButton(id: string, label: string, shortcut: string): string {
-  return `<button type="button" class="control control--quiet action-button quiet" id="${escapeHtml(id)}"><span>${escapeHtml(label)}</span>${shortcutHint(shortcut)}</button>`;
+export function quietButton(id: string, label: string, shortcut?: string): string {
+  return `<button type="button" class="control control--quiet action-button quiet" id="${escapeHtml(id)}"><span>${escapeHtml(label)}</span>${shortcut ? shortcutHint(shortcut) : ""}</button>`;
 }

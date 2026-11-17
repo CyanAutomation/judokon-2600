@@ -1,7 +1,7 @@
 import { layoutSetupActions } from "./layout";
 import type { GameState } from "../state";
 import { shortcutHint } from "./controls";
-import { footerUtilities, intro, seedDialog } from "./setup-templates";
+import { footerUtilities, intro, matchSoundToggle, seedDialog } from "./setup-templates";
 import { game } from "./game-templates";
 import { createHelpers, headerContext, status } from "./helpers";
 import { escapeHtml as esc } from "./utils/escapeHtml";
@@ -26,7 +26,7 @@ function generateHint(state: GameState): string {
 
   // Match phase hints
   if (state.pendingStat) {
-    return "Your opponent is sizing you up…";
+    return "Opponent is sizing you up…";
   }
   if (state.match.phase === "selecting") {
     return `${shortcutHint("1–5")} Pick a stat ${shortcutHint("Esc / Q")} Quit match`;
@@ -41,7 +41,7 @@ function generateHint(state: GameState): string {
  * Generate optional footer settings panel
  */
 function generateSettings(state: GameState): string {
-  return !state.match ? footerUtilities(state) : "";
+  return state.match ? matchSoundToggle() : footerUtilities(state);
 }
 
 export function renderApp(root: HTMLElement, state: GameState): void {
@@ -53,7 +53,7 @@ export function renderApp(root: HTMLElement, state: GameState): void {
   const quietMatchStatus = Boolean(state.match && !state.busy && !state.errorMessage && (state.match.phase === "selecting" || state.result));
   const content = !state.match
     ? intro(state)
-    : `<h1 id="game-title" class="visually-hidden">Round ${state.match.matchNumber} match</h1><p id="status" class="${quietMatchStatus ? "visually-hidden" : "active-command"}" role="status" aria-live="polite">${esc(status(state))} <span class="block-cursor" aria-hidden="true">█</span></p>${game(state.match, state, helpers)}`;
+    : `<h1 id="game-title" class="visually-hidden">Round ${state.match.matchNumber} match</h1><p id="status" class="${quietMatchStatus ? "visually-hidden" : "active-command"}">${esc(status(state))} <span class="block-cursor" aria-hidden="true">█</span></p>${game(state.match, state, helpers)}`;
 
   const settings = generateSettings(state);
   const dialog = !state.match ? seedDialog(state) : "";

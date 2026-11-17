@@ -46,7 +46,8 @@ describe("renderApp", () => {
 
     renderApp(root, state);
 
-    expect(root.querySelector('[role="status"]')?.textContent).toContain("Putting your matchup together");
+    expect(root.querySelector(".intro-status")?.textContent).toContain("Putting your matchup together");
+    expect(root.querySelector('[aria-live="polite"]')).toBeNull();
   });
 
   it("[REQ-UI-009] shows a setup draw error as text", () => {
@@ -56,7 +57,7 @@ describe("renderApp", () => {
 
     renderApp(root, state);
 
-    const status = root.querySelector<HTMLElement>('[role="status"]');
+    const status = root.querySelector<HTMLElement>(".intro-status");
     expect(status?.textContent).toContain(message);
     expect(status?.querySelector("img")).toBeNull();
   });
@@ -74,6 +75,7 @@ describe("renderApp", () => {
     const status = root.querySelector<HTMLElement>("#status");
     expect(status?.textContent).toContain(message);
     expect(status?.querySelector("img")).toBeNull();
+    expect(status?.hasAttribute("aria-live")).toBe(false);
   });
 
   it("provides a level-one heading while a match is active", () => {
@@ -86,14 +88,26 @@ describe("renderApp", () => {
     expect(root.querySelector("#game-title")?.textContent).toBe("Round 4 match");
   });
 
-  it("keeps the repeated idle selection status available to assistive technology", () => {
+  it("[REQ-AUDIO-016] keeps the sound toggle available during an active match", () => {
+    localStorage.setItem("judokon.soundEnabled", "false");
+    const root = document.createElement("div");
+    renderApp(root, createMockGameState({ match: createMockMatch() }));
+    const sound = root.querySelector<HTMLButtonElement>("#sound-enabled");
+
+    expect(sound?.textContent).toContain("Sound: Off");
+    expect(sound?.getAttribute("aria-pressed")).toBe("false");
+    expect(root.querySelector(".footer-settings")).toBeNull();
+  });
+
+  it("keeps repeated idle selection status visible without replacing the persistent live region", () => {
     const root = document.createElement("div");
     const state = createMockGameState({ match: createMockMatch({ phase: "selecting" }) });
 
     renderApp(root, state);
 
     expect(root.querySelector("#status")?.classList.contains("visually-hidden")).toBe(true);
-    expect(root.querySelector("#status")?.getAttribute("aria-live")).toBe("polite");
+    expect(root.querySelector("#status")?.textContent).toContain("Pick one of your stats.");
+    expect(root.querySelector("#status")?.hasAttribute("aria-live")).toBe(false);
     expect(root.querySelector("#decision-heading")?.textContent).toBe("Choose a stat");
   });
 

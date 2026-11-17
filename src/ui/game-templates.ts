@@ -4,25 +4,15 @@
  * HTML generation for the active match interface, including fighter cards, scoreboards, results, and round history.
  */
 
-import { STAT_KEYS, type Judoka, type StatKey } from "../api/types";
+import { STAT_KEYS, type StatKey } from "../api/types";
 import { actionGroup, buttonChoice, type ButtonChoiceConfig, primaryButton, quietButton, surface } from "./controls";
-import { type Match, type MatchResult, strongestStats } from "../game/game";
+import { type Match, type MatchResult, rankedStats, strongestStats } from "../game/game";
 import { type GameState } from "../state";
 import { labels, type Helpers } from "./helpers";
 import { matchOutcomeCopy, roundOutcomeCopy } from "./constants";
 import { escapeHtml as esc } from "./utils/escapeHtml";
 import { championProgress, matchBreakdownContent, matchTakeaway } from "./match-templates";
-
-/**
- * Generate fighter card HTML
- */
-function fighter(j: Judoka, side: "player" | "opponent", state: GameState, helpers: Helpers): string {
-  const label = side === "player" ? "Your judoka" : "Your opponent";
-  const value = state.result ? side === "player" ? state.result.playerValue : state.result.opponentValue : null;
-  const chosen = state.result ? `<p class="selected-stat outcome-${state.result.outcome}"><span>${labels[state.result.stat]}</span><strong>${value}</strong></p>` : "";
-  const rarity = j.rarity || "Unclassified";
-  return `<details class="surface panel fighter-card ${side}" aria-label="${label} details"><summary class="fighter-summary"><span class="eyebrow">${label}</span><strong>${esc(helpers.nameOf(j))}</strong><span class="badge rarity rarity-${esc(rarity.toLowerCase())}">${esc(rarity)}</span></summary><div class="fighter-detail-body"><p>${esc(helpers.detailOf(j))}</p>${chosen}</div></details>`;
-}
+import { fighterCard } from "./fighterCard";
 
 /**
  * Generate score pips
@@ -60,7 +50,12 @@ function callout(m: Match, r: MatchResult, helpers: Helpers): string {
 function historyStrip(state: GameState): string {
   if (!state.history.length) return "";
   const count = state.history.length;
-  return `<details class="match-history reference-disclosure" aria-label="Round history"><summary>Round history · ${count} ${count === 1 ? "round" : "rounds"}</summary><ol tabindex="0" aria-label="Round history. Use the left and right arrow keys to view all rounds.">${state.history.map((h) => `<li class="${h.outcome}"><span>R${h.roundNumber}</span><strong>${labels[h.stat]}</strong><span>${h.outcome === "player" ? "WIN" : h.outcome === "opponent" ? "LOSS" : "DRAW"}</span></li>`).join("")}</ol></details>`;
+  return `<details class="match-history reference-disclosure" aria-label="Round history"><summary>Round history · ${count} ${count === 1 ? "round" : "rounds"}</summary><ol tabindex="0" aria-label="Round history. Use the left and right arrow keys to view all rounds.">${state.history.map((h) => {
+    const comparison = h.playerValue !== undefined && h.opponentValue !== undefined
+      ? `You ${h.playerValue} · Opponent ${h.opponentValue}`
+      : "Details unavailable after restore";
+    return `<li class="${h.outcome}"><span>R${h.roundNumber} · ${labels[h.stat]}</span><strong>${esc(h.opponentName ?? "Opponent details unavailable")}</strong><span class="history-values">${comparison}</span><span>${h.outcome === "player" ? "WIN" : h.outcome === "opponent" ? "LOSS" : "DRAW"}</span></li>`;
+  }).join("")}</ol></details>`;
 }
 
 /**
@@ -109,7 +104,7 @@ function statChoices(m: Match, state: GameState): string {
 
 function commitment(state: GameState): string {
   if (!state.pendingStat) return "";
-  return surface("section", "commitment", "Opponent thinking", `<span class="block-cursor" aria-hidden="true">█</span><div><strong>Your opponent is sizing you up…</strong><p>Let’s see how your ${labels[state.pendingStat as StatKey]} stacks up.</p></div>`, { ariaLive: "polite" });
+  return surface("section", "commitment", "Opponent thinking", `<span class="block-cursor" aria-hidden="true">█</span><div><strong>Opponent is sizing you up…</strong><p>Let’s see how your ${labels[state.pendingStat as StatKey]} stacks up.</p></div>`, { ariaLive: "polite" });
 }
 
 function matchActions(m: Match, state: GameState): string {
@@ -127,29 +122,32 @@ function replayTools(state: GameState): string {
   return `<details class="replay-details reference-disclosure"><summary>Replay details</summary><div class="replay-tools">${quietButton("copy-seed", "Copy replay seed", "Copy")}<p class="replay-seed">Replay seed: <code>${esc(state.activeSeed)}</code></p>${state.seedMessage ? `<p class="seed-message" role="status">${esc(state.seedMessage)}</p>` : ""}</div></details>`;
 }
 
-function decisionArea(m: Match, state: GameState, helpers: Helpers): string {
-  const scout = state.result ? "" : `<aside class="scout-report" aria-label="Opponent intel"><p><span class="eyebrow">Opponent top stats</span><strong>${strongestStats(m.opponent).map(stat => labels[stat]).join(" / ")}</strong></p><details class="scout-tip"><summary>Scouting tip</summary><p>Use this as a guide; the opponent’s exact values appear after your pick.</p></details></aside>`;
-  return `<section class="round-decision" aria-labelledby="decision-heading"><h2 id="decision-heading" class="decision-heading">Choose a stat</h2><p class="decision-player">Your judoka <strong>${esc(helpers.nameOf(m.player))}</strong></p>${scout}${statChoices(m, state)}</section>`;
+function decisionArea(m: Match, state: GameState): string {
+  const scout = state.result ? "" : `<aside class="scout-report" aria-label="Opponent intel"><p><span class="eyebrow">Opponent top two stats</span><strong>${rankedStats(m.opponent).slice(0, 2).map(stat => labels[stat]).join(" / ")}</strong></p><details class="scout-tip"><summary>Scouting tip</summary><p>Use this as a guide; the opponent’s exact values appear after your pick.</p></details></aside>`;
+  const glossary = `<details class="stat-glossary reference-disclosure"><summary>What do these stats mean?</summary><dl><dt>Kumi-kata</dt><dd>Grip fighting</dd><dt>Ne-waza</dt><dd>Ground work</dd></dl></details>`;
+  return `<section class="round-decision" aria-labelledby="decision-heading"><h2 id="decision-heading" class="decision-heading">Choose a stat</h2>${scout}${statChoices(m, state)}${glossary}</section>`;
+}
+
+function fighterPair(m: Match, state: GameState, helpers: Helpers): string {
+  const revealOpponent = Boolean(state.pendingStat || state.result);
+  const selectedStat = state.result?.stat ?? (state.pendingStat as StatKey | null);
+  const open = !state.result;
+  return `<section class="head-to-head" aria-label="Head-to-head"><div class="fighter-pair">${fighterCard({ judoka: m.player, side: "player", helpers, result: state.result, selectedStat, revealStats: true, open })}${fighterCard({ judoka: m.opponent, side: "opponent", helpers, result: state.result, selectedStat, revealStats: revealOpponent, open })}</div></section>`;
 }
 
 function selectingContent(m: Match, state: GameState, helpers: Helpers): string {
-  const player = fighter(m.player, "player", state, helpers);
-  return `${decisionArea(m, state, helpers)}${commitment(state)}${player}${championProgress(m, state, helpers)}${historyStrip(state)}`;
+  return `${decisionArea(m, state)}${commitment(state)}${fighterPair(m, state, helpers)}${championProgress(m, state, helpers)}${historyStrip(state)}`;
 }
 
 function nextRoundContent(m: Match, state: GameState, helpers: Helpers): string {
   const resolved = state.result ? resultPanel(m, state.result, helpers) : "";
-  const player = fighter(m.player, "player", state, helpers);
-  const opponent = state.result ? fighter(m.opponent, "opponent", state, helpers) : "";
-  return `${resolved}${matchActions(m, state)}${player}${opponent}${historyStrip(state)}${championProgress(m, state, helpers)}`;
+  return `${resolved}${fighterPair(m, state, helpers)}${matchActions(m, state)}${historyStrip(state)}${championProgress(m, state, helpers)}`;
 }
 
 function completedMatchContent(m: Match, state: GameState, helpers: Helpers): string {
   const resolved = state.result ? resultPanel(m, state.result, helpers) : "";
   const postMatch = `<details class="match-breakdown"><summary>Match breakdown</summary><div class="post-match-summary">${matchBreakdownContent(m, state)}</div></details>`;
-  const player = fighter(m.player, "player", state, helpers);
-  const opponent = state.result ? fighter(m.opponent, "opponent", state, helpers) : "";
-  return `${resolved}${matchTakeaway(m, state)}${matchActions(m, state)}${replayTools(state)}${postMatch}${player}${opponent}${historyStrip(state)}${championProgress(m, state, helpers)}`;
+  return `${resolved}${fighterPair(m, state, helpers)}${matchTakeaway(m, state)}${matchActions(m, state)}${replayTools(state)}${postMatch}${historyStrip(state)}${championProgress(m, state, helpers)}`;
 }
 
 function phaseContent(m: Match, state: GameState, helpers: Helpers): string {

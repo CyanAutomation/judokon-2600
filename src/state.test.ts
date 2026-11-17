@@ -190,6 +190,21 @@ describe("saveGameState", () => {
   });
 });
 
+it("preserves the version 1 saved-history fields when runtime comparison details are present", () => {
+  const state = createGameState();
+  state.match = createMockMatch({ phase: "awaitingNext" });
+  state.history = [{
+    outcome: "player", stat: "power", roundNumber: 1,
+    playerValue: 8, opponentValue: 5, opponentName: "Rival Judoka"
+  } as GameState["history"][number]];
+
+  saveGameState(state);
+
+  const serialized = JSON.parse(sessionStorage.getItem("judokon.activeMatch.v1")!) as { version: number; history: unknown[] };
+  expect(serialized.version).toBe(1);
+  expect(serialized.history).toEqual([{ outcome: "player", stat: "power", roundNumber: 1 }]);
+});
+
 describe("loadSavedGameState", () => {
   it("returns null when no saved match exists", () => {
     const loaded = loadSavedGameState();

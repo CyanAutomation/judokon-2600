@@ -11,4 +11,4 @@ export { actionGroup, shortcutHint, primaryButton, quietButton } from "./buttons
 export { type ButtonChoiceConfig, buttonChoice, utilityButton, radioChoice } from "./inputs";
 
 // Re-export container components
-export { definitionList, surface, terminalMenu } from "./containers";
+export { badge, definitionList, valueList, surface, terminalMenu } from "./containers";

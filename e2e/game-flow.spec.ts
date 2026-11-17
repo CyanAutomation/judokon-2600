@@ -11,7 +11,7 @@ const judoka = Array.from({ length: 6 }, (_, index) => ({
   stats: { power: 80 - index, speed: 70, technique: 60, kumikata: 50, newaza: 40 }
 }));
 
-test("player can complete setup and reach the first stat choice", async ({ page }) => {
+async function mockCatalogue(page: import("@playwright/test").Page): Promise<void> {
   await page.route("https://budokon.scheimann.workers.dev/v1/draw", async (route) => {
     const corsHeaders = {
       "access-control-allow-origin": "*",
@@ -30,6 +30,10 @@ test("player can complete setup and reach the first stat choice", async ({ page 
       body: JSON.stringify({ judoka })
     });
   });
+}
+
+test("[REQ-UI-022] player can reach stat choices that fit at mobile and desktop widths", async ({ page }) => {
+  await mockCatalogue(page);
 
   await page.goto("/");
   await expect(page.getByRole("group", { name: "Choose game mode" })).toBeVisible();
@@ -40,4 +44,140 @@ test("player can complete setup and reach the first stat choice", async ({ page 
 
   await expect(page.getByRole("heading", { name: "Choose a stat" })).toBeVisible();
   await expect(page.locator('[data-stat="power"]')).toBeVisible();
+
+  for (const width of [360, 560, 700, 900, 980, 1280, 1600]) {
+    await page.setViewportSize({ width, height: 720 });
+    const overflowingChoices = await page.locator(".stats .option-card").evaluateAll((buttons) =>
+      buttons
+        .filter((button) => button.scrollWidth > button.clientWidth + 1)
+        .map((button) => button.textContent?.trim())
+    );
+    expect(overflowingChoices, `stat choice text should fit at ${width}px`).toEqual([]);
+  }
+});
+
+test("[REQ-UI-003] round result keeps the comparison and next action in view on desktop and mobile", async ({ page }) => {
+  await mockCatalogue(page);
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto("/");
+  await page.getByText("Classic Battle", { exact: true }).click();
+  await page.getByText("Absolute", { exact: true }).click();
+  await page.getByText("Quick", { exact: true }).click();
+
+  await page.locator('[data-stat="power"]').click();
+  await expect(page.locator("#next")).toBeVisible();
+  await expect(page.locator(".head-to-head")).toBeVisible();
+  await expect.poll(() => page.evaluate(() => (document.activeElement as HTMLElement | null)?.id)).toBe("next");
+
+  const appScroll = page.locator(".app-scroll");
+  await expect(appScroll).toHaveCount(1);
+  const desktopAction = await page.locator("#next").evaluate((button) => {
+    const rect = button.getBoundingClientRect();
+    return { top: rect.top, bottom: rect.bottom };
+  });
+  const desktopScrollTop = await appScroll.evaluate((element) => element.scrollTop);
+  expect(desktopAction.top).toBeGreaterThanOrEqual(0);
+  expect(desktopAction.bottom).toBeLessThanOrEqual(720);
+  expect(desktopScrollTop).toBe(0);
+
+  await page.locator("#next").click();
+  await page.setViewportSize({ width: 360, height: 720 });
+  await page.locator('[data-stat="speed"]').click();
+  await expect(page.locator("#next")).toBeVisible();
+  await expect(page.locator(".head-to-head")).toBeVisible();
+
+  await expect(appScroll).toHaveCount(1);
+  const mobileAction = await page.locator("#next").evaluate((button) => {
+    const rect = button.getBoundingClientRect();
+    return { top: rect.top, bottom: rect.bottom };
+  });
+  const mobileScrollTop = await appScroll.evaluate((element) => element.scrollTop);
+  expect(mobileAction.top).toBeGreaterThanOrEqual(0);
+  expect(mobileAction.bottom).toBeLessThanOrEqual(720);
+  expect(mobileScrollTop).toBe(0);
+});
+
+test("[REQ-GAME-023] summary and Quit keys keep native actions; Undo restores the match", async ({ page }) => {
+  await mockCatalogue(page);
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto("/");
+  await page.getByText("Classic Battle", { exact: true }).click();
+  await page.getByText("Absolute", { exact: true }).click();
+  await page.getByText("Quick", { exact: true }).click();
+  await page.locator('[data-stat="power"]').click();
+
+  const history = page.locator("details.match-history");
+  await history.locator("summary").focus();
+  await page.keyboard.press("Enter");
+  await expect(history).toHaveAttribute("open", "");
+  await expect(page.locator("#next")).toBeVisible();
+
+  await page.locator("#quit").focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("button", { name: "Undo quit" })).toBeVisible();
+  await expect(page.getByRole("group", { name: "Choose game mode" })).toBeVisible();
+  await page.screenshot({ path: "docs/assets/review/quit-undo-desktop.png", fullPage: true });
+
+  await page.setViewportSize({ width: 360, height: 720 });
+  await page.screenshot({ path: "docs/assets/review/quit-undo-mobile.png", fullPage: true });
+  await page.getByRole("button", { name: "Undo quit" }).click();
+  await expect(page.locator(".result-panel")).toBeVisible();
+  await expect(page.locator("#next")).toBeVisible();
+});
+
+test("[REQ-UI-025] Quick start opens the default match and its glossary and history are useful", async ({ page }) => {
+  await mockCatalogue(page);
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto("/");
+  await expect(page.getByRole("group", { name: "Choose game mode" })).toBeVisible();
+  await expect(page.locator("#intro-title")).toHaveText("Step into the judoka circuit.");
+  await expect(page.locator("#intro-title br")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Quick start" })).toBeVisible();
+  await page.screenshot({ path: "docs/assets/review/quick-start-desktop.png", fullPage: true });
+
+  await page.setViewportSize({ width: 360, height: 720 });
+  await page.screenshot({ path: "docs/assets/review/quick-start-mobile.png", fullPage: true });
+  await page.getByRole("button", { name: "Quick start" }).click();
+  await expect(page.getByRole("heading", { name: "Choose a stat" })).toBeVisible();
+  await expect(page.locator(".scoreboard")).toContainText("First to 3");
+  const sound = page.locator("#sound-enabled");
+  await expect(sound).toHaveAttribute("aria-pressed", "false");
+  await sound.focus();
+  await page.keyboard.press("Enter");
+  await expect(page.locator("#sound-enabled")).toHaveAttribute("aria-pressed", "true");
+  await page.keyboard.press("Space");
+  await expect(page.locator("#sound-enabled")).toHaveAttribute("aria-pressed", "false");
+
+  const glossary = page.locator("details.stat-glossary");
+  await glossary.locator("summary").click();
+  await expect(glossary).toContainText("Grip fighting");
+  await expect(glossary).toContainText("Ground work");
+
+  await page.locator('[data-stat="power"]').click();
+  const history = page.locator("details.match-history");
+  await history.locator("summary").click();
+  const row = history.locator("li").first();
+  await expect(row).toContainText("Test2 Fighter");
+  await expect(row).toContainText("You 80 · Opponent 79");
+
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await row.scrollIntoViewIfNeeded();
+  await page.screenshot({ path: "docs/assets/review/round-history-desktop.png" });
+
+  await page.locator("#next").click();
+  await page.locator('[data-stat="speed"]').click();
+  await page.setViewportSize({ width: 360, height: 720 });
+  const updatedHistory = page.locator("details.match-history");
+  await updatedHistory.locator("summary").click();
+  await expect(updatedHistory).toHaveAttribute("open", "");
+  const secondRow = updatedHistory.locator("li").nth(1);
+  await expect(secondRow).toContainText("Test4 Fighter");
+  await expect(secondRow).toContainText("You 70 · Opponent 70");
+  await expect(secondRow).toContainText("DRAW");
+  const scrollWidth = await updatedHistory.locator("ol").evaluate(element => element.scrollWidth);
+  const clientWidth = await updatedHistory.locator("ol").evaluate(element => element.clientWidth);
+  expect(scrollWidth).toBeGreaterThan(clientWidth);
+  await updatedHistory.locator("ol").evaluate(element => { element.scrollLeft = element.scrollWidth; });
+  const scrollLeft = await updatedHistory.locator("ol").evaluate(element => element.scrollLeft);
+  expect(scrollLeft).toBeGreaterThan(0);
 });

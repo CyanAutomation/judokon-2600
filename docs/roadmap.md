@@ -2,6 +2,16 @@
 
 This document records possible future directions. These are proposals, not features in the current game. Any implementation should preserve the deterministic match rules and keep optional systems out of the core arcade flow.
 
+## Draw resolution options
+
+Draws currently leave the score unchanged and play continues to the next round. Three possible policies are open for maintainer discussion:
+
+1. **Keep draws as they are.** This preserves the current simple rules and score history; close stat ratings can still produce stretches with no score change.
+2. **Let the player re-pick after a draw.** This could reduce stalemates without adding a new scoring value, but it changes round pacing and needs a clear rule for preventing repeated ties.
+3. **Add a deterministic sudden-death comparison.** A second stat or published fixed tie-break could settle a draw immediately, but it adds scoring complexity and must be reflected in result copy, history, and replay expectations.
+
+No scoring change is included in this roadmap update. Choose a policy and its tie-repeat behavior before implementation.
+
 ## Progression-enhanced scouting
 
 The current scout report is free and always visible. A future progression release could make scouting an earned, opt-in reward without revealing exact opponent values:

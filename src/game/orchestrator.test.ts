@@ -1,7 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Judoka } from "../api/types";
-import { createGameState } from "../state";
-import { clearAndExit, draw, next, resolve, MATCH_RESOLUTION_DELAY_MS, handleSetupStepClick, handleOpenSeedModal, handleCloseSeedModal, handleSaveReplaySeed, handleToggleSound, handleKeyboardMoveCursor, handleKeyboardCloseSeedModal, type OrchestratorDeps } from "./orchestrator";
+import { createGameState, saveGameState } from "../state";
+import { clearAndExit, draw, next, resolve, requestQuit, start, MATCH_RESOLUTION_DELAY_MS, handleSetupStepClick, handleOpenSeedModal, handleCloseSeedModal, handleSaveReplaySeed, handleToggleSound, handleKeyboardMoveCursor, handleKeyboardCloseSeedModal, type OrchestratorDeps } from "./orchestrator";
+import { createMatch } from "./game";
+import { createSnackbar } from "../ui/snackbar";
 import type { TacticalAssessmentResult } from "./tacticalAssessment";
 import type { TacticalFeatures } from "./tacticalAssessment";
 
@@ -222,6 +224,114 @@ describe("next-round draws", () => {
       "replacement-3",
       "replacement-4"
     ]);
+  });
+});
+
+describe("quit undo", () => {
+  beforeEach(() => sessionStorage.clear());
+
+  it("[REQ-GAME-023] offers Undo and restores a stable match with pending choice cleared", () => {
+    const state = createGameState();
+    const match = createMatch(judoka("player"), judoka("opponent"), 3);
+    state.match = match;
+    state.activeSeed = "undo-seed";
+    state.drawBuffer = [judoka("buffered")];
+    state.history = [{ stat: "power", outcome: "player", roundNumber: 1 }];
+    saveGameState(state);
+    state.pendingStat = "technique";
+    const notify = vi.fn();
+    const render = vi.fn();
+    const clearNotices = vi.fn();
+    const deps = { client: {}, render, notify, clearNotices } as unknown as OrchestratorDeps;
+
+    requestQuit(state, deps);
+
+    expect(state.match).toBeNull();
+    expect(sessionStorage.getItem("judokon.activeMatch.v1")).toBeNull();
+    expect(notify).toHaveBeenCalledWith(expect.objectContaining({
+      key: "quit-match",
+      message: expect.stringContaining("Match quit"),
+      action: expect.objectContaining({ label: "Undo quit", run: expect.any(Function) })
+    }));
+    expect(clearNotices).toHaveBeenCalledOnce();
+
+    notify.mock.calls[0]![0].action!.run();
+
+    expect(state.match).toBe(match);
+    expect(state.pendingStat).toBeNull();
+    expect(state.history).toEqual([{ stat: "power", outcome: "player", roundNumber: 1 }]);
+    expect(state.drawBuffer.map(({ id }) => id)).toEqual(["buffered"]);
+    expect(sessionStorage.getItem("judokon.activeMatch.v1")).toContain("undo-seed");
+    expect(render).toHaveBeenCalledTimes(2);
+  });
+
+  it("ignores an undo callback after a new draw has started, even with the same seed", async () => {
+    const state = createGameState();
+    state.match = createMatch(judoka("old-player"), judoka("old-opponent"), 3);
+    state.activeSeed = "same-seed";
+    state.history = [{ stat: "power", outcome: "player", roundNumber: 1 }];
+    const pendingDraw = deferred<Judoka[]>();
+    const notify = vi.fn();
+    const deps = {
+      client: { drawBatch: vi.fn(() => pendingDraw.promise) },
+      render: vi.fn(),
+      notify,
+      clearNotices: vi.fn()
+    } as unknown as OrchestratorDeps;
+
+    requestQuit(state, deps);
+    const undo = notify.mock.calls[0]![0].action!.run;
+    const newGame = start(state, deps, 3, "same-seed");
+
+    expect(state.match).toBeNull();
+    expect(state.busy).toBe(true);
+    expect(state.history).toEqual([]);
+    undo();
+    expect(state.busy).toBe(true);
+    expect(state.history).toEqual([]);
+
+    pendingDraw.resolve([
+      judoka("new-player"),
+      judoka("new-opponent"),
+      judoka("buffer-1"),
+      judoka("buffer-2"),
+      judoka("buffer-3"),
+      judoka("buffer-4")
+    ]);
+    await newGame;
+
+    expect(state.match?.player.id).toBe("new-player");
+    expect(state.history).toEqual([]);
+  });
+});
+
+describe("focus across game screen transitions", () => {
+  it("restores focus into the new setup screen when clearing a focused snackbar", () => {
+    const app = document.createElement("main");
+    app.id = "app-under-test";
+    app.innerHTML = '<button id="old-game-control">Old game control</button>';
+    const host = document.createElement("div");
+    document.body.append(app, host);
+    const notifications = createSnackbar(host);
+
+    try {
+      app.querySelector<HTMLButtonElement>("#old-game-control")!.focus();
+      notifications.show({ key: "notes", message: "Dojo notes ready.", duration: 8000 });
+      host.querySelector<HTMLButtonElement>("[data-dismiss]")!.focus();
+
+      const deps = {
+        client: {},
+        render: () => { app.innerHTML = '<button id="seed-button">Replay seed</button>'; },
+        clearNotices: () => notifications.clear()
+      } as unknown as OrchestratorDeps;
+      clearAndExit(createGameState(), deps);
+
+      expect(document.activeElement).toBe(app.querySelector("#seed-button"));
+    } finally {
+      notifications.dispose();
+      app.remove();
+      host.remove();
+    }
   });
 });
 
