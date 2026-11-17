@@ -53,6 +53,11 @@ class SnackbarController implements Snackbar {
     }
   }
 
+  announce(message: string): void {
+    if (this.disposed) return;
+    this.announcement.textContent = message;
+  }
+
   clear(): void {
     this.queue = [];
     this.dismiss();

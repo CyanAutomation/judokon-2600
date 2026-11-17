@@ -380,6 +380,34 @@ export function clearAndExit(state: GameState, deps: OrchestratorDeps): void {
   deps.render();
 }
 
+/** Return to setup while offering a short undo window for the current run. */
+export function requestQuit(state: GameState, deps: OrchestratorDeps): void {
+  const snapshot: GameState = {
+    ...state,
+    pendingStat: null,
+    busy: false,
+    history: state.history.map(item => ({ ...item })),
+    drawBuffer: [...state.drawBuffer]
+  };
+
+  clearAndExit(state, deps);
+  deps.notify?.({
+    key: "quit-match",
+    message: "Match quit. Use Undo to resume.",
+    duration: 8000,
+    action: {
+      label: "Undo quit",
+      run: () => {
+        Object.assign(state, snapshot, { pendingStat: null, busy: false });
+        persistPreferences(state);
+        saveGameState(state);
+        deps.render();
+        document.querySelector<HTMLElement>("#game")?.focus({ preventScroll: true });
+      }
+    }
+  });
+}
+
 /**
  * Update match length selection
  * Called when user selects match length in intro

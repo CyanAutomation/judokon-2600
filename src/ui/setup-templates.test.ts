@@ -49,13 +49,14 @@ describe("setup templates", () => {
     }
   });
 
-  it("provides a page heading and a live status for setup", () => {
+  it("provides a page heading and visible setup status without a rerendered live region", () => {
     const root = document.createElement("div");
     root.innerHTML = intro(state());
 
     expect(root.querySelectorAll("h1")).toHaveLength(1);
     expect(root.querySelector("h1")?.textContent?.trim()).not.toBe("");
-    expect(root.querySelector('[role="status"]')).not.toBeNull();
+    expect(root.querySelector(".intro-status")).not.toBeNull();
+    expect(root.querySelector('[aria-live="polite"]')).toBeNull();
   });
 
   it("[REQ-UI-014] starts with game mode as the only setup choice", () => {

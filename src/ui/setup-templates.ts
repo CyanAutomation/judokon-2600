@@ -135,5 +135,5 @@ export function intro(state: GameState): string {
   const firstStepCopy = step === "mode"
     ? `<p class="intro-lede">Pick a game mode, then choose one of your judoka’s stats each round. ${pointRule}</p><p class="intro-footnote">Your last setup will be waiting here next time.</p>`
     : "";
-  return `<section class="intro" data-setup-step="${step}" aria-labelledby="intro-title"><div class="intro-copy"><p class="eyebrow">Choose your challenge</p><h1 id="intro-title">Step into the <br/>judoka circuit.</h1>${firstStepCopy}<p class="intro-status" role="status">${esc(statusMessage)}<span class="block-cursor" aria-hidden="true">█</span></p></div>${surface("section", "intro-mode-panel", "Match setup", `${helpers.eyebrow("Match setup")}${setupPanel(state, helpers)}`)}</section>`;
+  return `<section class="intro" data-setup-step="${step}" aria-labelledby="intro-title"><div class="intro-copy"><p class="eyebrow">Choose your challenge</p><h1 id="intro-title">Step into the <br/>judoka circuit.</h1>${firstStepCopy}<p class="intro-status">${esc(statusMessage)}<span class="block-cursor" aria-hidden="true">█</span></p></div>${surface("section", "intro-mode-panel", "Match setup", `${helpers.eyebrow("Match setup")}${setupPanel(state, helpers)}`)}</section>`;
 }

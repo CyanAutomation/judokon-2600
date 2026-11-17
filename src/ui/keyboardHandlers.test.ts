@@ -150,11 +150,40 @@ describe("handleMatchKeyboard", () => {
     root.appendChild(button);
     const click = vi.spyOn(button, "click");
     const event = createKeyboardEvent("Enter", { cancelable: true });
+    button.dispatchEvent(event);
 
     handleMatchKeyboard(event, state, root, handlers);
 
     expect(click).toHaveBeenCalledOnce();
     expect(event.defaultPrevented).toBe(true);
+  });
+
+  it.each([
+    ["Enter", "summary"],
+    [" ", "summary"],
+    ["Enter", "button#quit"],
+    [" ", "button#quit"]
+  ])("[REQ-KEYBOARD-008] leaves %s on %s to its focused control", (key, selector) => {
+    const state = createMockGameState({ match: createMockMatch({ phase: "awaitingNext" }) });
+    const root = document.createElement("div");
+    const details = document.createElement("details");
+    details.innerHTML = "<summary>Round history</summary>";
+    const quit = document.createElement("button");
+    quit.id = "quit";
+    root.append(details, quit);
+    const focused = root.querySelector<HTMLElement>(selector)!;
+    const event = createKeyboardEvent(key, { cancelable: true, bubbles: true });
+    focused.dispatchEvent(event);
+    const next = vi.fn();
+    const primary = document.createElement("button");
+    primary.id = "next";
+    primary.click = next;
+    root.append(primary);
+
+    handleMatchKeyboard(event, state, root, { resolve: vi.fn(), keyboardTick: vi.fn() });
+
+    expect(next).not.toHaveBeenCalled();
+    expect(event.defaultPrevented).toBe(false);
   });
 
   it("[REQ-KEYBOARD-008] does not advance to the next round while a draw is in progress", () => {

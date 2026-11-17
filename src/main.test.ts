@@ -223,7 +223,7 @@ describe("Main Module - Draw Error Handling", () => {
     const visibleMessages: string[] = [];
     const render = vi.fn(() => {
       renderApp(root, state);
-      visibleMessages.push(root.querySelector<HTMLElement>('[role="status"]')?.textContent?.trim() ?? "");
+      visibleMessages.push(root.querySelector<HTMLElement>(".intro-status")?.textContent?.trim() ?? "");
     });
 
     await start(state, { client, render });
@@ -232,7 +232,7 @@ describe("Main Module - Draw Error Handling", () => {
     expect(state.busy).toBe(false);
     expect(state.match).toBeNull();
     expect(visibleMessages[0]).toContain("Putting your matchup together");
-    expect(root.querySelector<HTMLElement>('[role="status"]')?.textContent).toContain(expectedMessage);
+    expect(root.querySelector<HTMLElement>(".intro-status")?.textContent).toContain(expectedMessage);
   });
 });
 
@@ -435,7 +435,7 @@ describe("Render function composition", () => {
 
     renderApp(root, state);
 
-    const status = root.querySelector<HTMLElement>('main [role="status"]');
+    const status = root.querySelector<HTMLElement>("main #status");
     const footerHint = root.querySelector<HTMLElement>("footer .footer-hint");
 
     expect(status?.textContent).toContain("Pick one of your stats.");

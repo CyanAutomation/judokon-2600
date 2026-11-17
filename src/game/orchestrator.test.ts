@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Judoka } from "../api/types";
-import { createGameState } from "../state";
-import { clearAndExit, draw, next, resolve, MATCH_RESOLUTION_DELAY_MS, handleSetupStepClick, handleOpenSeedModal, handleCloseSeedModal, handleSaveReplaySeed, handleToggleSound, handleKeyboardMoveCursor, handleKeyboardCloseSeedModal, type OrchestratorDeps } from "./orchestrator";
+import { createGameState, saveGameState } from "../state";
+import { clearAndExit, draw, next, resolve, requestQuit, MATCH_RESOLUTION_DELAY_MS, handleSetupStepClick, handleOpenSeedModal, handleCloseSeedModal, handleSaveReplaySeed, handleToggleSound, handleKeyboardMoveCursor, handleKeyboardCloseSeedModal, type OrchestratorDeps } from "./orchestrator";
+import { createMatch } from "./game";
 import type { TacticalAssessmentResult } from "./tacticalAssessment";
 import type { TacticalFeatures } from "./tacticalAssessment";
 
@@ -222,6 +223,45 @@ describe("next-round draws", () => {
       "replacement-3",
       "replacement-4"
     ]);
+  });
+});
+
+describe("quit undo", () => {
+  beforeEach(() => sessionStorage.clear());
+
+  it("[REQ-GAME-023] offers Undo and restores a stable match with pending choice cleared", () => {
+    const state = createGameState();
+    const match = createMatch(judoka("player"), judoka("opponent"), 3);
+    state.match = match;
+    state.activeSeed = "undo-seed";
+    state.drawBuffer = [judoka("buffered")];
+    state.history = [{ stat: "power", outcome: "player", roundNumber: 1 }];
+    saveGameState(state);
+    state.pendingStat = "technique";
+    const notify = vi.fn();
+    const render = vi.fn();
+    const clearNotices = vi.fn();
+    const deps = { client: {}, render, notify, clearNotices } as unknown as OrchestratorDeps;
+
+    requestQuit(state, deps);
+
+    expect(state.match).toBeNull();
+    expect(sessionStorage.getItem("judokon.activeMatch.v1")).toBeNull();
+    expect(notify).toHaveBeenCalledWith(expect.objectContaining({
+      key: "quit-match",
+      message: expect.stringContaining("Match quit"),
+      action: expect.objectContaining({ label: "Undo quit", run: expect.any(Function) })
+    }));
+    expect(clearNotices).toHaveBeenCalledOnce();
+
+    notify.mock.calls[0]![0].action!.run();
+
+    expect(state.match).toBe(match);
+    expect(state.pendingStat).toBeNull();
+    expect(state.history).toEqual([{ stat: "power", outcome: "player", roundNumber: 1 }]);
+    expect(state.drawBuffer.map(({ id }) => id)).toEqual(["buffered"]);
+    expect(sessionStorage.getItem("judokon.activeMatch.v1")).toContain("undo-seed");
+    expect(render).toHaveBeenCalledTimes(2);
   });
 });
 
