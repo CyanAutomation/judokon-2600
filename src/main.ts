@@ -19,6 +19,7 @@ import { start, next, resolve, copyReplaySeed, clearAndExit, requestQuit, choose
 import { handleGlobalKeyboardEvent } from "./ui/keyboardEventDispatcher";
 import { getSoundEnabled } from "./ui/helpers/soundStorage";
 import { requestTacticalAssessment } from "./api/tacticalAssessment";
+import { registerAppServiceWorker } from "./pwa/registerServiceWorker";
 
 const app = document.querySelector<HTMLDivElement>("#app");
 if (!app) throw new Error("Application root is missing");
@@ -183,6 +184,7 @@ root.addEventListener("change", (e) => {
 document.addEventListener("keydown", handleKeyboardEvent);
 
 render();
+void registerAppServiceWorker(() => {});
 if (savedMatch && state.match) {
   notifications.show({ key: "restored", message: `Match restored — round ${state.match.matchNumber}.`, duration: 6000 });
 }
