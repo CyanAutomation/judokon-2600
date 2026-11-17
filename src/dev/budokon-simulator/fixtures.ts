@@ -44,4 +44,3 @@ function createFixtures(): Judoka[] {
 
 /** Fictional, deterministic catalogue entries used only by simulator mode and tests. */
 export const SIMULATED_JUDOKA: readonly Judoka[] = Object.freeze(createFixtures());
-

@@ -4,4 +4,3 @@ export type BudokonTransport = "live" | "simulator";
 export function budokonTransportFor(command: string, mode: string): BudokonTransport {
   return command === "serve" && mode === "simulator" ? "simulator" : "live";
 }
-

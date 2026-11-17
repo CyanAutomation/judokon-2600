@@ -40,4 +40,3 @@ export async function mockBudokonDraw(page: Page, options: CatalogueMockOptions 
     await fulfillDraw(route);
   });
 }
-

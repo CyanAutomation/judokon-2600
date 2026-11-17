@@ -17,4 +17,3 @@ test("simulator mode starts Quick Start without requesting the live Budokon endp
   expect(browserRequests).toEqual([]);
   expect(consoleMessages.some(message => message.includes("Simulated Budokon draw data is active"))).toBe(true);
 });
-

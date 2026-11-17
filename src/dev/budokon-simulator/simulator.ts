@@ -152,4 +152,3 @@ export function createBudokonSimulatorFetch(fixtures: readonly Judoka[] = SIMULA
     });
   };
 }
-
