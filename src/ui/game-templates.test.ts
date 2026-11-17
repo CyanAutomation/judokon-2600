@@ -41,7 +41,7 @@ const judoka: Judoka = {
   stats: { power: 8, speed: 7, technique: 9, kumikata: 6, newaza: 5 },
 };
 
-it("presents the stat decision before opponent intel and keeps the scouting tip optional", () => {
+it("[REQ-UI-004] presents two ranked opponent stats without showing their values", () => {
   const match: Match = {
     player: judoka,
     opponent: { ...judoka, id: "opponent", slug: "opponent", firstname: "Rival" },
@@ -63,6 +63,10 @@ it("presents the stat decision before opponent intel and keeps the scouting tip 
   expect(decision?.querySelector("h2")?.textContent).toBe("Choose a stat");
   expect(decision?.contains(intel ?? null)).toBe(true);
   expect(intel && choices && (intel.compareDocumentPosition(choices) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0).toBe(true);
+  expect(intel?.querySelector("strong")?.textContent).toBe("Technique / Power");
+  for (const value of Object.values(match.opponent.stats)) {
+    expect(intel?.textContent).not.toContain(String(value));
+  }
   expect(tip?.open).toBe(false);
   expect(tip?.textContent).toContain("exact values appear after your pick");
 });

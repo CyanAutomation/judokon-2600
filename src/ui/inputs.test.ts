@@ -99,7 +99,7 @@ describe("inputs", () => {
       expect(selected?.textContent).not.toContain("Strongest");
       expect(strongest?.disabled).toBe(true);
       expect(strongest?.getAttribute("aria-pressed")).toBe("false");
-      expect(strongest?.querySelector(".choice-marker")?.textContent).toBe("Top stat");
+      expect(strongest?.querySelector(".choice-marker")?.textContent).toBe("Your best");
       expect(strongest?.querySelector(".choice-marker")?.getAttribute("aria-hidden")).toBeNull();
       expect(strongest?.querySelector(".choice-primary .choice-label")?.textContent).toBe("Technique");
       expect(strongest?.querySelector(".choice-primary .choice-value")?.textContent).toBe("10");
