@@ -12,8 +12,10 @@ import type { SetupStep } from "./state";
 import { initAudio, keyboardTick, setSoundEnabled } from "./audio";
 import { createGameState, loadSavedGameState, persistPreferences, type GameState } from "./state";
 import { renderApp } from "./ui/render";
+import { status } from "./ui/helpers/status";
+import { createStatusAnnouncer } from "./ui/statusAnnouncer";
 import type { Match } from "./game/game";
-import { start, next, resolve, copyReplaySeed, clearAndExit, chooseLength, handleSetupStepClick, handleOpenSeedModal, handleCloseSeedModal, handleSaveReplaySeed, handleToggleSound, handleKeyboardMoveCursor, handleKeyboardCloseSeedModal, type OrchestratorDeps } from "./game/orchestrator";
+import { start, next, resolve, copyReplaySeed, clearAndExit, requestQuit, chooseLength, handleSetupStepClick, handleOpenSeedModal, handleCloseSeedModal, handleSaveReplaySeed, handleToggleSound, handleKeyboardMoveCursor, handleKeyboardCloseSeedModal, type OrchestratorDeps } from "./game/orchestrator";
 import { handleGlobalKeyboardEvent } from "./ui/keyboardEventDispatcher";
 import { getSoundEnabled } from "./ui/helpers/soundStorage";
 import { requestTacticalAssessment } from "./api/tacticalAssessment";
@@ -45,6 +47,7 @@ window.judokonCacheStats = () => client.getCacheStats();
 
 // Initialize game state from localStorage and sessionStorage
 const state: GameState = createGameState();
+const announceStatusChange = createStatusAnnouncer(message => notifications.announce(message), status(state));
 const savedMatch = loadSavedGameState();
 if (savedMatch) {
   state.match = savedMatch.match ?? null;
@@ -64,6 +67,7 @@ injectSpeedInsights();
 function render(): void {
   renderApp(root, state);
   notifications.setSuspended(Boolean(state.seedModalOpen));
+  announceStatusChange(status(state));
 }
 
 const deps: OrchestratorDeps = {
@@ -100,6 +104,7 @@ function createClickHandlers() {
     next: (m: Match) => next(state, m, deps),
     resolve: (stat: StatKey) => resolve(state, state.match!, stat, deps),
     clearAndExit: () => clearAndExit(state, deps),
+    requestQuit: () => requestQuit(state, deps),
     setSetupStep: (setupStep: SetupStep) => handleSetupStepClick(state, setupStep, deps),
     openSeedModal: () => handleOpenSeedModal(state, deps),
     closeSeedModal: () => handleCloseSeedModal(state, deps),

@@ -231,6 +231,14 @@ function handleQuitMatch(e: KeyboardEvent, root: HTMLElement): boolean {
   return false;
 }
 
+function isNonPrimaryInteractiveTarget(event: KeyboardEvent): boolean {
+  if (!(event.target instanceof Element)) return false;
+  const target = event.target.closest(
+    'a[href], button, input, select, textarea, summary, [contenteditable]:not([contenteditable="false"]), [role="button"], [role="menuitem"], [tabindex]:not([tabindex="-1"])'
+  );
+  return Boolean(target && !target.matches("#next, #replay"));
+}
+
 /**
  * Handles keyboard input during an active match.
  * Supports: numbered keys for stat selection (1-5), Enter for next round, Escape/Q to quit.
@@ -242,6 +250,7 @@ export function handleMatchKeyboard(
   handlers: { resolve: (s: StatKey) => void; keyboardTick: () => void }
 ): void {
   if (!state.match) return;
+  if (isNonPrimaryInteractiveTarget(e)) return;
   const { phase } = state.match;
 
   // Handle quit (works in any phase)

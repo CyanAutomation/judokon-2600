@@ -21,6 +21,12 @@ export function footerUtilities(state: GameState): string {
   return `<details class="footer-settings"><summary>Game settings</summary><div class="footer-utilities" role="group" aria-label="Game settings">${utilityButton("seed-button", seedLabel)}${utilityButton("sound-enabled", `Sound: ${soundEnabled ? "On" : "Off"}`, soundEnabled)}${notificationSettings}</div></details>`;
 }
 
+/** Sound stays directly reachable in the match footer without opening setup-only settings. */
+export function matchSoundToggle(): string {
+  const soundEnabled = getSoundEnabled();
+  return `<div class="footer-match-settings" role="group" aria-label="Game settings">${utilityButton("sound-enabled", `Sound: ${soundEnabled ? "On" : "Off"}`, soundEnabled)}</div>`;
+}
+
 export function seedDialog(state: GameState): string {
   const dialog = state.seedModalOpen
     ? `<div class="modal-backdrop"><section class="panel seed-dialog" role="dialog" aria-modal="true" aria-labelledby="seed-dialog-title"><p class="eyebrow">Replay setup</p><h2 id="seed-dialog-title">Set a replay seed</h2><p>Use the same seed to replay the same matchups, as long as the Budokon judoka catalogue has not changed.</p><label for="replay-seed">Replay seed<input id="replay-seed" value="${esc(state.seedDraft ?? state.replaySeed)}" placeholder="Leave blank for a fresh matchup" autocomplete="off" spellcheck="false" /></label>${actionGroup(`${quietButton("cancel-seed", "Cancel", "Esc")}${primaryButton("save-seed", "Use seed", "Enter")}`, { label: "Replay seed actions", className: "dialog-actions" })}</section></div>`
@@ -107,9 +113,9 @@ function setupPanel(state: GameState, helpers: Helpers): string {
   const cursor = state.setupCursor ?? 0;
   if (step === "mode") {
     const hint = state.mode === "champion"
-      ? "Keep your judoka in the fight and build a streak."
+      ? "Keep your judoka and face a rotating line-up of opponents."
       : "Meet a fresh opponent every round.";
-    return `${setupProgress(state, step)}<fieldset class="setup-group setup-stage"><legend>Choose game mode</legend>${terminalMenu(modeChoices(state, cursor))}<small>${hint}</small></fieldset>`;
+    return `${setupProgress(state, step)}<fieldset class="setup-group setup-stage"><legend>Choose game mode</legend>${terminalMenu(modeChoices(state, cursor))}<small>${hint}</small></fieldset>${setupAction(quietButton("quick-start", "Quick start"))}`;
   }
   if (step === "division") {
     return `${setupContext(setupSummary("Game mode", helpers.modeLabel(), "mode"))}${setupProgress(state, step)}<fieldset class="setup-group setup-stage"><legend>Choose division</legend>${terminalMenu(divisionChoices(state, cursor))}</fieldset>`;
@@ -135,5 +141,5 @@ export function intro(state: GameState): string {
   const firstStepCopy = step === "mode"
     ? `<p class="intro-lede">Pick a game mode, then choose one of your judoka’s stats each round. ${pointRule}</p><p class="intro-footnote">Your last setup will be waiting here next time.</p>`
     : "";
-  return `<section class="intro" data-setup-step="${step}" aria-labelledby="intro-title"><div class="intro-copy"><p class="eyebrow">Choose your challenge</p><h1 id="intro-title">Step into the <br/>judoka circuit.</h1>${firstStepCopy}<p class="intro-status" role="status">${esc(statusMessage)}<span class="block-cursor" aria-hidden="true">█</span></p></div>${surface("section", "intro-mode-panel", "Match setup", `${helpers.eyebrow("Match setup")}${setupPanel(state, helpers)}`)}</section>`;
+  return `<section class="intro" data-setup-step="${step}" aria-labelledby="intro-title"><div class="intro-copy"><p class="eyebrow">Choose your challenge</p><h1 id="intro-title">Step into the judoka circuit.</h1>${firstStepCopy}<p class="intro-status">${esc(statusMessage)}<span class="block-cursor" aria-hidden="true">█</span></p></div>${surface("section", "intro-mode-panel", "Match setup", `${helpers.eyebrow("Match setup")}${setupPanel(state, helpers)}`)}</section>`;
 }

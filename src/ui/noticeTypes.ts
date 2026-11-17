@@ -9,6 +9,7 @@ export type NoticeDuration = "normal" | "long" | "manual";
 
 export interface Snackbar {
   show(notice: Notice): void;
+  announce(message: string): void;
   clear(): void;
   setSuspended(value: boolean): void;
   setDuration(value: NoticeDuration): void;

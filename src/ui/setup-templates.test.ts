@@ -49,13 +49,23 @@ describe("setup templates", () => {
     }
   });
 
-  it("provides a page heading and a live status for setup", () => {
+  it("provides a page heading and visible setup status without a rerendered live region", () => {
     const root = document.createElement("div");
     root.innerHTML = intro(state());
 
     expect(root.querySelectorAll("h1")).toHaveLength(1);
     expect(root.querySelector("h1")?.textContent?.trim()).not.toBe("");
-    expect(root.querySelector('[role="status"]')).not.toBeNull();
+    expect(root.querySelector(".intro-status")).not.toBeNull();
+    expect(root.querySelector('[aria-live="polite"]')).toBeNull();
+  });
+
+  it("[REQ-UI-027] keeps the hero headline as continuous text for natural wrapping", () => {
+    const root = document.createElement("div");
+    root.innerHTML = intro(state());
+    const heading = root.querySelector("#intro-title");
+
+    expect(heading?.textContent?.replace(/\s+/g, " ").trim()).toBe("Step into the judoka circuit.");
+    expect(heading?.querySelector("br")).toBeNull();
   });
 
   it("[REQ-UI-014] starts with game mode as the only setup choice", () => {
@@ -67,6 +77,17 @@ describe("setup templates", () => {
     expect(markup).toContain("Champion");
     expect(markup).not.toContain("Weight class");
     expect(markup).not.toContain('id="start"');
+  });
+
+  it("[REQ-UI-025] offers Quick start from the first setup step without removing the four-step choices", () => {
+    const current = state({ setupStep: "mode", mode: "champion" });
+    const markup = intro(current);
+
+    expect(markup).toContain('id="quick-start"');
+    expect(markup).toContain("Keep your judoka and face a rotating line-up of opponents.");
+    expect(markup).toContain('data-setup-step="mode"');
+    expect(markup).toContain('data-intro-mode="classic"');
+    expect(markup).toContain('data-intro-mode="champion"');
   });
 
   it("[REQ-UI-014] exposes the active setup choices as one native radio group", () => {

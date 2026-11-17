@@ -5,7 +5,8 @@ import { getNoticeDuration, saveNoticeDuration } from "./noticePreferences";
 class SnackbarController implements Snackbar {
   private readonly bar: HTMLElement;
   private readonly message: HTMLElement;
-  private readonly announcement: HTMLElement;
+  private readonly gameStatusAnnouncement: HTMLElement;
+  private readonly noticeAnnouncement: HTMLElement;
   private readonly action: HTMLButtonElement;
   private readonly dismissButton: HTMLButtonElement;
   private readonly abort = new AbortController();
@@ -22,10 +23,11 @@ class SnackbarController implements Snackbar {
 
   constructor(host: HTMLElement) {
     host.classList.add("notification-dock");
-    host.innerHTML = '<div class="snackbar" role="group" aria-label="Notification" hidden><p class="snackbar-message"></p><button type="button" class="control control--quiet quiet" data-action hidden></button><button type="button" class="control control--quiet quiet" data-dismiss aria-label="Dismiss notification">Dismiss</button></div><span class="visually-hidden" role="status" aria-live="polite" aria-atomic="true"></span>';
+    host.innerHTML = '<div class="snackbar" role="group" aria-label="Notification" hidden><p class="snackbar-message"></p><button type="button" class="control control--quiet quiet" data-action hidden></button><button type="button" class="control control--quiet quiet" data-dismiss aria-label="Dismiss notification">Dismiss</button></div><span class="visually-hidden" data-game-status role="status" aria-live="polite" aria-atomic="true"></span><span class="visually-hidden" data-notice-status role="status" aria-live="polite" aria-atomic="true"></span>';
     this.bar = host.querySelector<HTMLElement>(".snackbar")!;
     this.message = host.querySelector<HTMLElement>(".snackbar-message")!;
-    this.announcement = host.querySelector<HTMLElement>('[role="status"]')!;
+    this.gameStatusAnnouncement = host.querySelector<HTMLElement>("[data-game-status]")!;
+    this.noticeAnnouncement = host.querySelector<HTMLElement>("[data-notice-status]")!;
     this.action = host.querySelector<HTMLButtonElement>("[data-action]")!;
     this.dismissButton = host.querySelector<HTMLButtonElement>("[data-dismiss]")!;
     this.duration = getNoticeDuration();
@@ -51,6 +53,11 @@ class SnackbarController implements Snackbar {
       if (replacingCurrent) this.queue.pop();
       else this.queue.shift();
     }
+  }
+
+  announce(message: string): void {
+    if (this.disposed) return;
+    this.gameStatusAnnouncement.textContent = message;
   }
 
   clear(): void {
@@ -144,7 +151,7 @@ class SnackbarController implements Snackbar {
     this.action.hidden = !this.current.action;
     this.action.textContent = this.current.action?.label ?? "";
     this.bar.hidden = false;
-    this.announcement.textContent = this.current.message;
+    this.noticeAnnouncement.textContent = this.current.message;
     this.keepOriginVisible();
     this.schedule();
   }
@@ -159,7 +166,7 @@ class SnackbarController implements Snackbar {
     const hadFocus = this.bar.contains(document.activeElement);
     this.current = undefined;
     this.bar.hidden = true;
-    this.announcement.textContent = "";
+    this.noticeAnnouncement.textContent = "";
     this.pauses.delete("focus");
     this.pauses.delete("hover");
     if (hadFocus && restoreFocus) this.restoreFocus();

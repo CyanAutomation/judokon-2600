@@ -23,7 +23,7 @@ export function status(state: GameState): string {
     } as const;
     return `>> ${prompts[state.setupStep ?? "mode"]}`;
   }
-  if (state.pendingStat) return ">> Your opponent is sizing you up…";
+  if (state.pendingStat) return ">> Opponent is sizing you up…";
   if (state.match.phase === "selecting") return ">> Pick one of your stats.";
   if (state.match.phase === "matchOver") return `>> ${matchOutcomeCopy[state.match.winner ?? "draw"]}`;
   if (!state.result) return ">> Match resolved.";

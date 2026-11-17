@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createMatch, matchSummary, nextMatch, selectStat, strongestStats } from "./game";
+import { createMatch, matchSummary, nextMatch, selectStat, strongestStats, rankedStats } from "./game";
 import type { GameMode, MatchHistoryItem } from "./game";
 import type { Judoka } from "../api/types";
 
@@ -32,9 +32,14 @@ function completedMatch(history: MatchHistoryItem[], mode: GameMode = "classic")
   };
 }
 
-it("identifies every strongest stat for a scout report", () => {
+it("identifies each tied best stat for the player's choice markers", () => {
   expect(strongestStats(player)).toEqual(["power"]);
   expect(strongestStats({ ...player, stats: { ...player.stats, technique: 9 } })).toEqual(["power", "technique"]);
+});
+it("[REQ-UI-004] ranks stats by value and breaks ties in the displayed order", () => {
+  expect(rankedStats(opponent)).toEqual(["technique", "newaza", "power", "kumikata", "speed"]);
+  expect(rankedStats({ ...player, stats: { power: 8, speed: 8, technique: 8, kumikata: 8, newaza: 8 } }))
+    .toEqual(["power", "speed", "technique", "kumikata", "newaza"]);
 });
 it("awards a point for a higher selected stat and progresses to the next match", () => {
   const result = selectStat(createMatch(player, opponent, 3), "power");
