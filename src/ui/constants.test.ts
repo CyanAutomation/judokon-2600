@@ -1,8 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { labels, weights, lengths } from "./constants";
+import { labels, weights, lengths, roundOutcomeCopy, matchOutcomeCopy } from "./constants";
 import type { StatKey } from "../api/types";
 
 describe("constants", () => {
+  it("uses consistent Opponent outcome labels", () => {
+    expect(roundOutcomeCopy.opponent).toBe("Opponent takes the point");
+    expect(matchOutcomeCopy.opponent).toBe("Opponent takes the match.");
+  });
   describe("labels", () => {
     it("[REQ-UI-012] uses the documented display label for each stat key", () => {
       const expectedLabels: Record<StatKey, string> = {

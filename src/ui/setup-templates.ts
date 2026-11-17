@@ -107,9 +107,9 @@ function setupPanel(state: GameState, helpers: Helpers): string {
   const cursor = state.setupCursor ?? 0;
   if (step === "mode") {
     const hint = state.mode === "champion"
-      ? "Keep your judoka in the fight and build a streak."
+      ? "Keep your judoka and face a rotating line-up of opponents."
       : "Meet a fresh opponent every round.";
-    return `${setupProgress(state, step)}<fieldset class="setup-group setup-stage"><legend>Choose game mode</legend>${terminalMenu(modeChoices(state, cursor))}<small>${hint}</small></fieldset>`;
+    return `${setupProgress(state, step)}<fieldset class="setup-group setup-stage"><legend>Choose game mode</legend>${terminalMenu(modeChoices(state, cursor))}<small>${hint}</small></fieldset>${setupAction(quietButton("quick-start", "Quick start"))}`;
   }
   if (step === "division") {
     return `${setupContext(setupSummary("Game mode", helpers.modeLabel(), "mode"))}${setupProgress(state, step)}<fieldset class="setup-group setup-stage"><legend>Choose division</legend>${terminalMenu(divisionChoices(state, cursor))}</fieldset>`;

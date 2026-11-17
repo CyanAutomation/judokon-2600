@@ -70,6 +70,17 @@ describe("setup templates", () => {
     expect(markup).not.toContain('id="start"');
   });
 
+  it("[REQ-UI-025] offers Quick start from the first setup step without removing the four-step choices", () => {
+    const current = state({ setupStep: "mode", mode: "champion" });
+    const markup = intro(current);
+
+    expect(markup).toContain('id="quick-start"');
+    expect(markup).toContain("Keep your judoka and face a rotating line-up of opponents.");
+    expect(markup).toContain('data-setup-step="mode"');
+    expect(markup).toContain('data-intro-mode="classic"');
+    expect(markup).toContain('data-intro-mode="champion"');
+  });
+
   it("[REQ-UI-014] exposes the active setup choices as one native radio group", () => {
     const root = document.createElement("div");
     root.innerHTML = intro(state({ setupStep: "mode" }));

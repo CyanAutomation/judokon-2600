@@ -35,6 +35,17 @@ it("routes the quit action through the undoable quit handler when available", ()
   expect(requestQuit).toHaveBeenCalledOnce();
   expect(clearAndExit).not.toHaveBeenCalled();
 });
+
+it("[REQ-UI-025] starts the selected setup directly from Quick start", () => {
+  const start = vi.fn();
+  const handlers = {
+    start, copyReplaySeed: vi.fn(), next: vi.fn(), resolve: vi.fn(), clearAndExit: vi.fn()
+  };
+
+  handleClickEvent(createClickEvent(createMockButton("quick-start")), createMockGameState(), handlers);
+
+  expect(start).toHaveBeenCalledOnce();
+});
 it("saves a seed from the dialog without relying on an inline footer field", () => {
   const saveReplaySeed = vi.fn();
   const handlers = {

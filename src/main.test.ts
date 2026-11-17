@@ -305,7 +305,10 @@ describe("Main Module - Match Resolution", () => {
     expect(state.match?.phase).toBe("awaitingNext");
     expect(state.match?.scores).toEqual({ player: 2, opponent: 1 });
     expect(state.history).toHaveLength(1);
-    expect(state.history[0]).toEqual({ outcome: "player", stat: "power", roundNumber: 1 });
+    expect(state.history[0]).toEqual({
+      outcome: "player", stat: "power", roundNumber: 1,
+      playerValue: 9, opponentValue: 4, opponentName: "Test Fighter"
+    });
     expect(saveSpy).toHaveBeenCalledOnce();
     expect(saveSpy).toHaveBeenCalledWith(
       "judokon.activeMatch.v1",
@@ -320,7 +323,10 @@ describe("Main Module - Match Resolution", () => {
     vi.advanceTimersByTime(MATCH_RESOLUTION_DELAY_MS);
 
     expect(state.history).toHaveLength(2);
-    expect(state.history[1]).toEqual({ outcome: "draw", stat: "speed", roundNumber: 2 });
+    expect(state.history[1]).toEqual({
+      outcome: "draw", stat: "speed", roundNumber: 2,
+      playerValue: 5, opponentValue: 5, opponentName: "Test Fighter"
+    });
     expect(saveSpy).toHaveBeenCalledTimes(2);
     expect(render).toHaveBeenCalledTimes(4);
   });
@@ -584,9 +590,9 @@ describe("History strip rendering", () => {
     const state = createMockGameState({
       match: createMockMatch(),
       history: [
-        { outcome: "player", stat: "power", roundNumber: 1 },
-        { outcome: "opponent", stat: "technique", roundNumber: 2 },
-        { outcome: "draw", stat: "speed", roundNumber: 3 }
+        { outcome: "player", stat: "power", roundNumber: 1, playerValue: 8, opponentValue: 6, opponentName: "Rival One" },
+        { outcome: "opponent", stat: "technique", roundNumber: 2, playerValue: 5, opponentValue: 9, opponentName: "Rival Two" },
+        { outcome: "draw", stat: "speed", roundNumber: 3, playerValue: 7, opponentValue: 7, opponentName: "Rival Three" }
       ]
     });
     const root = document.createElement("div");
@@ -598,9 +604,9 @@ describe("History strip rendering", () => {
 
     expect(history).not.toBeNull();
     expect(entries).toHaveLength(3);
-    expect(entries?.[0]?.textContent).toBe("R1PowerWIN");
-    expect(entries?.[1]?.textContent).toBe("R2TechniqueLOSS");
-    expect(entries?.[2]?.textContent).toBe("R3SpeedDRAW");
+    expect(entries?.[0]?.textContent).toContain("R1 · PowerRival OneYou 8 · Opponent 6WIN");
+    expect(entries?.[1]?.textContent).toContain("R2 · TechniqueRival TwoYou 5 · Opponent 9LOSS");
+    expect(entries?.[2]?.textContent).toContain("R3 · SpeedRival ThreeYou 7 · Opponent 7DRAW");
   });
 });
 
@@ -848,7 +854,10 @@ it("[REQ-GAME-013] starts a match from setup and resolves the first round", asyn
 
   expect(state.result?.outcome).toBe("player");
   expect(state.match?.scores).toEqual({ player: 1, opponent: 0 });
-  expect(state.history).toEqual([{ outcome: "player", stat: "power", roundNumber: 1 }]);
+  expect(state.history).toEqual([{
+    outcome: "player", stat: "power", roundNumber: 1,
+    playerValue: 8, opponentValue: 5, opponentName: "Opponent Fighter"
+  }]);
   expect(state.match?.phase).toBe("awaitingNext");
   expect(root.querySelector(".result-panel")).not.toBeNull();
   expect(root.querySelector<HTMLButtonElement>("#next")).not.toBeNull();
