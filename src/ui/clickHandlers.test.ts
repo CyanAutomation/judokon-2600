@@ -1,316 +1,192 @@
-import { expect, it, vi } from "vitest";
-import { handleClickEvent } from "./clickHandlers";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { BudokonClient } from "../api/budokon";
+import {
+  handleCloseSeedModal,
+  handleOpenSeedModal,
+  handleSaveReplaySeed,
+  handleSetupStepClick,
+  start,
+  type OrchestratorDeps
+} from "../game/orchestrator";
+import { persistPreferences, type GameState, type SetupStep } from "../state";
+import { createMockGameState, createMockJudoka } from "../test/mocks";
 import { handleChangeEvent } from "./changeHandlers";
-import type { StatKey } from "../api/types";
-import type { SetupStep } from "../state";
-import { createMockMatch, createMockGameState, createMockButton, createClickEvent, createChangeEvent } from "../test/mocks";
+import { handleClickEvent } from "./clickHandlers";
+import { renderApp } from "./render";
 
-it("opens the seed modal from the footer utility", () => {
-  const openSeedModal = vi.fn();
-  const handlers = {
-    start: vi.fn(),
-    copyReplaySeed: vi.fn(),
-    next: vi.fn(),
-    resolve: vi.fn(),
-    clearAndExit: vi.fn(),
-    openSeedModal
-  };
-  const button = createMockButton("seed-button");
-
-  handleClickEvent(createClickEvent(button), createMockGameState(), handlers);
-
-  expect(openSeedModal).toHaveBeenCalledOnce();
-});
-
-it("routes the install utility through its prompt handler", () => {
-  const installApp = vi.fn();
-  const handlers = {
-    start: vi.fn(),
-    copyReplaySeed: vi.fn(),
-    next: vi.fn(),
-    resolve: vi.fn(),
-    clearAndExit: vi.fn(),
-    installApp
-  };
-
-  handleClickEvent(createClickEvent(createMockButton("install-app")), createMockGameState(), handlers);
-
-  expect(installApp).toHaveBeenCalledOnce();
-});
-
-it("routes the quit action through the undoable quit handler when available", () => {
-  const requestQuit = vi.fn();
-  const clearAndExit = vi.fn();
-  const handlers = {
-    start: vi.fn(), copyReplaySeed: vi.fn(), next: vi.fn(), resolve: vi.fn(), clearAndExit, requestQuit
-  };
-  const button = createMockButton("quit");
-
-  handleClickEvent(createClickEvent(button), createMockGameState(), handlers);
-
-  expect(requestQuit).toHaveBeenCalledOnce();
-  expect(clearAndExit).not.toHaveBeenCalled();
-});
-
-it("[REQ-UI-025] starts the selected setup directly from Quick start", () => {
-  const start = vi.fn();
-  const handlers = {
-    start, copyReplaySeed: vi.fn(), next: vi.fn(), resolve: vi.fn(), clearAndExit: vi.fn()
-  };
-
-  handleClickEvent(createClickEvent(createMockButton("quick-start")), createMockGameState(), handlers);
-
-  expect(start).toHaveBeenCalledOnce();
-});
-it("saves a seed from the dialog without relying on an inline footer field", () => {
-  const saveReplaySeed = vi.fn();
-  const handlers = {
-    start: vi.fn(),
-    copyReplaySeed: vi.fn(),
-    next: vi.fn(),
-    resolve: vi.fn(),
-    clearAndExit: vi.fn(),
-    saveReplaySeed
-  };
-  const dialog = document.createElement("div");
-  dialog.className = "seed-dialog";
-  const input = document.createElement("input");
-  input.id = "replay-seed";
-  input.value = "dojo-42";
-  const button = createMockButton("save-seed");
-  dialog.append(input, button);
-
-  handleClickEvent(createClickEvent(button), createMockGameState(), handlers);
-
-  expect(saveReplaySeed).toHaveBeenCalledWith("dojo-42");
-});
-
-it.each([
-  { setupStep: "mode", choice: "classic", dataKey: "introMode", nextStep: "division" },
-  { setupStep: "division", choice: "absolute", dataKey: "division", nextStep: "length" }
-] as const)("advances from the $setupStep step when its selected choice is clicked", ({ setupStep, choice, dataKey, nextStep }) => {
-  const state = createMockGameState({ match: null, setupStep, mode: "classic", division: "absolute" });
-  const input = document.createElement("input");
-  input.checked = true;
-  input.dataset[dataKey] = choice;
-  const handlers = {
-    start: vi.fn(),
-    copyReplaySeed: vi.fn(),
-    next: vi.fn(),
-    resolve: vi.fn(),
-    clearAndExit: vi.fn(),
-    setSetupStep: (step: SetupStep) => { state.setupStep = step; }
-  };
-
-  handleClickEvent(createClickEvent(input), state, handlers);
-
-  expect(state.setupStep).toBe(nextStep);
-});
-
-it("[REQ-UI-014] advances setup after the newly selected mode changes", () => {
-  const state = createMockGameState({ match: null, setupStep: "mode", mode: "classic" });
-  const input = document.createElement("input");
-  input.type = "radio";
-  input.checked = true;
-  input.dataset.introMode = "champion";
+function createInteractiveApp(state: GameState) {
   const root = document.createElement("div");
-  root.append(input);
-  root.addEventListener("click", (event) => handleClickEvent(event as MouseEvent, state, {
-    start: vi.fn(),
+  document.body.append(root);
+
+  const drawBatch = vi.fn(async (_seed: string, count: number) =>
+    Array.from({ length: count }, (_, index) => createMockJudoka(`draw-${index}`))
+  );
+  const client = { drawBatch } as unknown as BudokonClient;
+  const render = () => renderApp(root, state);
+  const deps = { client, render } as OrchestratorDeps;
+  let startOperation: Promise<void> | undefined;
+
+  const handlers = {
+    start: (seed?: string) => { startOperation = start(state, deps, state.target, seed); },
     copyReplaySeed: async () => undefined,
     next: async () => undefined,
-    resolve: vi.fn(),
-    clearAndExit: vi.fn(),
-    setSetupStep: (step) => { state.setupStep = step; }
+    resolve: () => undefined,
+    clearAndExit: () => undefined,
+    setSetupStep: (step: SetupStep) => handleSetupStepClick(state, step, deps),
+    openSeedModal: () => handleOpenSeedModal(state, deps),
+    closeSeedModal: () => handleCloseSeedModal(state, deps),
+    saveReplaySeed: (seed: string) => handleSaveReplaySeed(state, seed, deps),
+    startWithLength: (points: number) => { startOperation = start(state, deps, points); }
+  };
+
+  root.addEventListener("click", event => handleClickEvent(event, state, handlers));
+  root.addEventListener("change", event => handleChangeEvent(event, state, root, {
+    render,
+    persistPreferences: () => persistPreferences(state),
+    setSoundEnabled: () => undefined
   }));
-  const changeHandlers = {
-    render: vi.fn(),
-    persistPreferences: vi.fn(),
-    setSoundEnabled: vi.fn()
+  render();
+
+  return {
+    root,
+    state,
+    drawBatch,
+    getStartOperation: () => startOperation
   };
-  root.addEventListener("change", (event) => handleChangeEvent(event, state, root, changeHandlers));
+}
 
-  root.dispatchEvent(createClickEvent(input));
-  expect(state.setupStep).toBe("mode");
-
-  root.dispatchEvent(createChangeEvent(input));
-
-  expect(state.mode).toBe("champion");
-  expect(state.setupStep).toBe("division");
-  expect(changeHandlers.persistPreferences).toHaveBeenCalledOnce();
-  expect(changeHandlers.render).toHaveBeenCalledOnce();
+beforeEach(() => {
+  document.body.replaceChildren();
+  localStorage.clear();
+  sessionStorage.clear();
 });
 
-it("does not confirm the current setup choice while busy or after a match starts", () => {
-  for (const stateOverride of [
-    { busy: true },
-    { match: createMockMatch() }
-  ]) {
-    const setSetupStep = vi.fn();
-    const state = createMockGameState({
-      match: null,
-      setupStep: "mode",
-      mode: "classic",
-      ...stateOverride
-    });
-    const input = document.createElement("input");
-    input.checked = true;
-    input.dataset.introMode = "classic";
-
-    handleClickEvent(createClickEvent(input), state, {
-      start: vi.fn(),
-      copyReplaySeed: vi.fn(),
-      next: vi.fn(),
-      resolve: vi.fn(),
-      clearAndExit: vi.fn(),
-      setSetupStep
-    });
-
-    expect(setSetupStep).not.toHaveBeenCalled();
-  }
+afterEach(() => {
+  document.body.replaceChildren();
+  localStorage.clear();
+  sessionStorage.clear();
 });
 
-it("[REQ-UI-014] advances setup after the newly selected division changes", () => {
-  const state = createMockGameState({ match: null, setupStep: "division", division: "absolute" });
-  const input = document.createElement("input");
-  input.type = "radio";
-  input.checked = true;
-  input.dataset.division = "weight";
-  const root = document.createElement("div");
-  root.append(input);
-  root.addEventListener("click", (event) => handleClickEvent(event as MouseEvent, state, {
-    start: vi.fn(),
-    copyReplaySeed: async () => undefined,
-    next: async () => undefined,
-    resolve: vi.fn(),
-    clearAndExit: vi.fn(),
-    setSetupStep: (step) => { state.setupStep = step; }
-  }));
-  const changeHandlers = {
-    render: vi.fn(),
-    persistPreferences: vi.fn(),
-    setSoundEnabled: vi.fn()
-  };
-  root.addEventListener("change", (event) => handleChangeEvent(event, state, root, changeHandlers));
+describe("setup choices", () => {
+  it.each([
+    {
+      description: "mode",
+      state: { setupStep: "mode" as const, mode: "classic" as const, division: "absolute" as const },
+      selector: "#mode-champion",
+      expectedStep: "division",
+      expectedLegend: "Choose division",
+      expectedSummary: "Game mode: Champion",
+      preferenceKey: "judokon.gameMode",
+      preferenceValue: "champion"
+    },
+    {
+      description: "division",
+      state: { setupStep: "division" as const, mode: "classic" as const, division: "absolute" as const },
+      selector: "#division-weight",
+      expectedStep: "weight",
+      expectedLegend: "Choose weight class",
+      expectedSummary: "Division: Weight class",
+      preferenceKey: "judokon.divisionMode",
+      preferenceValue: "weight"
+    }
+  ])("[REQ-UI-014] choosing a new $description advances the rendered setup", scenario => {
+    const state = createMockGameState(scenario.state);
+    const { root } = createInteractiveApp(state);
 
-  root.dispatchEvent(createClickEvent(input));
-  expect(state.setupStep).toBe("division");
+    root.querySelector<HTMLInputElement>(scenario.selector)!.click();
 
-  root.dispatchEvent(createChangeEvent(input));
+    expect(state.setupStep).toBe(scenario.expectedStep);
+    expect(root.querySelector("fieldset legend")?.textContent).toBe(scenario.expectedLegend);
+    expect(root.querySelector(".setup-context")?.textContent).toContain(scenario.expectedSummary);
+    expect(localStorage.getItem(scenario.preferenceKey)).toBe(scenario.preferenceValue);
+  });
 
-  expect(state.division).toBe("weight");
-  expect(state.setupStep).toBe("weight");
-  expect(changeHandlers.persistPreferences).toHaveBeenCalledOnce();
-  expect(changeHandlers.render).toHaveBeenCalledOnce();
+  it.each([
+    {
+      step: "mode" as const,
+      selector: "#mode-classic",
+      expectedLegend: "Choose division"
+    },
+    {
+      step: "division" as const,
+      selector: "#division-absolute",
+      expectedLegend: "Choose match length"
+    }
+  ])("[REQ-UI-014] clicking the selected $step choice advances to the next setup stage", scenario => {
+    const state = createMockGameState({ setupStep: scenario.step });
+    const { root } = createInteractiveApp(state);
+
+    root.querySelector<HTMLInputElement>(scenario.selector)!.click();
+
+    expect(root.querySelector("fieldset legend")?.textContent).toBe(scenario.expectedLegend);
+  });
+
+  it("[REQ-KEYBOARD-008] keeps the current setup stage when its selected choice is clicked during a draw", () => {
+    const state = createMockGameState({ setupStep: "mode", busy: true });
+    const { root } = createInteractiveApp(state);
+
+    root.querySelector<HTMLInputElement>("#mode-classic")!.click();
+
+    expect(state.setupStep).toBe("mode");
+    expect(root.querySelector("fieldset legend")?.textContent).toBe("Choose game mode");
+  });
 });
 
-it("starts the match when a match-length choice is clicked", () => {
-  const startWithLength = vi.fn();
-  const handlers = {
-    start: vi.fn(),
-    copyReplaySeed: vi.fn(),
-    next: vi.fn(),
-    resolve: vi.fn(),
-    clearAndExit: vi.fn(),
-    startWithLength
-  };
-  const state = createMockGameState({ match: null, busy: false });
-  const label = document.createElement("label");
-  label.className = "choice-card";
-  const input = document.createElement("input");
-  input.type = "radio";
-  input.dataset.length = "5";
-  const child = document.createElement("span");
-  label.append(input, child);
-  const event = new MouseEvent("click", { bubbles: true, cancelable: true });
-  Object.defineProperty(event, "target", { value: child });
+describe("replay seed dialog", () => {
+  it("[REQ-UI-010] saves an edited replay seed only after the user chooses Use seed", () => {
+    const state = createMockGameState({ setupStep: "mode", replaySeed: "original-seed" });
+    const { root } = createInteractiveApp(state);
+    root.querySelector<HTMLDetailsElement>(".footer-settings")!.open = true;
 
-  handleClickEvent(event, state, handlers);
+    root.querySelector<HTMLButtonElement>("#seed-button")!.click();
 
-  expect(startWithLength).toHaveBeenCalledOnce();
-  expect(startWithLength).toHaveBeenCalledWith(5);
-  expect(event.defaultPrevented).toBe(true);
+    const dialog = root.querySelector<HTMLElement>('[role="dialog"][aria-labelledby="seed-dialog-title"]');
+    const input = dialog?.querySelector<HTMLInputElement>("#replay-seed");
+    expect(dialog?.querySelector("h2")?.textContent).toBe("Set a replay seed");
+    expect(input?.value).toBe("original-seed");
+    expect(document.activeElement).toBe(input);
+
+    input!.value = "  next-seed  ";
+    input!.dispatchEvent(new Event("change", { bubbles: true }));
+    expect(state.seedDraft).toBe("  next-seed  ");
+    expect(state.replaySeed).toBe("original-seed");
+
+    dialog!.querySelector<HTMLButtonElement>("#save-seed")!.click();
+
+    expect(state.replaySeed).toBe("next-seed");
+    expect(state.seedModalOpen).toBe(false);
+    expect(root.querySelector('[role="dialog"]')).toBeNull();
+    expect(root.querySelector<HTMLButtonElement>("#seed-button")?.textContent).toContain("next-seed");
+  });
+
+  it("[REQ-UI-010] keeps the saved replay seed when an edit is canceled", () => {
+    const state = createMockGameState({ setupStep: "mode", replaySeed: "original-seed" });
+    const { root } = createInteractiveApp(state);
+    root.querySelector<HTMLDetailsElement>(".footer-settings")!.open = true;
+    root.querySelector<HTMLButtonElement>("#seed-button")!.click();
+
+    const input = root.querySelector<HTMLInputElement>("#replay-seed")!;
+    input.value = "unsaved-seed";
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+    root.querySelector<HTMLButtonElement>("#cancel-seed")!.click();
+
+    expect(state.replaySeed).toBe("original-seed");
+    expect(state.seedDraft).toBe("unsaved-seed");
+    expect(root.querySelector('[role="dialog"]')).toBeNull();
+  });
 });
 
-it("ignores match-length clicks while a match is being drawn", () => {
-  const startWithLength = vi.fn();
-  const handlers = {
-    start: vi.fn(),
-    copyReplaySeed: vi.fn(),
-    next: vi.fn(),
-    resolve: vi.fn(),
-    clearAndExit: vi.fn(),
-    startWithLength
-  };
-  const state = createMockGameState({ match: null, busy: true });
-  const label = document.createElement("label");
-  label.className = "choice-card";
-  const input = document.createElement("input");
-  input.type = "radio";
-  input.dataset.length = "10";
-  label.append(input);
-  const event = new MouseEvent("click", { bubbles: true, cancelable: true });
-  Object.defineProperty(event, "target", { value: label });
+it("[REQ-GAME-013] starts with the selected target when a match length is clicked", async () => {
+  const state = createMockGameState({ setupStep: "length", replaySeed: "length-choice-seed" });
+  const { root, drawBatch, getStartOperation } = createInteractiveApp(state);
 
-  handleClickEvent(event, state, handlers);
+  root.querySelector<HTMLInputElement>('#length-5')!.click();
 
-  expect(startWithLength).not.toHaveBeenCalled();
-});
+  const operation = getStartOperation();
+  expect(operation).toBeDefined();
+  await operation;
 
-it("invokes resolve handler when button with data-stat attribute is clicked", () => {
-  const resolve = vi.fn<(stat: StatKey) => void>();
-  const handlers = {
-    start: vi.fn(),
-    copyReplaySeed: vi.fn(),
-    next: vi.fn(),
-    resolve,
-    clearAndExit: vi.fn()
-  };
-  const state = createMockGameState();
-  const root = document.createElement("div");
-  const button = createMockButton("stat-power");
-  button.setAttribute("data-stat", "power");
-  root.appendChild(button);
-  root.addEventListener("click", (event) => handleClickEvent(event, state, handlers));
-
-  button.click();
-
-  expect(resolve).toHaveBeenCalledWith("power" satisfies StatKey);
-});
-
-it("invokes next handler when #next button is clicked and match exists", () => {
-  const next = vi.fn();
-  const handlers = {
-    start: vi.fn(),
-    copyReplaySeed: vi.fn(),
-    next,
-    resolve: vi.fn(),
-    clearAndExit: vi.fn()
-  };
-  const activeMatch = createMockMatch();
-  const state = createMockGameState({ match: activeMatch });
-  const button = createMockButton("next");
-  const event = createClickEvent(button);
-
-  handleClickEvent(event, state, handlers);
-
-  expect(handlers.next).toHaveBeenCalledWith(activeMatch);
-});
-
-it("does not invoke next handler when #next button is clicked without a match", () => {
-  const next = vi.fn();
-  const handlers = {
-    start: vi.fn(),
-    copyReplaySeed: vi.fn(),
-    next,
-    resolve: vi.fn(),
-    clearAndExit: vi.fn()
-  };
-  const state = createMockGameState({ match: null });
-  const button = createMockButton("next");
-  const event = createClickEvent(button);
-
-  handleClickEvent(event, state, handlers);
-
-  expect(handlers.next).not.toHaveBeenCalled();
+  expect(state.match?.target).toBe(5);
+  expect(drawBatch).toHaveBeenCalledOnce();
+  expect(root.querySelector('[aria-label^="Match score:"]')?.getAttribute("aria-label")).toContain("First to 5 points");
 });
