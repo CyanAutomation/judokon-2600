@@ -63,7 +63,7 @@ Reloading the same browser tab restores the last valid saved session, including 
 
 The Budokon draw cache is page-local and reuses identical requests for five minutes. To inspect its hit, miss, coalescing, expiry, and eviction counters in browser developer tools, run `window.judokonCacheStats()`. Tactical assessments with identical features and model are reused for five minutes in Vercel's regional Runtime Cache; see the [caching guide](docs/caching.md) for scope and operational details.
 
-While a round is open, a compact intel line shows the opponent's strongest stat (all tied stats when there is a tie). The opponent's exact values remain hidden until you select a stat. The scouting tip is optional and can be expanded beside the stat choices.
+While a round is open, a compact intel line shows the opponent's two highest-ranked stats. Ties follow the displayed stat order, and exact values stay hidden until you select a stat. Your own best stat is marked **Your best** on the stat choices. The scouting tip is optional and can be expanded beside the choices.
 
 ## Roadmap
 

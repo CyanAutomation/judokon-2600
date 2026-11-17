@@ -7,7 +7,7 @@ These IDs give the UI and game tests a stable link to observable product behavio
 | REQ-UI-001 | With no active match, render setup; with an active match, render the match controls. | [Gameplay flow](../README.md#gameplay) |
 | REQ-UI-002 | The active match scoreboard exposes both current scores and the target score. | [Scoring and match length](../README.md#gameplay) |
 | REQ-UI-003 | After a round resolves, show the selected stat and both compared values in the head-to-head cards before the next action. | [Stat comparison](../README.md#gameplay) |
-| REQ-UI-004 | During stat selection, show the opponent's strongest stat or tied strongest stats in a compact intel line, without exposing exact values. | [Scout report](../README.md#gameplay) |
+| REQ-UI-004 | During stat selection, show the opponent's two highest-ranked stats in descending order, using displayed stat order for ties and hiding exact values. Mark the player's highest stat as “Your best.” | [Scout report](../README.md#gameplay) |
 | REQ-CHAMPION-005 | Champion progress is shown only in Champion mode. Its current streak counts consecutive trailing player wins and resets after a loss or draw; the run record still includes earlier wins. | [Champion mode](../README.md#gameplay) |
 | REQ-UI-006 | Round history lists resolved rounds and is omitted before any round has resolved. | [Match flow](../README.md#gameplay) |
 | REQ-GAME-007 | Quitting returns to setup, clears active-run data, and removes the saved active match. | [Keyboard controls](../README.md#gameplay) |

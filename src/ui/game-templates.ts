@@ -6,7 +6,7 @@
 
 import { STAT_KEYS, type StatKey } from "../api/types";
 import { actionGroup, buttonChoice, type ButtonChoiceConfig, primaryButton, quietButton, surface } from "./controls";
-import { type Match, type MatchResult, strongestStats } from "../game/game";
+import { type Match, type MatchResult, rankedStats, strongestStats } from "../game/game";
 import { type GameState } from "../state";
 import { labels, type Helpers } from "./helpers";
 import { matchOutcomeCopy, roundOutcomeCopy } from "./constants";
@@ -118,7 +118,7 @@ function replayTools(state: GameState): string {
 }
 
 function decisionArea(m: Match, state: GameState): string {
-  const scout = state.result ? "" : `<aside class="scout-report" aria-label="Opponent intel"><p><span class="eyebrow">Opponent top stats</span><strong>${strongestStats(m.opponent).map(stat => labels[stat]).join(" / ")}</strong></p><details class="scout-tip"><summary>Scouting tip</summary><p>Use this as a guide; the opponent’s exact values appear after your pick.</p></details></aside>`;
+  const scout = state.result ? "" : `<aside class="scout-report" aria-label="Opponent intel"><p><span class="eyebrow">Opponent top two stats</span><strong>${rankedStats(m.opponent).slice(0, 2).map(stat => labels[stat]).join(" / ")}</strong></p><details class="scout-tip"><summary>Scouting tip</summary><p>Use this as a guide; the opponent’s exact values appear after your pick.</p></details></aside>`;
   return `<section class="round-decision" aria-labelledby="decision-heading"><h2 id="decision-heading" class="decision-heading">Choose a stat</h2>${scout}${statChoices(m, state)}</section>`;
 }
 
