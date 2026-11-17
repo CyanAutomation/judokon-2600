@@ -70,6 +70,7 @@ export function createInstallPromptController(
       try {
         promptResult = event.prompt();
       } catch {
+        promptEvent = event;
         onChange(getPresentation());
         return;
       }

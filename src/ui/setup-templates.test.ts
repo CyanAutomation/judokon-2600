@@ -184,6 +184,15 @@ describe("setup templates", () => {
     expect(settings?.querySelector("#sound-enabled")).not.toBeNull();
   });
 
+  it("renders replay seeds as text in the settings button", () => {
+    const replaySeed = '"><img src=x onerror="alert(1)"&';
+    const root = document.createElement("div");
+    root.innerHTML = advanced(state({ replaySeed }));
+
+    expect(root.querySelector<HTMLButtonElement>("#seed-button")?.textContent).toBe(`Replay seed: ${replaySeed}`);
+    expect(root.querySelector("#seed-button img")).toBeNull();
+  });
+
   it("keeps prior setup choices compact and drops introductory copy after the first step", () => {
     const root = document.createElement("div");
     root.innerHTML = intro(state({ setupStep: "length", division: "weight", mode: "champion" }));

@@ -31,6 +31,31 @@ describe("install affordance", () => {
     controller.dispose();
   });
 
+  it("keeps the install prompt available when prompt() throws synchronously", async () => {
+    const onChange = vi.fn();
+    const controller = createInstallPromptController({ userAgent: "Chrome/130.0.0.0", standalone: false }, onChange);
+    const source = new EventTarget();
+    controller.attach(source);
+    const prompt = vi.fn()
+      .mockImplementationOnce(() => { throw new Error("Prompt unavailable"); })
+      .mockResolvedValueOnce(undefined);
+    const beforeInstall = new Event("beforeinstallprompt", { cancelable: true }) as Event & {
+      prompt: () => Promise<void>;
+      userChoice: Promise<{ outcome: "accepted" | "dismissed"; platform: string }>;
+    };
+    beforeInstall.prompt = prompt;
+    beforeInstall.userChoice = Promise.resolve({ outcome: "accepted", platform: "web" });
+    source.dispatchEvent(beforeInstall);
+
+    await controller.install();
+    expect(controller.getPresentation()).toEqual({ buttonAvailable: true, iosHintVisible: false });
+
+    await controller.install();
+    expect(prompt).toHaveBeenCalledTimes(2);
+    expect(controller.getPresentation()).toEqual({ buttonAvailable: false, iosHintVisible: false });
+    controller.dispose();
+  });
+
   it("shows the Home Screen hint on iOS Safari and hides it in standalone mode", () => {
     const iosSafari = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) Version/18.0 Mobile/15E148 Safari/604.1";
     const safari = createInstallPromptController({ userAgent: iosSafari, standalone: false }, vi.fn());
