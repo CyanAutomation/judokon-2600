@@ -17,7 +17,7 @@ npm ci
 npm run dev
 ```
 
-Open [http://localhost:5173](http://localhost:5173) to play locally. The Vite development server supports gameplay and deterministic match summaries, but it does not run the Vercel tactical-assessment function. To manually test tactical insight, use a configured Vercel Preview; the [deployment guide](docs/tactical-insight-deployment.md) covers the required environment variables and verification. See the [developer guide](docs/index.md) for the repository map and additional setup details.
+Open [http://localhost:5173](http://localhost:5173) to play locally; `npm run dev` uses the live Budokon API. To draw from the local synthetic catalogue without a network connection, run `npm run dev:sim` instead. The simulator does not provide the separate Vercel tactical-assessment function. To manually test tactical insight, use a configured Vercel Preview; the [deployment guide](docs/tactical-insight-deployment.md) covers the required environment variables and verification. See the [developer guide](docs/index.md) and [simulator guide](docs/budokon-simulator.md) for setup details.
 
 ## Gameplay
 
@@ -55,7 +55,7 @@ An optional post-match tactical insight interprets patterns in the player’s ch
 
 ### Opponents, replay, and connection issues
 
-Judoka are fetched directly from the public [Budokon catalogue API](https://budokon.scheimann.workers.dev/docs). Before each match, six judoka are drawn into a buffer so subsequent opponents can appear instantly. The seed button in the footer **Game settings** bar opens a dialog for an optional replay seed; otherwise each match gets a fresh seed. **Replay** starts a fresh match with the active seed and reproduces the same draws only while the Budokon dataset version and draw algorithm stay the same. The API returns both values, but this client does not retain them with the replay seed. Draw requests time out after 10 seconds. Connection failures, rejected access, missing endpoints, timeouts, and temporary server failures display persistent retry guidance in the status area. If copying a replay seed fails, its selectable text and manual-copy guidance remain in **Replay details**.
+In normal development and production, judoka are fetched directly from the public [Budokon catalogue API](https://budokon.scheimann.workers.dev/docs). In simulator mode, six fictional judoka are drawn into the same match buffer using a simple deterministic ordering. Simulator results carry `ju-do-kon-sim-fixtures-v1` identifiers and are not canonical Budokon data. The seed button in the footer **Game settings** bar opens a dialog for an optional replay seed; otherwise each match gets a fresh seed. **Replay** starts a fresh match with the active seed and reproduces the same draws only while that catalogue version and draw algorithm stay the same. Draw requests time out after 10 seconds. Connection failures, rejected access, missing endpoints, timeouts, and temporary server failures display persistent retry guidance in the status area. If copying a replay seed fails, its selectable text and manual-copy guidance remain in **Replay details**.
 
 ### Saved sessions and scout report
 
@@ -75,7 +75,7 @@ JU-DO-KON! can be installed from Chromium on Android and desktop, or added to th
 
 ## Offline behaviour
 
-After the first visit, the app shell and setup remain available offline. Starting or continuing a match needs a connection because judoka draws come from the Budokon service. If a draw fails while offline, JU-DO-KON! explains that you need to reconnect and lets you retry when the connection returns.
+After the first visit, the app shell and setup remain available offline. Normal development and production need a connection for Budokon draws. In local simulator mode, draws work offline. If a live draw fails while offline, JU-DO-KON! explains that you need to reconnect and lets you retry when the connection returns.
 
 ## Development and checks
 
@@ -93,6 +93,8 @@ Run the Chromium browser smoke test with:
 npx playwright install chromium
 npm run test:e2e
 ```
+
+Run the simulator-mode Quick Start browser check separately with `npm run test:e2e:sim`.
 
 GitHub Actions installs Chromium and runs the same smoke test. On failure, it uploads the Playwright report and traces as a workflow artifact.
 Set `PLAYWRIGHT_CHROMIUM_EXECUTABLE` to use an already installed Chromium binary.

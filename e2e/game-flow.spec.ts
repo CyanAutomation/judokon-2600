@@ -1,39 +1,8 @@
 import { expect, test } from "@playwright/test";
-
-const judoka = Array.from({ length: 6 }, (_, index) => ({
-  id: `test-${index + 1}`,
-  slug: `test-${index + 1}`,
-  firstname: `Test${index + 1}`,
-  surname: "Fighter",
-  country: "Japan",
-  countryCode: "JP",
-  weightClass: "-73",
-  stats: { power: 80 - index, speed: 70, technique: 60, kumikata: 50, newaza: 40 }
-}));
-
-async function mockCatalogue(page: import("@playwright/test").Page): Promise<void> {
-  await page.route("https://budokon.scheimann.workers.dev/v1/draw", async (route) => {
-    const corsHeaders = {
-      "access-control-allow-origin": "*",
-      "access-control-allow-methods": "POST, OPTIONS",
-      "access-control-allow-headers": "content-type"
-    };
-
-    if (route.request().method() === "OPTIONS") {
-      await route.fulfill({ status: 204, headers: corsHeaders });
-      return;
-    }
-
-    await route.fulfill({
-      status: 200,
-      headers: { ...corsHeaders, "content-type": "application/json" },
-      body: JSON.stringify({ judoka })
-    });
-  });
-}
+import { mockBudokonDraw } from "./support/budokon";
 
 test("[REQ-UI-022] player can reach stat choices that fit at mobile and desktop widths", async ({ page }) => {
-  await mockCatalogue(page);
+  await mockBudokonDraw(page);
 
   await page.goto("/");
   await expect(page.getByRole("group", { name: "Choose game mode" })).toBeVisible();
@@ -57,7 +26,7 @@ test("[REQ-UI-022] player can reach stat choices that fit at mobile and desktop 
 });
 
 test("[REQ-UI-003] round result keeps the comparison and next action in view on desktop and mobile", async ({ page }) => {
-  await mockCatalogue(page);
+  await mockBudokonDraw(page);
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto("/");
   await page.getByText("Classic Battle", { exact: true }).click();
@@ -98,7 +67,7 @@ test("[REQ-UI-003] round result keeps the comparison and next action in view on 
 });
 
 test("[REQ-GAME-023] summary and Quit keys keep native actions; Undo restores the match", async ({ page }) => {
-  await mockCatalogue(page);
+  await mockBudokonDraw(page);
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto("/");
   await page.getByText("Classic Battle", { exact: true }).click();
@@ -126,7 +95,7 @@ test("[REQ-GAME-023] summary and Quit keys keep native actions; Undo restores th
 });
 
 test("[REQ-UI-025] Quick start opens the default match and its glossary and history are useful", async ({ page }) => {
-  await mockCatalogue(page);
+  await mockBudokonDraw(page);
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto("/");
   await expect(page.getByRole("group", { name: "Choose game mode" })).toBeVisible();
@@ -137,8 +106,15 @@ test("[REQ-UI-025] Quick start opens the default match and its glossary and hist
 
   await page.setViewportSize({ width: 360, height: 720 });
   await page.screenshot({ path: "docs/assets/review/quick-start-mobile.png", fullPage: true });
+  const drawResponse = page.waitForResponse(response =>
+    response.url() === "https://budokon.scheimann.workers.dev/v1/draw" && response.request().method() === "POST"
+  );
   await page.getByRole("button", { name: "Quick start" }).click();
   await expect(page.getByRole("heading", { name: "Choose a stat" })).toBeVisible();
+  const { judoka: drawn } = await (await drawResponse).json() as {
+    judoka: { firstname: string; surname: string; stats: Record<string, number> }[];
+  };
+  const [firstPlayer, firstOpponent, secondPlayer, secondOpponent] = drawn;
   await expect(page.locator(".scoreboard")).toContainText("First to 3");
   const sound = page.locator("#sound-enabled");
   await expect(sound).toHaveAttribute("aria-pressed", "false");
@@ -157,8 +133,8 @@ test("[REQ-UI-025] Quick start opens the default match and its glossary and hist
   const history = page.locator("details.match-history");
   await history.locator("summary").click();
   const row = history.locator("li").first();
-  await expect(row).toContainText("Test2 Fighter");
-  await expect(row).toContainText("You 80 · Opponent 79");
+  await expect(row).toContainText(`${firstOpponent!.firstname} ${firstOpponent!.surname}`);
+  await expect(row).toContainText(`You ${firstPlayer!.stats.power} · Opponent ${firstOpponent!.stats.power}`);
 
   await page.setViewportSize({ width: 1280, height: 720 });
   await row.scrollIntoViewIfNeeded();
@@ -171,8 +147,8 @@ test("[REQ-UI-025] Quick start opens the default match and its glossary and hist
   await updatedHistory.locator("summary").click();
   await expect(updatedHistory).toHaveAttribute("open", "");
   const secondRow = updatedHistory.locator("li").nth(1);
-  await expect(secondRow).toContainText("Test4 Fighter");
-  await expect(secondRow).toContainText("You 70 · Opponent 70");
+  await expect(secondRow).toContainText(`${secondOpponent!.firstname} ${secondOpponent!.surname}`);
+  await expect(secondRow).toContainText(`You ${secondPlayer!.stats.speed} · Opponent ${secondOpponent!.stats.speed}`);
   await expect(secondRow).toContainText("DRAW");
   const scrollWidth = await updatedHistory.locator("ol").evaluate(element => element.scrollWidth);
   const clientWidth = await updatedHistory.locator("ol").evaluate(element => element.clientWidth);
@@ -218,27 +194,7 @@ test("[REQ-PWA-029] production registers the service worker and keeps the app sh
 
 test("[REQ-UI-030] an offline match draw explains how to reconnect and can be retried", async ({ page, context }) => {
   let catalogueAvailable = false;
-  await page.route("https://budokon.scheimann.workers.dev/v1/draw", async route => {
-    if (!catalogueAvailable) {
-      await route.abort();
-      return;
-    }
-
-    const corsHeaders = {
-      "access-control-allow-origin": "*",
-      "access-control-allow-methods": "POST, OPTIONS",
-      "access-control-allow-headers": "content-type"
-    };
-    if (route.request().method() === "OPTIONS") {
-      await route.fulfill({ status: 204, headers: corsHeaders });
-      return;
-    }
-    await route.fulfill({
-      status: 200,
-      headers: { ...corsHeaders, "content-type": "application/json" },
-      body: JSON.stringify({ judoka })
-    });
-  });
+  await mockBudokonDraw(page, { shouldAbort: () => !catalogueAvailable });
 
   await page.goto("/");
   await expect(page.getByRole("group", { name: "Choose game mode" })).toBeVisible();
