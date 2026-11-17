@@ -17,6 +17,7 @@ interface ButtonHandlers {
   next: (m: Match) => Promise<void>;
   resolve: (s: StatKey) => void;
   clearAndExit: () => void;
+  requestQuit?: () => void;
   setSetupStep?: (step: SetupStep) => void;
   openSeedModal?: () => void;
   closeSeedModal?: () => void;
@@ -39,7 +40,7 @@ const buttonHandlers = new Map<string, ButtonHandler>([
   ["replay", (_, state, h) => h.start(state.activeSeed)],
   ["copy-seed", (_, __, h) => void h.copyReplaySeed()],
   ["next", (_, s, h) => s.match && void h.next(s.match)],
-  ["quit", (_, __, h) => h.clearAndExit()]
+  ["quit", (_, __, h) => h.requestQuit ? h.requestQuit() : h.clearAndExit()]
 ]);
 
 export function handleClickEvent(

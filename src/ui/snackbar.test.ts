@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { createSnackbar } from "./snackbar";
+import { renderApp } from "./render";
+import { createMockGameState, createMockMatch, createMockMatchResult } from "../test/mocks";
 
 let host: HTMLElement;
 let notices: ReturnType<typeof createSnackbar>;
@@ -23,6 +25,24 @@ it("expires independently without replacing or moving focus from gameplay", () =
   expect(host.querySelector<HTMLElement>('.snackbar')!.hidden).toBe(true);
   expect(document.querySelector('#game')).toBe(game);
   expect(document.activeElement?.id).toBe('origin');
+});
+
+it("[REQ-UI-024] keeps round announcements in a persistent polite region across app renders", async () => {
+  const app = document.createElement("div");
+  app.id = "app-under-test";
+  host.before(app);
+  const state = createMockGameState({ match: createMockMatch(), result: createMockMatchResult() });
+  renderApp(app, state);
+  const liveRegion = host.querySelector('[role="status"]');
+
+  notices.announce("Round 1: Power, 8 to 5. You take the point.");
+  await Promise.resolve();
+  renderApp(app, state);
+  renderApp(app, state);
+
+  expect(liveRegion?.getAttribute("aria-live")).toBe("polite");
+  expect(liveRegion?.textContent).toBe("Round 1: Power, 8 to 5. You take the point.");
+  expect(host.querySelector<HTMLElement>(".snackbar")?.hidden).toBe(true);
 });
 
 it("keeps the focused game control visible when the dock reduces the scroll area", () => {

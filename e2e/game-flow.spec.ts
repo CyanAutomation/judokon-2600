@@ -96,3 +96,31 @@ test("[REQ-UI-003] round result keeps the comparison and next action in view on 
   expect(mobileAction.bottom).toBeLessThanOrEqual(720);
   expect(mobileScrollTop).toBe(0);
 });
+
+test("[REQ-GAME-023] summary and Quit keys keep native actions; Undo restores the match", async ({ page }) => {
+  await mockCatalogue(page);
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto("/");
+  await page.getByText("Classic Battle", { exact: true }).click();
+  await page.getByText("Absolute", { exact: true }).click();
+  await page.getByText("Quick", { exact: true }).click();
+  await page.locator('[data-stat="power"]').click();
+
+  const history = page.locator("details.match-history");
+  await history.locator("summary").focus();
+  await page.keyboard.press("Enter");
+  await expect(history).toHaveAttribute("open", "");
+  await expect(page.locator("#next")).toBeVisible();
+
+  await page.locator("#quit").focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("button", { name: "Undo quit" })).toBeVisible();
+  await expect(page.getByRole("group", { name: "Choose game mode" })).toBeVisible();
+  await page.screenshot({ path: "docs/assets/review/quit-undo-desktop.png", fullPage: true });
+
+  await page.setViewportSize({ width: 360, height: 720 });
+  await page.screenshot({ path: "docs/assets/review/quit-undo-mobile.png", fullPage: true });
+  await page.getByRole("button", { name: "Undo quit" }).click();
+  await expect(page.locator(".result-panel")).toBeVisible();
+  await expect(page.locator("#next")).toBeVisible();
+});
