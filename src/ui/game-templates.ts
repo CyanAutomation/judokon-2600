@@ -4,7 +4,7 @@
  * HTML generation for the active match interface, including fighter cards, scoreboards, results, and round history.
  */
 
-import { STAT_KEYS, type Judoka, type StatKey } from "../api/types";
+import { STAT_KEYS, type StatKey } from "../api/types";
 import { actionGroup, buttonChoice, type ButtonChoiceConfig, primaryButton, quietButton, surface } from "./controls";
 import { type Match, type MatchResult, strongestStats } from "../game/game";
 import { type GameState } from "../state";
@@ -12,17 +12,7 @@ import { labels, type Helpers } from "./helpers";
 import { matchOutcomeCopy, roundOutcomeCopy } from "./constants";
 import { escapeHtml as esc } from "./utils/escapeHtml";
 import { championProgress, matchBreakdownContent, matchTakeaway } from "./match-templates";
-
-/**
- * Generate fighter card HTML
- */
-function fighter(j: Judoka, side: "player" | "opponent", state: GameState, helpers: Helpers): string {
-  const label = side === "player" ? "Your judoka" : "Your opponent";
-  const value = state.result ? side === "player" ? state.result.playerValue : state.result.opponentValue : null;
-  const chosen = state.result ? `<p class="selected-stat outcome-${state.result.outcome}"><span>${labels[state.result.stat]}</span><strong>${value}</strong></p>` : "";
-  const rarity = j.rarity || "Unclassified";
-  return `<details class="surface panel fighter-card ${side}" aria-label="${label} details"><summary class="fighter-summary"><span class="eyebrow">${label}</span><strong>${esc(helpers.nameOf(j))}</strong><span class="badge rarity rarity-${esc(rarity.toLowerCase())}">${esc(rarity)}</span></summary><div class="fighter-detail-body"><p>${esc(helpers.detailOf(j))}</p>${chosen}</div></details>`;
-}
+import { fighterCard } from "./fighterCard";
 
 /**
  * Generate score pips
@@ -127,29 +117,31 @@ function replayTools(state: GameState): string {
   return `<details class="replay-details reference-disclosure"><summary>Replay details</summary><div class="replay-tools">${quietButton("copy-seed", "Copy replay seed", "Copy")}<p class="replay-seed">Replay seed: <code>${esc(state.activeSeed)}</code></p>${state.seedMessage ? `<p class="seed-message" role="status">${esc(state.seedMessage)}</p>` : ""}</div></details>`;
 }
 
-function decisionArea(m: Match, state: GameState, helpers: Helpers): string {
+function decisionArea(m: Match, state: GameState): string {
   const scout = state.result ? "" : `<aside class="scout-report" aria-label="Opponent intel"><p><span class="eyebrow">Opponent top stats</span><strong>${strongestStats(m.opponent).map(stat => labels[stat]).join(" / ")}</strong></p><details class="scout-tip"><summary>Scouting tip</summary><p>Use this as a guide; the opponent’s exact values appear after your pick.</p></details></aside>`;
-  return `<section class="round-decision" aria-labelledby="decision-heading"><h2 id="decision-heading" class="decision-heading">Choose a stat</h2><p class="decision-player">Your judoka <strong>${esc(helpers.nameOf(m.player))}</strong></p>${scout}${statChoices(m, state)}</section>`;
+  return `<section class="round-decision" aria-labelledby="decision-heading"><h2 id="decision-heading" class="decision-heading">Choose a stat</h2>${scout}${statChoices(m, state)}</section>`;
+}
+
+function fighterPair(m: Match, state: GameState, helpers: Helpers): string {
+  const revealOpponent = Boolean(state.pendingStat || state.result);
+  const selectedStat = state.result?.stat ?? (state.pendingStat as StatKey | null);
+  const open = !state.result;
+  return `<section class="head-to-head" aria-label="Head-to-head"><div class="fighter-pair">${fighterCard({ judoka: m.player, side: "player", helpers, result: state.result, selectedStat, revealStats: true, open })}${fighterCard({ judoka: m.opponent, side: "opponent", helpers, result: state.result, selectedStat, revealStats: revealOpponent, open })}</div></section>`;
 }
 
 function selectingContent(m: Match, state: GameState, helpers: Helpers): string {
-  const player = fighter(m.player, "player", state, helpers);
-  return `${decisionArea(m, state, helpers)}${commitment(state)}${player}${championProgress(m, state, helpers)}${historyStrip(state)}`;
+  return `${decisionArea(m, state)}${commitment(state)}${fighterPair(m, state, helpers)}${championProgress(m, state, helpers)}${historyStrip(state)}`;
 }
 
 function nextRoundContent(m: Match, state: GameState, helpers: Helpers): string {
   const resolved = state.result ? resultPanel(m, state.result, helpers) : "";
-  const player = fighter(m.player, "player", state, helpers);
-  const opponent = state.result ? fighter(m.opponent, "opponent", state, helpers) : "";
-  return `${resolved}${matchActions(m, state)}${player}${opponent}${historyStrip(state)}${championProgress(m, state, helpers)}`;
+  return `${resolved}${fighterPair(m, state, helpers)}${matchActions(m, state)}${historyStrip(state)}${championProgress(m, state, helpers)}`;
 }
 
 function completedMatchContent(m: Match, state: GameState, helpers: Helpers): string {
   const resolved = state.result ? resultPanel(m, state.result, helpers) : "";
   const postMatch = `<details class="match-breakdown"><summary>Match breakdown</summary><div class="post-match-summary">${matchBreakdownContent(m, state)}</div></details>`;
-  const player = fighter(m.player, "player", state, helpers);
-  const opponent = state.result ? fighter(m.opponent, "opponent", state, helpers) : "";
-  return `${resolved}${matchTakeaway(m, state)}${matchActions(m, state)}${replayTools(state)}${postMatch}${player}${opponent}${historyStrip(state)}${championProgress(m, state, helpers)}`;
+  return `${resolved}${fighterPair(m, state, helpers)}${matchTakeaway(m, state)}${matchActions(m, state)}${replayTools(state)}${postMatch}${historyStrip(state)}${championProgress(m, state, helpers)}`;
 }
 
 function phaseContent(m: Match, state: GameState, helpers: Helpers): string {

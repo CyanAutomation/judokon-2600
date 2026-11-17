@@ -11,7 +11,7 @@ const judoka = Array.from({ length: 6 }, (_, index) => ({
   stats: { power: 80 - index, speed: 70, technique: 60, kumikata: 50, newaza: 40 }
 }));
 
-test("player can complete setup and reach the first stat choice", async ({ page }) => {
+async function mockCatalogue(page: import("@playwright/test").Page): Promise<void> {
   await page.route("https://budokon.scheimann.workers.dev/v1/draw", async (route) => {
     const corsHeaders = {
       "access-control-allow-origin": "*",
@@ -30,6 +30,10 @@ test("player can complete setup and reach the first stat choice", async ({ page 
       body: JSON.stringify({ judoka })
     });
   });
+}
+
+test("[REQ-UI-022] player can reach stat choices that fit at mobile and desktop widths", async ({ page }) => {
+  await mockCatalogue(page);
 
   await page.goto("/");
   await expect(page.getByRole("group", { name: "Choose game mode" })).toBeVisible();
@@ -40,4 +44,50 @@ test("player can complete setup and reach the first stat choice", async ({ page 
 
   await expect(page.getByRole("heading", { name: "Choose a stat" })).toBeVisible();
   await expect(page.locator('[data-stat="power"]')).toBeVisible();
+
+  for (const width of [360, 560, 700, 900, 980, 1280, 1600]) {
+    await page.setViewportSize({ width, height: 720 });
+    const overflowingChoices = await page.locator(".stats .option-card").evaluateAll((buttons) =>
+      buttons
+        .filter((button) => button.scrollWidth > button.clientWidth + 1)
+        .map((button) => button.textContent?.trim())
+    );
+    expect(overflowingChoices, `stat choice text should fit at ${width}px`).toEqual([]);
+  }
+});
+
+test("[REQ-UI-003] round result keeps the comparison and next action in view on desktop and mobile", async ({ page }) => {
+  await mockCatalogue(page);
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto("/");
+  await page.getByText("Classic Battle", { exact: true }).click();
+  await page.getByText("Absolute", { exact: true }).click();
+  await page.getByText("Quick", { exact: true }).click();
+
+  await page.locator('[data-stat="power"]').click();
+  await expect(page.locator("#next")).toBeVisible();
+  await expect(page.locator(".head-to-head")).toBeVisible();
+  await expect.poll(() => page.evaluate(() => (document.activeElement as HTMLElement | null)?.id)).toBe("next");
+
+  const desktopAction = await page.locator("#next").evaluate((button) => {
+    const rect = button.getBoundingClientRect();
+    return { top: rect.top, bottom: rect.bottom, scrollTop: document.querySelector(".app-scroll")?.scrollTop };
+  });
+  expect(desktopAction.top).toBeGreaterThanOrEqual(0);
+  expect(desktopAction.bottom).toBeLessThanOrEqual(720);
+  expect(desktopAction.scrollTop).toBe(0);
+
+  await page.locator("#next").click();
+  await page.setViewportSize({ width: 360, height: 720 });
+  await page.locator('[data-stat="speed"]').click();
+  await expect(page.locator("#next")).toBeVisible();
+  await expect(page.locator(".head-to-head")).toBeVisible();
+
+  const mobileAction = await page.locator("#next").evaluate((button) => {
+    const rect = button.getBoundingClientRect();
+    return { top: rect.top, bottom: rect.bottom, scrollTop: document.querySelector(".app-scroll")?.scrollTop };
+  });
+  expect(mobileAction.top).toBeGreaterThanOrEqual(0);
+  expect(mobileAction.bottom).toBeLessThanOrEqual(720);
+  expect(mobileAction.scrollTop).toBe(0);
 });
