@@ -50,6 +50,7 @@ describe("installable web app manifest", () => {
 
       const declared = /^([0-9]+)x([0-9]+)$/.exec(icon.sizes);
       expect(declared, `${icon.src} must declare numeric pixel dimensions`).not.toBeNull();
+      if (!declared) continue;
       const dimensions = readPngDimensions(await readFile(iconPath));
       expect(dimensions).toEqual({ width: Number(declared[1]), height: Number(declared[2]) });
     }
