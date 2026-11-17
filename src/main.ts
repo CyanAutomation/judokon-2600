@@ -20,6 +20,8 @@ import { handleGlobalKeyboardEvent } from "./ui/keyboardEventDispatcher";
 import { getSoundEnabled } from "./ui/helpers/soundStorage";
 import { requestTacticalAssessment } from "./api/tacticalAssessment";
 import { registerAppServiceWorker } from "./pwa/registerServiceWorker";
+import { createUpdateNoticeCoordinator } from "./pwa/updateNotice";
+import { listenForOnlineRecovery } from "./ui/offlineRecovery";
 
 const app = document.querySelector<HTMLDivElement>("#app");
 if (!app) throw new Error("Application root is missing");
@@ -49,10 +51,7 @@ window.judokonCacheStats = () => client.getCacheStats();
 // Initialize game state from localStorage and sessionStorage
 const state: GameState = createGameState();
 const announceStatusChange = createStatusAnnouncer(message => notifications.announce(message), status(state));
-let waitingWorker: ServiceWorker | null = null;
-let updateNoticeShown = false;
-let updateReloadRequested = false;
-let updateReloadStarted = false;
+let updateNotice: ReturnType<typeof createUpdateNoticeCoordinator> | undefined;
 const savedMatch = loadSavedGameState();
 if (savedMatch) {
   state.match = savedMatch.match ?? null;
@@ -73,31 +72,18 @@ function render(): void {
   renderApp(root, state);
   notifications.setSuspended(Boolean(state.seedModalOpen));
   announceStatusChange(status(state));
-  showPendingUpdateIfSafe();
+  updateNotice?.setMatch(state.match);
 }
 
-function showPendingUpdateIfSafe(): void {
-  if (!waitingWorker || updateNoticeShown || (state.match && state.match.phase !== "matchOver")) return;
-  updateNoticeShown = true;
-  notifications.show({
-    key: "app-update",
-    message: "A new version is available.",
-    duration: 8000,
-    action: {
-      label: "Reload",
-      run: () => {
-        if (!waitingWorker || updateReloadRequested) return;
-        updateReloadRequested = true;
-        waitingWorker.postMessage({ type: "SKIP_WAITING" });
-      }
-    }
-  });
-}
+listenForOnlineRecovery(state, render);
 
-function handleUpdateControllerChange(): void {
-  if (!updateReloadRequested || updateReloadStarted) return;
-  updateReloadStarted = true;
-  window.location.reload();
+if ("serviceWorker" in navigator) {
+  updateNotice = createUpdateNoticeCoordinator(
+    notice => notifications.show(notice),
+    navigator.serviceWorker,
+    () => window.location.reload()
+  );
+  void registerAppServiceWorker(worker => updateNotice?.setWaitingWorker(worker));
 }
 
 const deps: OrchestratorDeps = {
@@ -140,7 +126,7 @@ function createClickHandlers() {
     closeSeedModal: () => handleCloseSeedModal(state, deps),
     saveReplaySeed: (seed: string) => handleSaveReplaySeed(state, seed, deps),
     toggleSound: () => handleToggleSound(setSoundEnabled, deps),
-    startWithLength: (points: number) => { if (!state.busy) void start(state, deps, points); }
+    startWithLength: (points: number) => { if (!state.busy) void start(state, deps, points); },
   };
 }
 
@@ -213,16 +199,6 @@ root.addEventListener("change", (e) => {
 document.addEventListener("keydown", handleKeyboardEvent);
 
 render();
-if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.addEventListener("controllerchange", handleUpdateControllerChange);
-  void registerAppServiceWorker(worker => {
-    waitingWorker = worker;
-    updateNoticeShown = false;
-    updateReloadRequested = false;
-    updateReloadStarted = false;
-    showPendingUpdateIfSafe();
-  });
-}
 if (savedMatch && state.match) {
   notifications.show({ key: "restored", message: `Match restored — round ${state.match.matchNumber}.`, duration: 6000 });
 }

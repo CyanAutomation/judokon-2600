@@ -38,3 +38,6 @@ These IDs give the UI and game tests a stable link to observable product behavio
 | REQ-UI-025 | Quick start begins a match from the selected setup while the full staged setup flow remains available. | [Setup and scoring](../README.md#gameplay) |
 | REQ-UI-026 | The stat glossary explains Kumi-kata as grip fighting and Ne-waza as ground work. | [Stat comparison](../README.md#gameplay) |
 | REQ-UI-027 | The intro hero heading is continuous text and wraps naturally without forcing a word onto its own line. | [Setup and scoring](../README.md#gameplay) |
+| REQ-PWA-029 | In production, the service worker precaches the app shell, uses network-first navigation with a cached index fallback, and leaves cross-origin, non-GET, `/api/*`, and Vercel Insights requests untouched. | [Service worker](caching.md#service-worker) |
+| REQ-UI-030 | A failed offline draw shows persistent reconnect guidance; an online event refreshes that status and keeps setup retry controls available. | [Offline behaviour](../README.md#offline-behaviour) |
+| REQ-PWA-031 | A waiting update prompts through the notification dock only on setup or after a match; Reload requests activation and reloads once the worker takes control. | [Service worker](caching.md#service-worker) |
