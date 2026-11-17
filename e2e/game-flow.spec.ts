@@ -130,6 +130,8 @@ test("[REQ-UI-025] Quick start opens the default match and its glossary and hist
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto("/");
   await expect(page.getByRole("group", { name: "Choose game mode" })).toBeVisible();
+  await expect(page.locator("#intro-title")).toHaveText("Step into the judoka circuit.");
+  await expect(page.locator("#intro-title br")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Quick start" })).toBeVisible();
   await page.screenshot({ path: "docs/assets/review/quick-start-desktop.png", fullPage: true });
 
@@ -138,6 +140,13 @@ test("[REQ-UI-025] Quick start opens the default match and its glossary and hist
   await page.getByRole("button", { name: "Quick start" }).click();
   await expect(page.getByRole("heading", { name: "Choose a stat" })).toBeVisible();
   await expect(page.locator(".scoreboard")).toContainText("First to 3");
+  const sound = page.locator("#sound-enabled");
+  await expect(sound).toHaveAttribute("aria-pressed", "false");
+  await sound.focus();
+  await page.keyboard.press("Enter");
+  await expect(page.locator("#sound-enabled")).toHaveAttribute("aria-pressed", "true");
+  await page.keyboard.press("Space");
+  await expect(page.locator("#sound-enabled")).toHaveAttribute("aria-pressed", "false");
 
   const glossary = page.locator("details.stat-glossary");
   await glossary.locator("summary").click();

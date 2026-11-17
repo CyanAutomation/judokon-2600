@@ -27,7 +27,7 @@ These IDs give the UI and game tests a stable link to observable product behavio
 | REQ-UI-013 | With no saved preferences, setup opens at the mode step with Classic, Absolute, Random weight class, and first-to-3 selected. | [Gameplay flow](../README.md#gameplay) |
 | REQ-UI-014 | Setup presents one decision stage at a time, preserves earlier choices in summaries, and uses a native radio group for the active options. | [Gameplay flow](../README.md#gameplay) |
 | REQ-UI-015 | Before starting, the final setup stage shows the selected target and scoring rule alongside a Start action. | [Gameplay flow](../README.md#gameplay) |
-| REQ-AUDIO-016 | Optional audio feedback is muted by default; when enabled, keyboard actions and match outcomes play feedback, and muting suppresses new feedback. | [Gameplay flow](../README.md#gameplay) |
+| REQ-AUDIO-016 | Optional audio feedback is muted by default, can be toggled during setup and active matches, and only plays keyboard or outcome feedback while enabled. | [Gameplay flow](../README.md#gameplay) |
 | REQ-GAME-017 | Replaying a completed match starts a fresh match with the active replay seed. | [Gameplay flow](../README.md#gameplay) |
 | REQ-UI-018 | Seed confirmations, valid session restoration, Dojo-note arrival, and quit Undo use one bottom-centre snack bar; essential gameplay and error information stays persistent. | [Notification plan](snackbar-plan.md) |
 | REQ-UI-019 | Snack bar expiry preserves gameplay DOM and focus, pauses on hover/focus/hidden tabs, supports extended/manual duration, and bounds/deduplicates queued notices. | [Notification plan](snackbar-plan.md) |
@@ -37,3 +37,4 @@ These IDs give the UI and game tests a stable link to observable product behavio
 | REQ-UI-024 | A status change, including a round result, is announced exactly once through a polite live region that survives app rerenders. | [Gameplay flow](../README.md#gameplay) |
 | REQ-UI-025 | Quick start begins a match from the selected setup while the full staged setup flow remains available. | [Setup and scoring](../README.md#gameplay) |
 | REQ-UI-026 | The stat glossary explains Kumi-kata as grip fighting and Ne-waza as ground work. | [Stat comparison](../README.md#gameplay) |
+| REQ-UI-027 | The intro hero heading is continuous text and wraps naturally without forcing a word onto its own line. | [Setup and scoring](../README.md#gameplay) |

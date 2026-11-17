@@ -59,6 +59,15 @@ describe("setup templates", () => {
     expect(root.querySelector('[aria-live="polite"]')).toBeNull();
   });
 
+  it("[REQ-UI-027] keeps the hero headline as continuous text for natural wrapping", () => {
+    const root = document.createElement("div");
+    root.innerHTML = intro(state());
+    const heading = root.querySelector("#intro-title");
+
+    expect(heading?.textContent?.replace(/\s+/g, " ").trim()).toBe("Step into the judoka circuit.");
+    expect(heading?.querySelector("br")).toBeNull();
+  });
+
   it("[REQ-UI-014] starts with game mode as the only setup choice", () => {
     const current = state();
     const markup = intro(current);

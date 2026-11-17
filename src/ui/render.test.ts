@@ -88,6 +88,17 @@ describe("renderApp", () => {
     expect(root.querySelector("#game-title")?.textContent).toBe("Round 4 match");
   });
 
+  it("[REQ-AUDIO-016] keeps the sound toggle available during an active match", () => {
+    localStorage.setItem("judokon.soundEnabled", "false");
+    const root = document.createElement("div");
+    renderApp(root, createMockGameState({ match: createMockMatch() }));
+    const sound = root.querySelector<HTMLButtonElement>("#sound-enabled");
+
+    expect(sound?.textContent).toContain("Sound: Off");
+    expect(sound?.getAttribute("aria-pressed")).toBe("false");
+    expect(root.querySelector(".footer-settings")).toBeNull();
+  });
+
   it("keeps repeated idle selection status visible without replacing the persistent live region", () => {
     const root = document.createElement("div");
     const state = createMockGameState({ match: createMockMatch({ phase: "selecting" }) });
