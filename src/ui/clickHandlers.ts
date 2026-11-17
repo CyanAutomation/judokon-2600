@@ -23,6 +23,7 @@ interface ButtonHandlers {
   closeSeedModal?: () => void;
   saveReplaySeed?: (seed: string) => void;
   toggleSound?: () => void;
+  installApp?: () => void;
   startWithLength?: (points: number) => void;
 }
 
@@ -34,6 +35,7 @@ const buttonHandlers = new Map<string, ButtonHandler>([
   ["cancel-seed", (_, __, h) => h.closeSeedModal?.()],
   ["save-seed", (b, _, h) => h.saveReplaySeed?.(b.closest<HTMLElement>(".seed-dialog")?.querySelector<HTMLInputElement>("#replay-seed")?.value ?? "")],
   ["sound-enabled", (_, __, h) => h.toggleSound?.()],
+  ["install-app", (_, __, h) => h.installApp?.()],
   ["confirm-weight", (_, __, h) => h.setSetupStep?.("length")],
   ["start", (_, __, h) => h.start()],
   ["quick-start", (_, __, h) => h.start()],

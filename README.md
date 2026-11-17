@@ -69,6 +69,10 @@ While a round is open, a compact intel line shows the opponent's two highest-ran
 
 Possible future features and their design constraints are collected in the [project roadmap](docs/roadmap.md). These proposals are not part of the current game.
 
+## Install
+
+JU-DO-KON! can be installed from Chromium on Android and desktop, or added to the Home Screen from iOS Safari. Open **Game settings** to use the Chromium install prompt or see the iOS Safari Home Screen hint. The installed app uses the same account-free game and local preferences as the website.
+
 ## Offline behaviour
 
 After the first visit, the app shell and setup remain available offline. Starting or continuing a match needs a connection because judoka draws come from the Budokon service. If a draw fails while offline, JU-DO-KON! explains that you need to reconnect and lets you retry when the connection returns.

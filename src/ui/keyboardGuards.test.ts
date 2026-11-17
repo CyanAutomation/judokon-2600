@@ -30,6 +30,18 @@ describe("keyboard event guards", () => {
     expect(shouldHandleKeyboardEvent(choiceEvent)).toBe(true);
   });
 
+  it("leaves focused utility buttons and summaries to their native keyboard actions", () => {
+    const button = document.createElement("button");
+    const summary = document.createElement("summary");
+    const buttonEvent = createKeyboardEvent("Enter");
+    const summaryEvent = createKeyboardEvent("Enter");
+    Object.defineProperty(buttonEvent, "target", { value: button });
+    Object.defineProperty(summaryEvent, "target", { value: summary });
+
+    expect(shouldHandleKeyboardEvent(buttonEvent)).toBe(false);
+    expect(shouldHandleKeyboardEvent(summaryEvent)).toBe(false);
+  });
+
   it.each([
     ["1", true],
     ["ArrowDown", true],
