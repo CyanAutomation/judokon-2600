@@ -18,14 +18,12 @@ export async function requestTacticalAssessment(
   features: TacticalFeatures,
   fetcher: Fetcher = globalThis.fetch.bind(globalThis)
 ): Promise<TacticalAssessmentResult> {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 5_000);
   try {
     const response = await fetcher("/api/tactical-assessment", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ features }),
-      signal: controller.signal
+      signal: AbortSignal.timeout(5_000)
     });
     const body: unknown = await response.json();
     if (typeof body !== "object" || body === null || Array.isArray(body)) {
@@ -38,7 +36,5 @@ export async function requestTacticalAssessment(
     return { assessment: null };
   } catch {
     return { assessment: null, issue: "unavailable" };
-  } finally {
-    clearTimeout(timeout);
   }
 }
