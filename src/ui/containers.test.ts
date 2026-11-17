@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { definitionList, surface, terminalMenu } from "./containers";
+import { badge, definitionList, surface, terminalMenu, valueList } from "./containers";
 
 describe("containers", () => {
   describe("surface", () => {
@@ -51,6 +51,23 @@ describe("containers", () => {
       expect(list?.querySelector("dd")?.textContent).toBe("3–1");
       expect(list?.querySelectorAll("dd")[1]?.textContent).toBe("<script>");
       expect(list?.querySelector("script")).toBeNull();
+    });
+  });
+
+  describe("display primitives", () => {
+    it("renders reusable badges and labeled values into semantic DOM", () => {
+      const root = document.createElement("div");
+      root.innerHTML = `${badge("Rare", "rarity rarity-rare")}${valueList([
+        { label: "Power", value: "8" },
+        { label: "Technique", value: "??", valueClassName: "hidden-value" },
+      ], "fighter-stat-list", "Opponent stats")}`;
+
+      expect(root.querySelector(".badge.rarity.rarity-rare")?.textContent).toBe("Rare");
+      const stats = root.querySelector('[aria-label="Opponent stats"]');
+      expect(stats?.tagName).toBe("UL");
+      expect(Array.from(stats?.querySelectorAll("li") ?? [], row => row.textContent?.trim()))
+        .toEqual(["Power8", "Technique??"]);
+      expect(stats?.querySelector(".hidden-value")?.textContent).toBe("??");
     });
   });
 });

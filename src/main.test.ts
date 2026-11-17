@@ -10,7 +10,7 @@ import { createMockJudoka, createMockMatch, createMockMatchResult, createMockGam
 
 describe("Main Module - Render Functions", () => {
   describe("Fighter card generation", () => {
-    it("reveals the selected stat and both values only after the round resolves", () => {
+    it("[REQ-UI-011] hides opponent stat values during selection and shows the resolved comparison", () => {
       const player = createMockJudoka("player", {
         stats: { power: 17, speed: 16, technique: 15, kumikata: 14, newaza: 13 }
       });
@@ -23,7 +23,9 @@ describe("Main Module - Render Functions", () => {
 
       renderApp(root, createMockGameState({ match }));
 
-      expect(root.querySelector(".fighter-card.opponent")).toBeNull();
+      expect(root.querySelector(".fighter-card.opponent")).not.toBeNull();
+      expect(Array.from(root.querySelectorAll(".fighter-card.opponent .fighter-stat-value"), value => value.textContent))
+        .toEqual(["??", "??", "??", "??", "??"]);
       const intel = root.querySelector(".scout-report");
       expect(intel?.textContent).toContain("Ne-waza");
       for (const value of Object.values(opponent.stats)) {
@@ -42,6 +44,8 @@ describe("Main Module - Render Functions", () => {
       const resultPanel = root.querySelector(".result-panel");
       expect(resultPanel).not.toBeNull();
       expect(resultPanel?.textContent).toContain("You scored 17 with Power; Rival Fighter scored 3.");
+      expect(root.querySelector(".fighter-card.player .fighter-result")?.textContent).toContain("Power");
+      expect(root.querySelector(".fighter-card.opponent .fighter-result")?.textContent).toContain("3");
     });
 
     it("[REQ-UI-011] identifies both judoka by name once the round has resolved", () => {
@@ -54,7 +58,7 @@ describe("Main Module - Render Functions", () => {
       renderApp(root, createMockGameState({ match, result }));
 
       expect(root.querySelector('[aria-label="Your judoka details"]')?.textContent).toContain("Aiko Tanaka");
-      expect(root.querySelector('[aria-label="Your opponent details"]')?.textContent).toContain("Mina Sato");
+      expect(root.querySelector('[aria-label="Opponent details"]')?.textContent).toContain("Mina Sato");
     });
 
     it.each([

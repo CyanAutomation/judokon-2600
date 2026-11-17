@@ -37,7 +37,7 @@ const attributes = (values: Record<string, string> = {}): string =>
 
 export function buttonChoice(config: ButtonChoiceConfig): string {
   const { label, shortcut, value, data, disabled = false, selected = false, strongest = false } = config;
-  return `<button type="button" class="control control--choice action-button option-card ${selected ? "is-selected" : ""} ${strongest ? "is-strongest" : ""}" ${data} ${disabled ? "disabled" : ""} aria-pressed="${selected}"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong>${strongest ? "<em>Top stat</em>" : ""}${shortcutHint(shortcut)}</button>`;
+  return `<button type="button" class="control control--choice action-button option-card ${selected ? "is-selected" : ""} ${strongest ? "is-strongest" : ""}" ${data} ${disabled ? "disabled" : ""} aria-pressed="${selected}"><span class="choice-primary"><span class="choice-label">${escapeHtml(label)}</span><strong class="choice-value">${escapeHtml(value)}</strong></span><span class="choice-meta">${strongest ? '<em class="choice-marker">Top stat</em>' : ""}${shortcutHint(shortcut)}</span></button>`;
 }
 
 export function utilityButton(id: string, label: string, pressed?: boolean): string {
