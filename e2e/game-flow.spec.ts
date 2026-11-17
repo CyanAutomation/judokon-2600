@@ -216,3 +216,47 @@ test("[REQ-PWA-029] production registers the service worker and keeps the app sh
   }
 });
 
+test("[REQ-UI-030] an offline match draw explains how to reconnect and can be retried", async ({ page, context }) => {
+  let catalogueAvailable = false;
+  await page.route("https://budokon.scheimann.workers.dev/v1/draw", async route => {
+    if (!catalogueAvailable) {
+      await route.abort();
+      return;
+    }
+
+    const corsHeaders = {
+      "access-control-allow-origin": "*",
+      "access-control-allow-methods": "POST, OPTIONS",
+      "access-control-allow-headers": "content-type"
+    };
+    if (route.request().method() === "OPTIONS") {
+      await route.fulfill({ status: 204, headers: corsHeaders });
+      return;
+    }
+    await route.fulfill({
+      status: 200,
+      headers: { ...corsHeaders, "content-type": "application/json" },
+      body: JSON.stringify({ judoka })
+    });
+  });
+
+  await page.goto("/");
+  await expect(page.getByRole("group", { name: "Choose game mode" })).toBeVisible();
+  await page.evaluate(() => navigator.serviceWorker.ready);
+  await page.reload();
+  await expect.poll(() => page.evaluate(() => Boolean(navigator.serviceWorker.controller))).toBe(true);
+
+  await context.setOffline(true);
+  await page.getByRole("button", { name: "Quick start" }).click();
+  await expect(page.locator(".intro-status")).toContainText("You're offline. Reconnect to start a match.");
+  await expect(page.locator("[data-game-status]")).toHaveAttribute("aria-live", "polite");
+  await expect(page.locator("[data-game-status]")).toHaveText(">> You're offline. Reconnect to start a match.");
+
+  catalogueAvailable = true;
+  await context.setOffline(false);
+  await expect(page.locator(".intro-status")).toContainText("You're back online. You can retry your match.");
+  await expect(page.locator("[data-game-status]")).toHaveText(">> You're back online. You can retry your match.");
+  await page.getByRole("button", { name: "Quick start" }).click();
+  await expect(page.getByRole("heading", { name: "Choose a stat" })).toBeVisible();
+});
+

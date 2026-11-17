@@ -69,6 +69,10 @@ While a round is open, a compact intel line shows the opponent's two highest-ran
 
 Possible future features and their design constraints are collected in the [project roadmap](docs/roadmap.md). These proposals are not part of the current game.
 
+## Offline behaviour
+
+After the first visit, the app shell and setup remain available offline. Starting or continuing a match needs a connection because judoka draws come from the Budokon service. If a draw fails while offline, JU-DO-KON! explains that you need to reconnect and lets you retry when the connection returns.
+
 ## Development and checks
 
 Run the complete local quality gate with:

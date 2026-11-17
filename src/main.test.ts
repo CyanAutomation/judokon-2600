@@ -84,6 +84,7 @@ describe("Main Module - Render Functions", () => {
 afterEach(() => {
   vi.useRealTimers();
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
 });
 
 describe("Main Module - Match Initialization", () => {
@@ -208,6 +209,41 @@ describe("Main Module - Match Initialization", () => {
 });
 
 describe("Main Module - Draw Error Handling", () => {
+  it("shows a reconnect message after a real network failure when offline", async () => {
+    vi.stubGlobal("navigator", { onLine: false });
+    const state = createMockGameState({ replaySeed: "offline-seed" });
+    const fetcher = vi.fn<typeof fetch>().mockRejectedValue(new TypeError("Failed to fetch"));
+
+    await start(state, { client: new BudokonClient(fetcher), render: vi.fn() });
+
+    expect(state.errorMessage).toBe("You're offline. Reconnect to start a match.");
+  });
+
+  it("explains that an offline draw needs a connection before the next round", async () => {
+    vi.stubGlobal("navigator", { onLine: false });
+    const match = createMockMatch({ phase: "awaitingNext" });
+    const state = createMockGameState({ match, drawBuffer: [] });
+    const fetcher = vi.fn<typeof fetch>().mockRejectedValue(new TypeError("Failed to fetch"));
+
+    await next(state, match, { client: new BudokonClient(fetcher), render: vi.fn() });
+
+    expect(state.errorMessage).toBe("You're offline. Reconnect to continue the match.");
+  });
+
+  it("keeps non-connection failures distinct when the browser is offline", async () => {
+    vi.stubGlobal("navigator", { onLine: false });
+    const state = createMockGameState({ replaySeed: "offline-timeout-seed" });
+    const client = new class extends BudokonClient {
+      override async drawBatch(): Promise<Judoka[]> {
+        throw new Error("Budokon API request timed out. Check your connection and try again.");
+      }
+    }();
+
+    await start(state, { client, render: vi.fn() });
+
+    expect(state.errorMessage).toBe("Budokon API request timed out. Check your connection and try again.");
+  });
+
   it.each([
     ["incompatible judoka", new Error("No compatible judoka found"), "No compatible judoka found. Choose Absolute or another division."],
     ["network failure", new Error("Network failed"), "Network failed. Check your connection and try again."],

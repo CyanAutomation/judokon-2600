@@ -2,6 +2,15 @@
 
 This document records possible future directions. These are proposals, not features in the current game. Any implementation should preserve the deterministic match rules and keep optional systems out of the core arcade flow.
 
+## Offline play options
+
+The app shell can be opened offline, while matches still need the Budokon service for judoka draws and replay seeds. Two future directions are possible:
+
+1. **Offline buffer.** Save a limited set of previously drawn judoka for a short offline run. This needs a clear limit and expiry policy, and replay seeds would still depend on the current Budokon dataset and draw algorithm.
+2. **Full offline play.** Bundle or persist a catalogue and generate draws on-device. Offline-generated seeds would not match server-generated seeds, because the server catalogue and draw algorithm remain authoritative online.
+
+Both options trade catalogue freshness and replay consistency for availability without a connection. Neither changes current draw or seed behavior.
+
 ## Draw resolution options
 
 Draws currently leave the score unchanged and play continues to the next round. Three possible policies are open for maintainer discussion:

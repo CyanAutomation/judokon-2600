@@ -1,5 +1,13 @@
 # Caching
 
+## Service worker
+
+The production service worker precaches `index.html`, hashed Vite files under `/assets/`, the favicon, web manifest, and install icons. Navigations use a three-second network-first request and fall back to the cached app shell. Older navigation caches are removed when a new worker activates.
+
+The worker never handles non-GET or cross-origin requests. Its navigation route excludes `/api/*`; the Budokon draw service remains a direct cross-origin request, and the tactical-assessment endpoint remains `no-store`. Vercel Insights is also cross-origin and is not part of the app-shell cache. These boundaries keep catalogue draws, replay behaviour, gameplay features, and telemetry on their existing network paths.
+
+An update waits for the player to choose **Reload** in the existing notification dock. The app defers that notice while a match is in `selecting` or `awaitingNext`, then asks the waiting worker to activate and reloads after it takes control. The worker does not activate an update on its own.
+
 ## Static files
 
 Vite emits content-hashed JavaScript and CSS under `/assets/`; Vercel serves these with a one-year immutable cache lifetime. The app document is revalidated on each navigation so it can point clients at the current asset hashes. The root favicon and web manifest use a one-hour cache lifetime with stale-while-revalidate for up to one day.
