@@ -18,7 +18,10 @@ export function footerUtilities(state: GameState): string {
   const duration = getNoticeDuration();
   const notificationSettings = `<label class="notice-duration" for="notice-duration">Notification duration<select id="notice-duration">${[["normal", "Standard"], ["long", "Extended"], ["manual", "Until dismissed"]].map(([value, label]) => `<option value="${value}" ${duration === value ? "selected" : ""}>${label}</option>`).join("")}</select></label>`;
   const seedLabel = state.replaySeed ? `Replay seed: ${state.replaySeed}` : "Replay seed: Random";
-  return `<details class="footer-settings"><summary>Game settings</summary><div class="footer-utilities" role="group" aria-label="Game settings">${utilityButton("seed-button", seedLabel)}${utilityButton("sound-enabled", `Sound: ${soundEnabled ? "On" : "Off"}`, soundEnabled)}${notificationSettings}</div></details>`;
+  const installOption = state.installPromptAvailable
+    ? utilityButton("install-app", "Install app")
+    : state.iosInstallHint ? `<p class="install-hint">Share, then Add to Home Screen</p>` : "";
+  return `<details class="footer-settings"><summary>Game settings</summary><div class="footer-utilities" role="group" aria-label="Game settings">${utilityButton("seed-button", seedLabel)}${utilityButton("sound-enabled", `Sound: ${soundEnabled ? "On" : "Off"}`, soundEnabled)}${installOption}${notificationSettings}</div></details>`;
 }
 
 /** Sound stays directly reachable in the match footer without opening setup-only settings. */

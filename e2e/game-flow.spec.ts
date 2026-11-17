@@ -260,3 +260,28 @@ test("[REQ-UI-030] an offline match draw explains how to reconnect and can be re
   await expect(page.getByRole("heading", { name: "Choose a stat" })).toBeVisible();
 });
 
+test("[REQ-PWA-032] Game settings trigger the available install prompt by keyboard", async ({ page }) => {
+  await page.goto("/");
+  await page.evaluate(() => {
+    Object.assign(window, { pwaPromptCalled: false });
+    const event = new Event("beforeinstallprompt", { cancelable: true }) as Event & {
+      prompt: () => Promise<void>;
+      userChoice: Promise<{ outcome: "accepted"; platform: string }>;
+    };
+    event.prompt = async () => {
+      (window as typeof window & { pwaPromptCalled: boolean }).pwaPromptCalled = true;
+    };
+    event.userChoice = Promise.resolve({ outcome: "accepted", platform: "web" });
+    window.dispatchEvent(event);
+  });
+
+  await page.getByText("Game settings", { exact: true }).click();
+  const installButton = page.getByRole("button", { name: "Install app" });
+  await expect(installButton).toBeVisible();
+  await installButton.focus();
+  await page.keyboard.press("Enter");
+
+  await expect.poll(() => page.evaluate(() => (window as typeof window & { pwaPromptCalled: boolean }).pwaPromptCalled)).toBe(true);
+  await expect(page.getByRole("button", { name: "Install app" })).toHaveCount(0);
+  await expect.poll(() => page.locator(".footer-settings > summary").evaluate(summary => document.activeElement === summary)).toBe(true);
+});
