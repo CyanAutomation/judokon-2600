@@ -19,6 +19,10 @@ import { start, next, resolve, copyReplaySeed, clearAndExit, requestQuit, choose
 import { handleGlobalKeyboardEvent } from "./ui/keyboardEventDispatcher";
 import { getSoundEnabled } from "./ui/helpers/soundStorage";
 import { requestTacticalAssessment } from "./api/tacticalAssessment";
+import { registerAppServiceWorker } from "./pwa/registerServiceWorker";
+import { createUpdateNoticeCoordinator } from "./pwa/updateNotice";
+import { listenForOnlineRecovery } from "./ui/offlineRecovery";
+import { createInstallPromptController, isStandaloneApp } from "./pwa/installPrompt";
 
 const app = document.querySelector<HTMLDivElement>("#app");
 if (!app) throw new Error("Application root is missing");
@@ -48,6 +52,21 @@ window.judokonCacheStats = () => client.getCacheStats();
 // Initialize game state from localStorage and sessionStorage
 const state: GameState = createGameState();
 const announceStatusChange = createStatusAnnouncer(message => notifications.announce(message), status(state));
+let updateNotice: ReturnType<typeof createUpdateNoticeCoordinator> | undefined;
+const installPrompt = createInstallPromptController({
+  userAgent: navigator.userAgent,
+  standalone: isStandaloneApp(),
+  platform: navigator.platform,
+  maxTouchPoints: navigator.maxTouchPoints
+}, presentation => {
+  state.installPromptAvailable = presentation.buttonAvailable;
+  state.iosInstallHint = presentation.iosHintVisible;
+  renderAfterInstallChange();
+});
+const installPresentation = installPrompt.getPresentation();
+state.installPromptAvailable = installPresentation.buttonAvailable;
+state.iosInstallHint = installPresentation.iosHintVisible;
+installPrompt.attach(window);
 const savedMatch = loadSavedGameState();
 if (savedMatch) {
   state.match = savedMatch.match ?? null;
@@ -68,6 +87,26 @@ function render(): void {
   renderApp(root, state);
   notifications.setSuspended(Boolean(state.seedModalOpen));
   announceStatusChange(status(state));
+  updateNotice?.setMatch(state.match);
+}
+
+function renderAfterInstallChange(): void {
+  const focusedId = document.activeElement instanceof HTMLElement ? document.activeElement.id : "";
+  render();
+  const previousControl = focusedId ? root.querySelector<HTMLElement>(`#${CSS.escape(focusedId)}`) : null;
+  const settingsSummary = root.querySelector<HTMLElement>(".footer-settings[open] > summary");
+  (previousControl ?? settingsSummary)?.focus({ preventScroll: true });
+}
+
+listenForOnlineRecovery(state, render);
+
+if ("serviceWorker" in navigator) {
+  updateNotice = createUpdateNoticeCoordinator(
+    notice => notifications.show(notice),
+    navigator.serviceWorker,
+    () => window.location.reload()
+  );
+  void registerAppServiceWorker(worker => updateNotice?.setWaitingWorker(worker));
 }
 
 const deps: OrchestratorDeps = {
@@ -110,7 +149,8 @@ function createClickHandlers() {
     closeSeedModal: () => handleCloseSeedModal(state, deps),
     saveReplaySeed: (seed: string) => handleSaveReplaySeed(state, seed, deps),
     toggleSound: () => handleToggleSound(setSoundEnabled, deps),
-    startWithLength: (points: number) => { if (!state.busy) void start(state, deps, points); }
+    startWithLength: (points: number) => { if (!state.busy) void start(state, deps, points); },
+    installApp: () => { void installPrompt.install(); }
   };
 }
 

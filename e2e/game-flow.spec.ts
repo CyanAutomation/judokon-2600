@@ -181,3 +181,107 @@ test("[REQ-UI-025] Quick start opens the default match and its glossary and hist
   const scrollLeft = await updatedHistory.locator("ol").evaluate(element => element.scrollLeft);
   expect(scrollLeft).toBeGreaterThan(0);
 });
+
+test("[REQ-PWA-029] production registers the service worker and keeps the app shell available offline", async ({ page, context }) => {
+  await page.goto("/");
+  await expect(page.getByRole("group", { name: "Choose game mode" })).toBeVisible();
+  await expect.poll(() => page.evaluate(async () => {
+    const registration = await navigator.serviceWorker.ready;
+    return registration.active?.state;
+  })).toBe("activated");
+  await page.reload();
+  await expect.poll(() => page.evaluate(() => Boolean(navigator.serviceWorker.controller))).toBe(true);
+
+  await context.setOffline(true);
+  await page.reload();
+  await expect(page.getByRole("group", { name: "Choose game mode" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Quick start" })).toBeVisible();
+  await page.getByText("Game settings", { exact: true }).click();
+  const notificationDuration = page.getByLabel("Notification duration");
+  await expect(notificationDuration).toBeVisible();
+  await notificationDuration.selectOption("long");
+  await expect(notificationDuration).toHaveValue("long");
+
+  await context.setOffline(false);
+  for (const path of [
+    "/site.webmanifest",
+    "/favicon.svg",
+    "/icon-192.png",
+    "/icon-512.png",
+    "/icon-512-maskable.png",
+    "/apple-touch-icon.png"
+  ]) {
+    const response = await page.request.get(new URL(path, page.url()).toString());
+    expect(response.status(), `${path} should be served`).toBe(200);
+  }
+});
+
+test("[REQ-UI-030] an offline match draw explains how to reconnect and can be retried", async ({ page, context }) => {
+  let catalogueAvailable = false;
+  await page.route("https://budokon.scheimann.workers.dev/v1/draw", async route => {
+    if (!catalogueAvailable) {
+      await route.abort();
+      return;
+    }
+
+    const corsHeaders = {
+      "access-control-allow-origin": "*",
+      "access-control-allow-methods": "POST, OPTIONS",
+      "access-control-allow-headers": "content-type"
+    };
+    if (route.request().method() === "OPTIONS") {
+      await route.fulfill({ status: 204, headers: corsHeaders });
+      return;
+    }
+    await route.fulfill({
+      status: 200,
+      headers: { ...corsHeaders, "content-type": "application/json" },
+      body: JSON.stringify({ judoka })
+    });
+  });
+
+  await page.goto("/");
+  await expect(page.getByRole("group", { name: "Choose game mode" })).toBeVisible();
+  await page.evaluate(() => navigator.serviceWorker.ready);
+  await page.reload();
+  await expect.poll(() => page.evaluate(() => Boolean(navigator.serviceWorker.controller))).toBe(true);
+
+  await context.setOffline(true);
+  await page.getByRole("button", { name: "Quick start" }).click();
+  await expect(page.locator(".intro-status")).toContainText("You're offline. Reconnect to start a match.");
+  await expect(page.locator("[data-game-status]")).toHaveAttribute("aria-live", "polite");
+  await expect(page.locator("[data-game-status]")).toHaveText(">> You're offline. Reconnect to start a match.");
+
+  catalogueAvailable = true;
+  await context.setOffline(false);
+  await expect(page.locator(".intro-status")).toContainText("You're back online. You can retry your match.");
+  await expect(page.locator("[data-game-status]")).toHaveText(">> You're back online. You can retry your match.");
+  await page.getByRole("button", { name: "Quick start" }).click();
+  await expect(page.getByRole("heading", { name: "Choose a stat" })).toBeVisible();
+});
+
+test("[REQ-PWA-032] Game settings trigger the available install prompt by keyboard", async ({ page }) => {
+  await page.goto("/");
+  await page.evaluate(() => {
+    Object.assign(window, { pwaPromptCalled: false });
+    const event = new Event("beforeinstallprompt", { cancelable: true }) as Event & {
+      prompt: () => Promise<void>;
+      userChoice: Promise<{ outcome: "accepted"; platform: string }>;
+    };
+    event.prompt = async () => {
+      (window as typeof window & { pwaPromptCalled: boolean }).pwaPromptCalled = true;
+    };
+    event.userChoice = Promise.resolve({ outcome: "accepted", platform: "web" });
+    window.dispatchEvent(event);
+  });
+
+  await page.getByText("Game settings", { exact: true }).click();
+  const installButton = page.getByRole("button", { name: "Install app" });
+  await expect(installButton).toBeVisible();
+  await installButton.focus();
+  await page.keyboard.press("Enter");
+
+  await expect.poll(() => page.evaluate(() => (window as typeof window & { pwaPromptCalled: boolean }).pwaPromptCalled)).toBe(true);
+  await expect(page.getByRole("button", { name: "Install app" })).toHaveCount(0);
+  await expect.poll(() => page.locator(".footer-settings > summary").evaluate(summary => document.activeElement === summary)).toBe(true);
+});

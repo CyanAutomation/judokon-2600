@@ -46,6 +46,9 @@ export interface GameState {
   /** Footer seed-dialog state is kept separate from the committed replay seed. */
   seedModalOpen?: boolean;
   seedDraft?: string;
+  /** Ephemeral install affordances; these are never written to sessionStorage. */
+  installPromptAvailable?: boolean;
+  iosInstallHint?: boolean;
 }
 
 /**
