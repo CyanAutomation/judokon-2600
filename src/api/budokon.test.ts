@@ -191,6 +191,25 @@ it("times out an unresponsive draw request", async () => {
   vi.useRealTimers();
 });
 
+it("uses a timeout signal and explains its TimeoutError", async () => {
+  const timeoutSignal = new AbortController().signal;
+  const timeoutSpy = vi.spyOn(AbortSignal, "timeout").mockReturnValue(timeoutSignal);
+  let requestSignal: AbortSignal | null | undefined;
+  const fetcher = vi.fn((_url: string, options: RequestInit) => {
+    requestSignal = options.signal;
+    return Promise.reject(new DOMException("The operation timed out", "TimeoutError"));
+  }) as unknown as typeof fetch;
+
+  try {
+    await expect(new BudokonClient(fetcher, 1).drawBatch("seed", 2))
+      .rejects.toThrow("Budokon API request timed out");
+    expect(timeoutSpy).toHaveBeenCalledWith(1);
+    expect(requestSignal).toBe(timeoutSignal);
+  } finally {
+    timeoutSpy.mockRestore();
+  }
+});
+
 it("explains when the Budokon endpoint cannot be reached", async () => {
   const fetcher = vi.fn<typeof fetch>().mockRejectedValue(new TypeError("fetch failed"));
   await expect(new BudokonClient(fetcher).drawBatch("offline", 2))
