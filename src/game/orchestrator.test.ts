@@ -4,10 +4,14 @@ import { createGameState, saveGameState } from "../state";
 import { clearAndExit, draw, next, resolve, requestQuit, start, MATCH_RESOLUTION_DELAY_MS, handleSetupStepClick, handleOpenSeedModal, handleCloseSeedModal, handleSaveReplaySeed, handleToggleSound, handleKeyboardMoveCursor, handleKeyboardCloseSeedModal, type OrchestratorDeps } from "./orchestrator";
 import { createMatch } from "./game";
 import { createSnackbar } from "../ui/snackbar";
+import { OFFLINE_DRAW_MESSAGE, OFFLINE_NEXT_ROUND_MESSAGE } from "../ui/offlineRecovery";
 import type { TacticalAssessmentResult } from "./tacticalAssessment";
 import type { TacticalFeatures } from "./tacticalAssessment";
 
-afterEach(() => vi.useRealTimers());
+afterEach(() => {
+  vi.useRealTimers();
+  vi.unstubAllGlobals();
+});
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -97,6 +101,23 @@ describe("draw operation ordering", () => {
     expect(sessionStorage.getItem("judokon.activeMatch.v1")).toBeNull();
     expect(onMatchReady).not.toHaveBeenCalled();
   });
+
+  it("keeps the offline draw message if connectivity returns before the request fails", async () => {
+    const pendingDraw = deferred<Judoka[]>();
+    const client = { drawBatch: vi.fn(() => pendingDraw.promise) };
+    const state = createGameState();
+    state.activeSeed = "offline-start";
+    const navigatorState = { onLine: false };
+    vi.stubGlobal("navigator", navigatorState);
+    const deps = { client, render: vi.fn() } as unknown as OrchestratorDeps;
+
+    const drawPromise = draw(state, deps);
+    navigatorState.onLine = true;
+    pendingDraw.reject(new Error("Unable to connect to the Budokon API: Failed to fetch"));
+    await drawPromise;
+
+    expect(state.errorMessage).toBe(OFFLINE_DRAW_MESSAGE);
+  });
 });
 
 describe("next-round draws", () => {
@@ -147,6 +168,36 @@ describe("next-round draws", () => {
     expect(state.drawBuffer).not.toContain(buffered);
     expect(saveSpy).toHaveBeenCalledTimes(1);
     expect(render).toHaveBeenCalledTimes(2);
+  });
+
+  it("keeps the offline next-round message if connectivity returns before the request fails", async () => {
+    const pendingDraw = deferred<Judoka[]>();
+    const client = { drawBatch: vi.fn(() => pendingDraw.promise) };
+    const match = {
+      player: judoka("current-player"),
+      opponent: judoka("current-opponent"),
+      target: 3,
+      matchNumber: 4,
+      scores: { player: 2, opponent: 1 },
+      mode: "classic" as const,
+      phase: "awaitingNext" as const,
+      winner: null
+    };
+    const state = createGameState();
+    state.activeSeed = "offline-next";
+    state.match = match;
+    state.mode = "classic";
+    state.drawBuffer = [judoka("last-buffered")];
+    const navigatorState = { onLine: false };
+    vi.stubGlobal("navigator", navigatorState);
+    const deps = { client, render: vi.fn() } as unknown as OrchestratorDeps;
+
+    const nextPromise = next(state, match, deps);
+    navigatorState.onLine = true;
+    pendingDraw.reject(new Error("Unable to connect to the Budokon API: Failed to fetch"));
+    await nextPromise;
+
+    expect(state.errorMessage).toBe(OFFLINE_NEXT_ROUND_MESSAGE);
   });
 
   it("uses a two-fighter Classic buffer without refilling it", async () => {
