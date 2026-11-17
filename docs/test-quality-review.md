@@ -90,3 +90,17 @@ The focused validation after these changes passed: 7 test files and 82 tests, in
 - Reworked the rendered settings test to assert the labeled settings group, seed and sound controls, and the modal dialog's accessible name and location.
 
 Validation after this cleanup: `npm run check` passed, including lint, 27 test files and 324 tests, Markdown link/style checks, and the production build. Mutation scores remain unmeasured, so cost/coverage scores remain provisional.
+
+## Follow-up: click-flow review (November 2026)
+
+- Replaced callback-only click checks in `clickHandlers.test.ts` with rendered setup, seed-dialog, and match-length flows using the real click/change handlers and orchestrator. The cases assert the resulting setup stage, saved preferences, dialog state, selected match target, and scoreboard.
+- Added a click-driven install prompt case in `installPrompt.test.ts`, exercising the rendered Game settings button, click dispatcher, and install controller. The existing browser keyboard activation remains covered in `e2e/game-flow.spec.ts`.
+- Removed isolated stat and next callback checks; the real stat choice remains covered by the first-round integration flow, and the rendered Next action remains covered by the browser game flow.
+- Removed the Quick start and undoable Quit callback checks; the browser flows cover starting from setup and quitting with Undo.
+- Replaced the synthetic Next-without-match case with setup/match render assertions that confirm setup has no Next control and active matches do not render setup choices.
+- Replaced a synthetic busy length-choice click with assertions that the native match-length radios and Start button are disabled while a draw is in progress. A busy selected-choice click remains covered through rendered setup.
+- The replacement cases score **9/10** in static review, with cost/coverage left at 1 until mutation scores are measured.
+
+Focused validation passed: `src/ui/clickHandlers.test.ts`, `src/ui/setup-templates.test.ts`, `src/pwa/installPrompt.test.ts`, and `src/main.test.ts` (4 files, 79 tests). The subsequent `npm run check` passed lint, all 41 test files and 428 tests, Markdown checks, and the production build. Mutation scores remain unmeasured.
+
+The Playwright run was attempted but could not launch: Chromium was absent, and the Playwright CDN returned HTTP 403 when installation was attempted. The focused Vitest install-click case passed.

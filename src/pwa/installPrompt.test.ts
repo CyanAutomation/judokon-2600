@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { handleClickEvent } from "../ui/clickHandlers";
 import { createMockGameState } from "../test/mocks";
 import { renderApp } from "../ui/render";
 import { createInstallPromptController } from "./installPrompt";
@@ -29,6 +30,55 @@ describe("install affordance", () => {
     expect(controller.getPresentation()).toEqual({ buttonAvailable: false, iosHintVisible: false });
     expect(changes.at(-1)).toEqual({ buttonAvailable: false, iosHintVisible: false });
     controller.dispose();
+  });
+
+  it("[REQ-PWA-032] clicking the available install choice invokes the browser prompt", async () => {
+    const state = createMockGameState({ installPromptAvailable: true });
+    const root = document.createElement("div");
+    document.body.append(root);
+    const render = () => renderApp(root, state);
+    let installOperation: Promise<void> | undefined;
+    const controller = createInstallPromptController({
+      userAgent: "Mozilla/5.0 Chrome/130.0.0.0 Safari/537.36",
+      standalone: false
+    }, presentation => {
+      state.installPromptAvailable = presentation.buttonAvailable;
+      state.iosInstallHint = presentation.iosHintVisible;
+      render();
+    });
+    const source = new EventTarget();
+    controller.attach(source);
+    const prompt = vi.fn().mockResolvedValue(undefined);
+    const beforeInstall = new Event("beforeinstallprompt", { cancelable: true }) as Event & {
+      prompt: () => Promise<void>;
+      userChoice: Promise<{ outcome: "accepted"; platform: string }>;
+    };
+    beforeInstall.prompt = prompt;
+    beforeInstall.userChoice = Promise.resolve({ outcome: "accepted", platform: "web" });
+    source.dispatchEvent(beforeInstall);
+
+    root.addEventListener("click", event => handleClickEvent(event as MouseEvent, state, {
+      start: vi.fn(),
+      copyReplaySeed: async () => undefined,
+      next: async () => undefined,
+      resolve: vi.fn(),
+      clearAndExit: vi.fn(),
+      installApp: () => { installOperation = controller.install(); }
+    }));
+    render();
+    root.querySelector<HTMLDetailsElement>(".footer-settings")!.open = true;
+
+    try {
+      root.querySelector<HTMLButtonElement>("#install-app")!.click();
+      expect(installOperation).toBeDefined();
+      await installOperation;
+
+      expect(prompt).toHaveBeenCalledOnce();
+      expect(root.querySelector("#install-app")).toBeNull();
+    } finally {
+      controller.dispose();
+      root.remove();
+    }
   });
 
   it("keeps the install prompt available when prompt() throws synchronously", async () => {
