@@ -30,7 +30,7 @@ describe("status", () => {
   it("[REQ-UI-009] keeps the opponent reveal playful and clear", () => {
     const state = createMockGameState({ match: createMockMatch(), pendingStat: "power" });
 
-    expect(status(state)).toBe(">> Your opponent is sizing you up…");
+    expect(status(state)).toBe(">> Opponent is sizing you up…");
   });
 
   it("[REQ-UI-009] prompts for a stat while a round is selecting", () => {
@@ -41,7 +41,7 @@ describe("status", () => {
 
   it.each([
     ["player", ">> The match is yours!"],
-    ["opponent", ">> Your opponent takes the match."],
+    ["opponent", ">> Opponent takes the match."],
     ["draw", ">> It’s a draw!"]
   ] as const)("[REQ-UI-009] reports a completed match when the winner is %s", (winner, expected) => {
     const state = createMockGameState({ match: createMockMatch({ phase: "matchOver", winner }) });

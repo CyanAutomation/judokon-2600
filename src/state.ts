@@ -7,7 +7,13 @@ const SAVED_MATCH_KEY = "judokon.activeMatch.v1";
 
 export type Division = "absolute" | "weight";
 export type SetupStep = "mode" | "division" | "weight" | "length";
-export type History = Pick<MatchResult, "outcome" | "stat"> & { roundNumber: number };
+export type History = Pick<MatchResult, "outcome" | "stat"> & {
+  roundNumber: number;
+  /** Per-round details stay in memory so the established version 1 session format remains stable. */
+  playerValue?: number;
+  opponentValue?: number;
+  opponentName?: string;
+};
 
 /**
  * Game state container - holds all game state in one place
@@ -102,7 +108,7 @@ export function saveGameState(state: GameState): void {
       version: 1,
       match: state.match,
       result: state.result,
-      history: state.history,
+      history: state.history.map(({ outcome, stat, roundNumber }) => ({ outcome, stat, roundNumber })),
       activeSeed: state.activeSeed,
       activeWeight: state.activeWeight,
       drawBuffer: state.drawBuffer,

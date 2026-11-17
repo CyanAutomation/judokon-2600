@@ -36,6 +36,7 @@ const buttonHandlers = new Map<string, ButtonHandler>([
   ["sound-enabled", (_, __, h) => h.toggleSound?.()],
   ["confirm-weight", (_, __, h) => h.setSetupStep?.("length")],
   ["start", (_, __, h) => h.start()],
+  ["quick-start", (_, __, h) => h.start()],
   ["retry", (_, __, h) => h.start()],
   ["replay", (_, state, h) => h.start(state.activeSeed)],
   ["copy-seed", (_, __, h) => void h.copyReplaySeed()],

@@ -9,7 +9,7 @@ These IDs give the UI and game tests a stable link to observable product behavio
 | REQ-UI-003 | After a round resolves, show the selected stat and both compared values in the head-to-head cards before the next action. | [Stat comparison](../README.md#gameplay) |
 | REQ-UI-004 | During stat selection, show the opponent's two highest-ranked stats in descending order, using displayed stat order for ties and hiding exact values. Mark the player's highest stat as “Your best.” | [Scout report](../README.md#gameplay) |
 | REQ-CHAMPION-005 | Champion progress is shown only in Champion mode. Its current streak counts consecutive trailing player wins and resets after a loss or draw; the run record still includes earlier wins. | [Champion mode](../README.md#gameplay) |
-| REQ-UI-006 | Round history lists resolved rounds and is omitted before any round has resolved. | [Match flow](../README.md#gameplay) |
+| REQ-UI-006 | Round history lists each resolved round's opponent, stat, compared values, and outcome; older version 1 saved sessions keep their existing history format. | [Match flow](../README.md#gameplay) |
 | REQ-GAME-007 | Quitting returns to setup, clears active-run data, and removes the saved active match. | [Keyboard controls](../README.md#gameplay) |
 | REQ-GAME-023 | Quitting offers an 8-second Undo action that restores the prior match and preferences with pending animation state cleared. | [Keyboard controls](../README.md#gameplay) |
 | REQ-GAME-008 | A selected weight class constrains the initial catalogue draw to that class. | [Gameplay flow](../README.md#gameplay) |
@@ -35,3 +35,5 @@ These IDs give the UI and game tests a stable link to observable product behavio
 | REQ-UI-021 | Late clipboard and tactical responses cannot notify a previous match; clipboard recovery and optional-service failures remain in their contextual disclosures. | [Notification plan](snackbar-plan.md) |
 | REQ-UI-022 | Stat choice labels, values, markers, and shortcuts remain inside their buttons at desktop and mobile widths. | [Keyboard controls](../README.md#gameplay) |
 | REQ-UI-024 | A status change, including a round result, is announced exactly once through a polite live region that survives app rerenders. | [Gameplay flow](../README.md#gameplay) |
+| REQ-UI-025 | Quick start begins a match from the selected setup while the full staged setup flow remains available. | [Setup and scoring](../README.md#gameplay) |
+| REQ-UI-026 | The stat glossary explains Kumi-kata as grip fighting and Ne-waza as ground work. | [Stat comparison](../README.md#gameplay) |

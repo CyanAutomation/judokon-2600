@@ -19,13 +19,13 @@ export const tieRule = "Tied numbers leave the score unchanged.";
 
 export const roundOutcomeCopy = {
   player: "You take the point",
-  opponent: "Your opponent takes the point",
+  opponent: "Opponent takes the point",
   draw: "No point this round"
 } as const;
 
 export const matchOutcomeCopy = {
   player: "The match is yours!",
-  opponent: "Your opponent takes the match.",
+  opponent: "Opponent takes the match.",
   draw: "It’s a draw!"
 } as const;
 

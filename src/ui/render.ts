@@ -26,7 +26,7 @@ function generateHint(state: GameState): string {
 
   // Match phase hints
   if (state.pendingStat) {
-    return "Your opponent is sizing you up…";
+    return "Opponent is sizing you up…";
   }
   if (state.match.phase === "selecting") {
     return `${shortcutHint("1–5")} Pick a stat ${shortcutHint("Esc / Q")} Quit match`;

@@ -23,7 +23,7 @@ Open [http://localhost:5173](http://localhost:5173) to play locally. The Vite de
 
 ### Setup and scoring
 
-Setup unfolds in four steps:
+Setup unfolds in four steps. **Quick start** uses the selected setup immediately (Classic, Absolute, and first-to-3 for a fresh profile); the four-step flow remains available for changing each option:
 
 - Choose a mode: **Classic** or **Champion**.
 - Choose a division: **Absolute** open-weight or **Weight** class. Weight division offers the 14 catalogue classes `-48`, `-52`, `-57`, `-60`, `-63`, `-66`, `-70`, `-73`, `-78`, `-81`, `-90`, `-100`, `+78`, and `+100`.
@@ -43,9 +43,9 @@ A selected stat is compared with the opponent's hidden value; the higher value e
 
 After each match, the summary recommends your best stat by most rounds won, then highest win rate, then earliest position in the displayed order (`power`, `speed`, `technique`, `kumikata`, `newaza`). It reports both wins and total selections; if no stat won a round, no recommendation is shown.
 
-In **Champion** mode, you keep the same judoka while opponents rotate. The **Current streak** counts consecutive rounds won at the end of the run: each win extends it, while either a loss or a draw resets it to zero. Earlier wins remain part of the run record but do not count toward the current streak.
+In **Champion** mode, you keep the same judoka while a rotating line-up of opponents changes each match. The **Current streak** counts consecutive rounds won at the end of the run: each win extends it, while either a loss or a draw resets it to zero. Earlier wins remain part of the run record but do not count toward the current streak.
 
-The match screen foregrounds the score and current decision. During stat selection, paired fighter cards show your judoka’s full details and keep the opponent’s stat values hidden. Picking a stat reveals the opponent’s values. After each round, the chosen stat and both values appear on the cards before the next action. Round history, Champion run metrics, and the completed-match breakdown remain available in collapsed disclosures. Replay seed and sound controls are under **Game settings** during setup.
+The match screen foregrounds the score and current decision. During stat selection, paired fighter cards show your judoka’s full details and keep the opponent’s stat values hidden. Picking a stat reveals the opponent’s values. The **What do these stats mean?** disclosure explains Kumi-kata (grip fighting) and Ne-waza (ground work). After each round, the chosen stat and both values appear on the cards before the next action. Round history shows each round’s opponent, stat, values, and outcome during the current run. Saved sessions retain the existing compact history fields. Champion run metrics and the completed-match breakdown remain available in collapsed disclosures. Replay seed and sound controls are under **Game settings** during setup.
 
 Selective snack bars rise from the bottom centre for replay-seed confirmations, restored matches, newly available Dojo notes, and quitting a match. A quit notice offers **Undo quit** for eight seconds and restores the match. The dock sits below gameplay and mobile setup controls, so it does not cover a stat choice or action. Confirmations last four seconds, restoration notices six seconds, and Dojo-note and quit notices eight seconds. Hovering, focusing a notification, or switching away from the tab pauses its timer. **Game settings → Notification duration** offers Standard, Extended (three times as long), or Until dismissed. A persistent polite live region announces status changes once; scores, round results, scouting information, and actionable errors remain visible in the app.
 

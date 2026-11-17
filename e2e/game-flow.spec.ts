@@ -124,3 +124,51 @@ test("[REQ-GAME-023] summary and Quit keys keep native actions; Undo restores th
   await expect(page.locator(".result-panel")).toBeVisible();
   await expect(page.locator("#next")).toBeVisible();
 });
+
+test("[REQ-UI-025] Quick start opens the default match and its glossary and history are useful", async ({ page }) => {
+  await mockCatalogue(page);
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto("/");
+  await expect(page.getByRole("group", { name: "Choose game mode" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Quick start" })).toBeVisible();
+  await page.screenshot({ path: "docs/assets/review/quick-start-desktop.png", fullPage: true });
+
+  await page.setViewportSize({ width: 360, height: 720 });
+  await page.screenshot({ path: "docs/assets/review/quick-start-mobile.png", fullPage: true });
+  await page.getByRole("button", { name: "Quick start" }).click();
+  await expect(page.getByRole("heading", { name: "Choose a stat" })).toBeVisible();
+  await expect(page.locator(".scoreboard")).toContainText("First to 3");
+
+  const glossary = page.locator("details.stat-glossary");
+  await glossary.locator("summary").click();
+  await expect(glossary).toContainText("Grip fighting");
+  await expect(glossary).toContainText("Ground work");
+
+  await page.locator('[data-stat="power"]').click();
+  const history = page.locator("details.match-history");
+  await history.locator("summary").click();
+  const row = history.locator("li").first();
+  await expect(row).toContainText("Test2 Fighter");
+  await expect(row).toContainText("You 80 · Opponent 79");
+
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await row.scrollIntoViewIfNeeded();
+  await page.screenshot({ path: "docs/assets/review/round-history-desktop.png" });
+
+  await page.locator("#next").click();
+  await page.locator('[data-stat="speed"]').click();
+  await page.setViewportSize({ width: 360, height: 720 });
+  const updatedHistory = page.locator("details.match-history");
+  await updatedHistory.locator("summary").click();
+  await expect(updatedHistory).toHaveAttribute("open", "");
+  const secondRow = updatedHistory.locator("li").nth(1);
+  await expect(secondRow).toContainText("Test4 Fighter");
+  await expect(secondRow).toContainText("You 70 · Opponent 70");
+  await expect(secondRow).toContainText("DRAW");
+  const scrollWidth = await updatedHistory.locator("ol").evaluate(element => element.scrollWidth);
+  const clientWidth = await updatedHistory.locator("ol").evaluate(element => element.clientWidth);
+  expect(scrollWidth).toBeGreaterThan(clientWidth);
+  await updatedHistory.locator("ol").evaluate(element => { element.scrollLeft = element.scrollWidth; });
+  const scrollLeft = await updatedHistory.locator("ol").evaluate(element => element.scrollLeft);
+  expect(scrollLeft).toBeGreaterThan(0);
+});

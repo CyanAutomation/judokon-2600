@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 import type { Judoka } from "../api/types";
-import type { Match, MatchResult } from "../game/game";
+import { createMatch, type Match, type MatchResult } from "../game/game";
 import type { GameState } from "../state";
 import { game } from "./game-templates";
 import { createHelpers } from "./helpers";
@@ -69,6 +69,20 @@ it("[REQ-UI-004] presents two ranked opponent stats without showing their values
   }
   expect(tip?.open).toBe(false);
   expect(tip?.textContent).toContain("exact values appear after your pick");
+});
+
+it("[REQ-UI-026] explains Kumi-kata and Ne-waza beside the stat choices", () => {
+  const match = createMatch(judoka, { ...judoka, id: "opponent", slug: "opponent" }, 3);
+  const current = state({ match });
+  const root = document.createElement("div");
+  root.innerHTML = game(match, current, createHelpers(current));
+  const glossary = root.querySelector("details.stat-glossary");
+
+  expect(glossary?.querySelector("summary")?.textContent).toBe("What do these stats mean?");
+  expect(glossary?.textContent).toContain("Kumi-kata");
+  expect(glossary?.textContent).toContain("Grip fighting");
+  expect(glossary?.textContent).toContain("Ne-waza");
+  expect(glossary?.textContent).toContain("Ground work");
 });
 
 it("[REQ-UI-011] shows both fighter cards after the decision without repeating the player's name", () => {
@@ -144,7 +158,7 @@ it("announces the opponent reveal to assistive technology", () => {
   const commitment = root.querySelector('[aria-label="Opponent thinking"]');
 
   expect(commitment?.getAttribute("aria-live")).toBe("polite");
-  expect(commitment?.textContent).toContain("Your opponent is sizing you up");
+  expect(commitment?.textContent).toContain("Opponent is sizing you up");
 });
 
 it("adds code-authored tactical insight beside the unchanged deterministic summary", () => {
@@ -305,6 +319,23 @@ it("[REQ-UI-003] shows the head-to-head payoff before the next action and defers
   expect(root.querySelector(".fighter-card.player .fighter-result")?.textContent).toContain("8");
   expect(root.querySelector(".fighter-card.opponent .fighter-result")?.textContent).toContain("9");
   expect(root.querySelector("details.match-history")?.hasAttribute("open")).toBe(false);
+});
+
+it("[REQ-UI-006] includes each round's opponent, compared values, stat, and outcome", () => {
+  const match = createMatch(judoka, { ...judoka, id: "opponent", slug: "opponent", firstname: "Rival" }, 3);
+  const current = state({
+    match: { ...match, phase: "awaitingNext" },
+    history: [{ stat: "power", outcome: "player", roundNumber: 1, playerValue: 8, opponentValue: 6, opponentName: "Rival Judoka" } as GameState["history"][number]]
+  });
+  const root = document.createElement("div");
+  root.innerHTML = game(current.match!, current, createHelpers(current));
+  const row = root.querySelector(".match-history li");
+
+  expect(row?.textContent).toContain("R1");
+  expect(row?.textContent).toContain("Power");
+  expect(row?.textContent).toContain("Rival Judoka");
+  expect(row?.textContent).toContain("You 8 · Opponent 6");
+  expect(row?.textContent).toContain("WIN");
 });
 
 it("[REQ-UI-003] shows the resolved comparison before replay and keeps the breakdown collapsed", () => {

@@ -256,7 +256,10 @@ export function resolve(state: GameState, _match: Match, stat: StatKey, deps: Or
     state.history.push({
       outcome: state.result.outcome,
       stat,
-      roundNumber: state.match.matchNumber
+      roundNumber: state.match.matchNumber,
+      playerValue: state.result.playerValue,
+      opponentValue: state.result.opponentValue,
+      opponentName: `${state.match.opponent.firstname} ${state.match.opponent.surname}`.trim()
     });
 
     state.pendingStat = null;

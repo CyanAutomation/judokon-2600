@@ -50,7 +50,12 @@ function callout(m: Match, r: MatchResult, helpers: Helpers): string {
 function historyStrip(state: GameState): string {
   if (!state.history.length) return "";
   const count = state.history.length;
-  return `<details class="match-history reference-disclosure" aria-label="Round history"><summary>Round history · ${count} ${count === 1 ? "round" : "rounds"}</summary><ol tabindex="0" aria-label="Round history. Use the left and right arrow keys to view all rounds.">${state.history.map((h) => `<li class="${h.outcome}"><span>R${h.roundNumber}</span><strong>${labels[h.stat]}</strong><span>${h.outcome === "player" ? "WIN" : h.outcome === "opponent" ? "LOSS" : "DRAW"}</span></li>`).join("")}</ol></details>`;
+  return `<details class="match-history reference-disclosure" aria-label="Round history"><summary>Round history · ${count} ${count === 1 ? "round" : "rounds"}</summary><ol tabindex="0" aria-label="Round history. Use the left and right arrow keys to view all rounds.">${state.history.map((h) => {
+    const comparison = h.playerValue !== undefined && h.opponentValue !== undefined
+      ? `You ${h.playerValue} · Opponent ${h.opponentValue}`
+      : "Details unavailable after restore";
+    return `<li class="${h.outcome}"><span>R${h.roundNumber} · ${labels[h.stat]}</span><strong>${esc(h.opponentName ?? "Opponent details unavailable")}</strong><span class="history-values">${comparison}</span><span>${h.outcome === "player" ? "WIN" : h.outcome === "opponent" ? "LOSS" : "DRAW"}</span></li>`;
+  }).join("")}</ol></details>`;
 }
 
 /**
@@ -99,7 +104,7 @@ function statChoices(m: Match, state: GameState): string {
 
 function commitment(state: GameState): string {
   if (!state.pendingStat) return "";
-  return surface("section", "commitment", "Opponent thinking", `<span class="block-cursor" aria-hidden="true">█</span><div><strong>Your opponent is sizing you up…</strong><p>Let’s see how your ${labels[state.pendingStat as StatKey]} stacks up.</p></div>`, { ariaLive: "polite" });
+  return surface("section", "commitment", "Opponent thinking", `<span class="block-cursor" aria-hidden="true">█</span><div><strong>Opponent is sizing you up…</strong><p>Let’s see how your ${labels[state.pendingStat as StatKey]} stacks up.</p></div>`, { ariaLive: "polite" });
 }
 
 function matchActions(m: Match, state: GameState): string {
@@ -119,7 +124,8 @@ function replayTools(state: GameState): string {
 
 function decisionArea(m: Match, state: GameState): string {
   const scout = state.result ? "" : `<aside class="scout-report" aria-label="Opponent intel"><p><span class="eyebrow">Opponent top two stats</span><strong>${rankedStats(m.opponent).slice(0, 2).map(stat => labels[stat]).join(" / ")}</strong></p><details class="scout-tip"><summary>Scouting tip</summary><p>Use this as a guide; the opponent’s exact values appear after your pick.</p></details></aside>`;
-  return `<section class="round-decision" aria-labelledby="decision-heading"><h2 id="decision-heading" class="decision-heading">Choose a stat</h2>${scout}${statChoices(m, state)}</section>`;
+  const glossary = `<details class="stat-glossary reference-disclosure"><summary>What do these stats mean?</summary><dl><dt>Kumi-kata</dt><dd>Grip fighting</dd><dt>Ne-waza</dt><dd>Ground work</dd></dl></details>`;
+  return `<section class="round-decision" aria-labelledby="decision-heading"><h2 id="decision-heading" class="decision-heading">Choose a stat</h2>${scout}${statChoices(m, state)}${glossary}</section>`;
 }
 
 function fighterPair(m: Match, state: GameState, helpers: Helpers): string {
