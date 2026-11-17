@@ -542,6 +542,7 @@ describe("Render function composition", () => {
     expect(root.querySelector("#intro-title")).not.toBeNull();
     expect(root.querySelector("fieldset legend")?.textContent).toBe("Choose game mode");
     expect(root.querySelector('[aria-label="Stat selection"]')).toBeNull();
+    expect(root.querySelector("#next")).toBeNull();
   });
 
   it("[REQ-UI-001] renders match controls when a match is active", () => {
@@ -551,6 +552,8 @@ describe("Render function composition", () => {
     expect(root.querySelector('[aria-label^="Match score:"]')).not.toBeNull();
     expect(root.querySelector('[aria-label="Stat selection"]')).not.toBeNull();
     expect(root.querySelector("#intro-title")).toBeNull();
+    expect(root.querySelector("#mode-classic")).toBeNull();
+    expect(root.querySelector("#division-absolute")).toBeNull();
   });
 
   it("[REQ-UI-002] exposes the current score and target in the match scoreboard", () => {
