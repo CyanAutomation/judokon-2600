@@ -90,7 +90,6 @@ export async function start(
 ): Promise<void> {
   if (state.busy) return;
 
-  deps.clearNotices?.();
   const operationId = beginOperation(state);
   const activeSeed = (seed ?? state.replaySeed.trim()) || crypto.randomUUID();
   state.target = points;
@@ -139,11 +138,11 @@ function buildDrawErrorMessage(error: unknown): string {
  * Called after match setup, handles loading and error states
  */
 export async function draw(state: GameState, deps: OrchestratorDeps, operationId = beginOperation(state)): Promise<void> {
-  deps.clearNotices?.();
   state.busy = true;
   state.result = null;
   state.errorMessage = "";
   deps.render();
+  deps.clearNotices?.();
 
   try {
     // A setup change or a newer draw must not alter the request already in flight.
@@ -203,11 +202,11 @@ async function prepareNextDrawBuffer(
 export async function next(state: GameState, match: Match, deps: OrchestratorDeps): Promise<void> {
   if (state.busy || state.match !== match || match.phase !== "awaitingNext") return;
 
-  deps.clearNotices?.();
   state.busy = true;
   state.result = null;
   state.errorMessage = "";
   deps.render();
+  deps.clearNotices?.();
 
   try {
     const matchSeed = `${state.activeSeed}:buffer:${match.matchNumber + 1}`;
@@ -363,7 +362,6 @@ function setupFocusTarget(state: GameState, step: SetupStep): string {
  * Used when user quits or changes settings
  */
 export function clearAndExit(state: GameState, deps: OrchestratorDeps): void {
-  deps.clearNotices?.();
   beginOperation(state);
   state.busy = false;
   state.match = null;
@@ -378,6 +376,7 @@ export function clearAndExit(state: GameState, deps: OrchestratorDeps): void {
   state.setupCursor = setupCursorForStep(state, "mode");
   clearSavedMatch();
   deps.render();
+  deps.clearNotices?.();
 }
 
 /** Return to setup while offering a short undo window for the current run. */
@@ -391,6 +390,7 @@ export function requestQuit(state: GameState, deps: OrchestratorDeps): void {
   };
 
   clearAndExit(state, deps);
+  const quitOperationId = currentOperations.get(state);
   deps.notify?.({
     key: "quit-match",
     message: "Match quit. Use Undo to resume.",
@@ -398,6 +398,8 @@ export function requestQuit(state: GameState, deps: OrchestratorDeps): void {
     action: {
       label: "Undo quit",
       run: () => {
+        if (currentOperations.get(state) !== quitOperationId) return;
+        beginOperation(state);
         Object.assign(state, snapshot, { pendingStat: null, busy: false });
         persistPreferences(state);
         saveGameState(state);
