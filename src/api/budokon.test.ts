@@ -181,14 +181,17 @@ it("rejects a response that omits a battle stat", async () => {
 });
 it("times out an unresponsive draw request", async () => {
   vi.useFakeTimers();
-  const fetcher = vi.fn((_url: string, options: RequestInit) => new Promise<Response>((_resolve, reject) => {
-    options.signal?.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")));
-  })) as unknown as typeof fetch;
-  const request = new BudokonClient(fetcher, 1).drawBatch("seed", 2);
-  const expectation = expect(request).rejects.toThrow("Budokon API request timed out");
-  await vi.advanceTimersByTimeAsync(1);
-  await expectation;
-  vi.useRealTimers();
+  try {
+    const fetcher = vi.fn((_url: string, options: RequestInit) => new Promise<Response>((_resolve, reject) => {
+      options.signal?.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")));
+    })) as unknown as typeof fetch;
+    const request = new BudokonClient(fetcher, 1).drawBatch("seed", 2);
+    const expectation = expect(request).rejects.toThrow("Budokon API request timed out");
+    await vi.advanceTimersByTimeAsync(1);
+    await expectation;
+  } finally {
+    vi.useRealTimers();
+  }
 });
 
 it("uses a timeout signal and explains its TimeoutError", async () => {
