@@ -14,7 +14,7 @@ These IDs give the UI and game tests a stable link to observable product behavio
 | REQ-GAME-023 | Quitting offers an 8-second Undo action that restores the prior match and preferences with pending animation state cleared. | [Keyboard controls](../README.md#gameplay) |
 | REQ-GAME-008 | A selected weight class constrains the initial catalogue draw to that class. | [Gameplay flow](../README.md#gameplay) |
 | REQ-GAME-009 | The same replay seed selects the same random weight class while the supported weight list is unchanged. | [Gameplay flow](../README.md#gameplay) |
-| REQ-KEYBOARD-008 | Setup and match keyboard controls follow the documented shortcuts, and busy draws cannot start or advance another operation. | [Keyboard controls](../README.md#gameplay) |
+| REQ-KEYBOARD-008 | Setup and match keyboard controls follow the documented shortcuts, busy draws cannot start or advance another operation, and native interactive controls keep their own activation keys. | [Keyboard controls](../README.md#gameplay) |
 | REQ-GAME-010 | Reloading the same tab restores valid saved session data; only stable match state is persisted, without pending stat selections or optional tactical assessments. | [Gameplay flow](../README.md#gameplay) |
 | REQ-GAME-011 | Setup offers the documented first-to-3, first-to-5, and first-to-10 match lengths. | [Gameplay flow](../README.md#gameplay) |
 | REQ-GAME-012 | Weight division offers the 14 documented catalogue classes in their listed order. | [Gameplay flow](../README.md#gameplay) |
@@ -38,3 +38,8 @@ These IDs give the UI and game tests a stable link to observable product behavio
 | REQ-UI-025 | Quick start begins a match from the selected setup while the full staged setup flow remains available. | [Setup and scoring](../README.md#gameplay) |
 | REQ-UI-026 | The stat glossary explains Kumi-kata as grip fighting and Ne-waza as ground work. | [Stat comparison](../README.md#gameplay) |
 | REQ-UI-027 | The intro hero heading is continuous text and wraps naturally without forcing a word onto its own line. | [Setup and scoring](../README.md#gameplay) |
+| REQ-PWA-028 | The manifest identifies the app and declares existing SVG and PNG icons with the correct sizes and separate any/maskable purposes. | [Install](../README.md#install) |
+| REQ-PWA-029 | In production, the service worker precaches the app shell, uses network-first navigation with a cached index fallback, and leaves cross-origin, non-GET, `/api/*`, and Vercel Insights requests untouched. | [Service worker](caching.md#service-worker) |
+| REQ-UI-030 | A failed offline draw shows persistent reconnect guidance; an online event refreshes that status and keeps setup retry controls available. | [Offline behaviour](../README.md#offline-behaviour) |
+| REQ-PWA-031 | A waiting update prompts through the notification dock only on setup or after a match; Reload requests activation and reloads once the worker takes control. | [Service worker](caching.md#service-worker) |
+| REQ-PWA-032 | Game settings offer Chromium's install prompt when available, show the iOS Safari Home Screen hint where no prompt exists, and hide the offer in standalone mode or after installation. | [Install](../README.md#install) |

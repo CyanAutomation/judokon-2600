@@ -4,11 +4,12 @@
 
 import type { GameState } from "../state";
 
-/**
- * Check if keyboard event target is an editable input
- */
-function isEditableInput(target: EventTarget | null): boolean {
-  return (target as HTMLElement)?.matches("input:not(.choice-input), select") ?? false;
+/** Native controls own their activation keys; game choice inputs keep the documented shortcuts. */
+function isNativeInteractiveTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof Element)) return false;
+  return Boolean(target.closest(
+    'a[href], button, input:not(.choice-input), select, textarea, summary, [contenteditable]:not([contenteditable="false"]), [role="button"], [role="menuitem"], [tabindex]:not([tabindex="-1"])'
+  ));
 }
 
 /**
@@ -22,7 +23,7 @@ export function isSeedModalEscape(e: KeyboardEvent, state: GameState): boolean {
  * Check if keyboard event should be processed by game handlers
  */
 export function shouldHandleKeyboardEvent(e: KeyboardEvent): boolean {
-  return !e.defaultPrevented && !((e.target as Element | null)?.closest?.(".snackbar, .notification-dock")) && !isEditableInput(e.target);
+  return !e.defaultPrevented && !((e.target as Element | null)?.closest?.(".snackbar, .notification-dock")) && !isNativeInteractiveTarget(e.target);
 }
 
 /**

@@ -25,6 +25,7 @@ The development server serves the SPA at port 5173. Tests run via Vitest (`npm r
 | `src/audio.ts` | Sound-effect layer: keyboard tick and outcome beep synthesis via Web Audio API |
 | `src/game/` | Core logic — `game.ts` (match creation, stat resolution, summary ranking), `orchestrator.ts` (draw buffer, round advancement, seed management) |
 | `src/main.ts` | Application bootstrap: state init, audio setup, dependency wiring |
+| `src/pwa/` and `src/sw.js` | Production service-worker registration, update prompting, and the precached app shell |
 | `src/state.ts` | Game-state type definitions, persistence helpers, and setup-step tracking |
 | `src/ui/` | Rendering components, event handlers, input controls, templates for intro/match screens |
 | `docs/test-contracts.md` | Stable requirement IDs for user-visible UI and gameplay test contracts |

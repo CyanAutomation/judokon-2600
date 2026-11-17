@@ -22,6 +22,22 @@ it("opens the seed modal from the footer utility", () => {
   expect(openSeedModal).toHaveBeenCalledOnce();
 });
 
+it("routes the install utility through its prompt handler", () => {
+  const installApp = vi.fn();
+  const handlers = {
+    start: vi.fn(),
+    copyReplaySeed: vi.fn(),
+    next: vi.fn(),
+    resolve: vi.fn(),
+    clearAndExit: vi.fn(),
+    installApp
+  };
+
+  handleClickEvent(createClickEvent(createMockButton("install-app")), createMockGameState(), handlers);
+
+  expect(installApp).toHaveBeenCalledOnce();
+});
+
 it("routes the quit action through the undoable quit handler when available", () => {
   const requestQuit = vi.fn();
   const clearAndExit = vi.fn();
