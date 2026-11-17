@@ -69,13 +69,16 @@ test("[REQ-UI-003] round result keeps the comparison and next action in view on 
   await expect(page.locator(".head-to-head")).toBeVisible();
   await expect.poll(() => page.evaluate(() => (document.activeElement as HTMLElement | null)?.id)).toBe("next");
 
+  const appScroll = page.locator(".app-scroll");
+  await expect(appScroll).toHaveCount(1);
   const desktopAction = await page.locator("#next").evaluate((button) => {
     const rect = button.getBoundingClientRect();
-    return { top: rect.top, bottom: rect.bottom, scrollTop: document.querySelector(".app-scroll")?.scrollTop };
+    return { top: rect.top, bottom: rect.bottom };
   });
+  const desktopScrollTop = await appScroll.evaluate((element) => element.scrollTop);
   expect(desktopAction.top).toBeGreaterThanOrEqual(0);
   expect(desktopAction.bottom).toBeLessThanOrEqual(720);
-  expect(desktopAction.scrollTop).toBe(0);
+  expect(desktopScrollTop).toBe(0);
 
   await page.locator("#next").click();
   await page.setViewportSize({ width: 360, height: 720 });
@@ -83,11 +86,13 @@ test("[REQ-UI-003] round result keeps the comparison and next action in view on 
   await expect(page.locator("#next")).toBeVisible();
   await expect(page.locator(".head-to-head")).toBeVisible();
 
+  await expect(appScroll).toHaveCount(1);
   const mobileAction = await page.locator("#next").evaluate((button) => {
     const rect = button.getBoundingClientRect();
-    return { top: rect.top, bottom: rect.bottom, scrollTop: document.querySelector(".app-scroll")?.scrollTop };
+    return { top: rect.top, bottom: rect.bottom };
   });
+  const mobileScrollTop = await appScroll.evaluate((element) => element.scrollTop);
   expect(mobileAction.top).toBeGreaterThanOrEqual(0);
   expect(mobileAction.bottom).toBeLessThanOrEqual(720);
-  expect(mobileAction.scrollTop).toBe(0);
+  expect(mobileScrollTop).toBe(0);
 });
