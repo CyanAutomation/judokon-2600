@@ -380,4 +380,23 @@ describe("browser assessment client", () => {
     }))))
       .resolves.toEqual({ assessment: null, issue: "unavailable" });
   });
+
+  it("uses a five-second timeout signal for the optional assessment request", async () => {
+    const timeoutSignal = new AbortController().signal;
+    const timeoutSpy = vi.spyOn(AbortSignal, "timeout").mockReturnValue(timeoutSignal);
+    let requestSignal: AbortSignal | null | undefined;
+    const fetcher = vi.fn<typeof fetch>((_input, init) => {
+      requestSignal = init?.signal;
+      return Promise.reject(new DOMException("The operation timed out", "TimeoutError"));
+    });
+
+    try {
+      await expect(requestTacticalAssessment(features, fetcher))
+        .resolves.toEqual({ assessment: null, issue: "unavailable" });
+      expect(timeoutSpy).toHaveBeenCalledWith(5_000);
+      expect(requestSignal).toBe(timeoutSignal);
+    } finally {
+      timeoutSpy.mockRestore();
+    }
+  });
 });

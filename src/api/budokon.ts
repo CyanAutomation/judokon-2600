@@ -56,7 +56,7 @@ export class BudokonClient {
   private static isTimeoutError(error: unknown): boolean {
     return (
       (error instanceof Error && error.message === "Aborted") ||
-      (typeof error === "object" && error !== null && (error as Record<string, unknown>).name === "AbortError")
+      (typeof error === "object" && error !== null && ["AbortError", "TimeoutError"].includes(String((error as Record<string, unknown>).name)))
     );
   }
 
@@ -66,14 +66,13 @@ export class BudokonClient {
 
   private async performDraw(parameters: DrawParameters): Promise<Judoka[]> {
     const { count, weightClass } = parameters;
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
+    const signal = AbortSignal.timeout(this.timeoutMs);
 
     try {
       const request = this.builder.buildRequest(parameters);
       const response = await this.fetcher(this.builder.getUrl(), {
         ...request,
-        signal: controller.signal
+        signal
       });
 
       if (!response.ok) {
@@ -93,8 +92,6 @@ export class BudokonClient {
         throw new Error("Budokon API returned an invalid response. Try again later.");
       }
       throw error;
-    } finally {
-      clearTimeout(timeout);
     }
   }
 }

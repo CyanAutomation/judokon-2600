@@ -55,7 +55,7 @@ export function strongestStats(judoka: Judoka): StatKey[] {
 
 /** Orders a judoka's stats from highest to lowest, keeping displayed stat order for ties. */
 export function rankedStats(judoka: Judoka): StatKey[] {
-  return [...STAT_KEYS].sort((first, second) =>
+  return [...STAT_KEYS].toSorted((first, second) =>
     judoka.stats[second] - judoka.stats[first] || STAT_KEYS.indexOf(first) - STAT_KEYS.indexOf(second)
   );
 }
