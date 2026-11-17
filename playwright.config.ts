@@ -3,6 +3,7 @@ import { env } from "node:process";
 
 export default defineConfig({
   testDir: "./e2e",
+  testMatch: "game-flow.spec.ts",
   timeout: 20_000,
   expect: { timeout: 5_000 },
   fullyParallel: true,

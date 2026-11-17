@@ -6,6 +6,7 @@ import { matchBreakdownContent } from "./ui/match-templates";
 import { lengths } from "./ui/constants";
 import { injectSpeedInsights } from "@vercel/speed-insights";
 import { BudokonClient } from "./api/budokon";
+import { createBudokonClient } from "budokon-transport";
 import type { StatKey } from "./api/types";
 import { handleClickEvent, handleChangeEvent, handleIntroKeyboard, handleMatchKeyboard } from "./ui/eventHandlers";
 import type { SetupStep } from "./state";
@@ -39,7 +40,7 @@ function fitViewport(): void {
 window.addEventListener("resize", fitViewport);
 window.visualViewport?.addEventListener("resize", fitViewport);
 fitViewport();
-const client = new BudokonClient();
+const client = createBudokonClient();
 
 declare global {
   interface Window {
