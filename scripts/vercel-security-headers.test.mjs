@@ -26,6 +26,8 @@ it("Vercel applies browser security headers to every route", () => {
     "form-action 'self'",
     "script-src 'self'",
     "style-src 'self'",
+    "worker-src 'self'",
+    "manifest-src 'self'",
     "connect-src 'self' https://budokon.scheimann.workers.dev https://vitals.vercel-insights.com"
   ]) {
     expect(policy.split(";").map((item) => item.trim()), `missing CSP directive: ${directive}`).toContain(directive);
@@ -37,8 +39,11 @@ it("keeps app documents fresh while caching root-level public assets briefly", (
   const documentHeaders = Object.fromEntries(policy("/").headers.map(({ key, value }) => [key.toLowerCase(), value]));
   const faviconHeaders = Object.fromEntries(policy("/favicon.svg").headers.map(({ key, value }) => [key.toLowerCase(), value]));
   const manifestHeaders = Object.fromEntries(policy("/site.webmanifest").headers.map(({ key, value }) => [key.toLowerCase(), value]));
+  const workerHeaders = Object.fromEntries(policy("/sw.js").headers.map(({ key, value }) => [key.toLowerCase(), value]));
 
   expect(documentHeaders["cache-control"]).toBe("public, max-age=0, must-revalidate");
   expect(faviconHeaders["cache-control"]).toBe("public, max-age=3600, stale-while-revalidate=86400");
   expect(manifestHeaders["cache-control"]).toBe("public, max-age=3600, stale-while-revalidate=86400");
+  expect(manifestHeaders["content-type"]).toBe("application/manifest+json");
+  expect(workerHeaders["cache-control"]).toBe("public, max-age=0, must-revalidate");
 });

@@ -181,3 +181,38 @@ test("[REQ-UI-025] Quick start opens the default match and its glossary and hist
   const scrollLeft = await updatedHistory.locator("ol").evaluate(element => element.scrollLeft);
   expect(scrollLeft).toBeGreaterThan(0);
 });
+
+test("[REQ-PWA-029] production registers the service worker and keeps the app shell available offline", async ({ page, context }) => {
+  await page.goto("/");
+  await expect(page.getByRole("group", { name: "Choose game mode" })).toBeVisible();
+  await expect.poll(() => page.evaluate(async () => {
+    const registration = await navigator.serviceWorker.ready;
+    return registration.active?.state;
+  })).toBe("activated");
+  await page.reload();
+  await expect.poll(() => page.evaluate(() => Boolean(navigator.serviceWorker.controller))).toBe(true);
+
+  await context.setOffline(true);
+  await page.reload();
+  await expect(page.getByRole("group", { name: "Choose game mode" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Quick start" })).toBeVisible();
+  await page.getByText("Game settings", { exact: true }).click();
+  const notificationDuration = page.getByLabel("Notification duration");
+  await expect(notificationDuration).toBeVisible();
+  await notificationDuration.selectOption("long");
+  await expect(notificationDuration).toHaveValue("long");
+
+  await context.setOffline(false);
+  for (const path of [
+    "/site.webmanifest",
+    "/favicon.svg",
+    "/icon-192.png",
+    "/icon-512.png",
+    "/icon-512-maskable.png",
+    "/apple-touch-icon.png"
+  ]) {
+    const response = await page.request.get(new URL(path, page.url()).toString());
+    expect(response.status(), `${path} should be served`).toBe(200);
+  }
+});
+
