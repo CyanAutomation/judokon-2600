@@ -165,10 +165,10 @@ it("pins CodeQL to the current v4 commit", () => {
   const codeql = readWorkflow("codeql.yml");
 
   expect(codeql).toContain(
-    "github/codeql-action/init@33d7b85da1a04171e211befe2c739303b9a4c066 # v4",
+    "github/codeql-action/init@1bd86f2fdb4b86187fa4059f16f31a3202acc9ea # v4",
   );
   expect(codeql).toContain(
-    "github/codeql-action/analyze@33d7b85da1a04171e211befe2c739303b9a4c066 # v4",
+    "github/codeql-action/analyze@1bd86f2fdb4b86187fa4059f16f31a3202acc9ea # v4",
   );
 });
 
