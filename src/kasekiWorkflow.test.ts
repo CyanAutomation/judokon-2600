@@ -26,48 +26,106 @@ it("accepts only each caller's intended changed-file allowlist", () => {
   );
 });
 
-it("passes the sweep name to the summary as data rather than shell source", () => {
+it("publishes the sweep name as data in the submission summary", () => {
   expect(sweepWorkflow).toContain("SWEEP_NAME: ${{ inputs.sweep_name }}");
   expect(sweepWorkflow).toContain(
-    'printf \'## Kaseki %s sweep\\n\' "$SWEEP_NAME"',
+    'printf \'## Soyuz %s submission\\n\' "$SWEEP_NAME"',
   );
   expect(sweepWorkflow).not.toContain(
-    'echo "## Kaseki ${{ inputs.sweep_name }} sweep"',
+    'echo "## Soyuz ${{ inputs.sweep_name }} submission"',
   );
 });
 
-it("keeps both callers restricted to main", () => {
-  expect(readWorkflow("kaseki-docs.yaml")).toContain(
-    "if: github.ref == 'refs/heads/main'",
-  );
-  expect(readWorkflow("kaseki-dry.yaml")).toContain(
-    "if: github.ref == 'refs/heads/main'",
-  );
-
-  for (const caller of ["kaseki-docs.yaml", "kaseki-dry.yaml"]) {
-    expect(readWorkflow(caller)).toContain(
-      "uses: $/.github/workflows/kaseki-sweep.yml",
-    );
-  }
-});
-
-it("requires and explicitly passes the Kaseki token through both callers", () => {
-  expect(sweepWorkflow).toMatch(
-    /workflow_call:[\s\S]*?secrets:\s+KASEKI_API_TOKEN:[\s\S]*?required: true/,
-  );
-
+it("keeps both callers restricted to main and using the shared workflow", () => {
   for (const caller of ["kaseki-docs.yaml", "kaseki-dry.yaml"]) {
     const workflow = readWorkflow(caller);
-    expect(workflow).toMatch(
-      /secrets:\s+KASEKI_API_TOKEN:\s+\$\{\{ secrets\.KASEKI_API_TOKEN \}\}/,
-    );
+    expect(workflow).toContain("if: github.ref == 'refs/heads/main'");
+    expect(workflow).toContain("uses: $/.github/workflows/kaseki-sweep.yml");
+    expect(workflow).not.toContain("KASEKI_API_TOKEN");
     expect(workflow).not.toContain("secrets: inherit");
   }
 });
 
-it("always submits sweeps as normal pull requests", () => {
+it("keeps the docs and DRY schedules, prompts, and scoped allowlists", () => {
+  const docs = readWorkflow("kaseki-docs.yaml");
+  const dry = readWorkflow("kaseki-dry.yaml");
+
+  expect(docs).toContain('cron: "0 4 * * 1"');
+  expect(docs).toContain("allowlist: README.md,docs/**/*.md");
+  expect(docs).toContain("Perform the documentation sweep for this repository.");
+  expect(docs).toContain("soyuz-docs-sweep-${{ github.repository }}");
+
+  expect(dry).toContain('cron: "0 6 * * 3"');
+  expect(dry).toContain("allowlist: src/**/*,api/**/*,scripts/**/*,test/**/*,tests/**/*");
+  expect(dry).toContain("Identify the single strongest DRY improvement available.");
+  expect(dry).toContain("soyuz-dry-sweep-${{ github.repository }}");
+});
+
+it("uses the Soyuz environment and scopes its submission token to the POST step", () => {
+  expect(sweepWorkflow).toContain("environment: soyuz");
+  expect(sweepWorkflow).toContain("SOYUZ_BASE_URL: ${{ vars.SOYUZ_BASE_URL }}");
+  expect(sweepWorkflow).toContain("timeout-minutes: 15");
+  expect(sweepWorkflow).toContain("VALIDATION_COMMAND: npm run check");
+  expect(sweepWorkflow).toMatch(
+    /env:\s+SOYUZ_SUBMISSION_API_TOKEN: \$\{\{ secrets\.SOYUZ_SUBMISSION_API_TOKEN \}\}/,
+  );
+  expect(sweepWorkflow).not.toContain("KASEKI_API_TOKEN");
+  expect(sweepWorkflow).not.toContain("KASEKI_BASE_URL");
+  expect(sweepWorkflow).not.toMatch(/workflow_call:[\s\S]*?secrets:/);
+});
+
+it("submits an idempotent patch request to Soyuz for a normal pull request", () => {
+  expect(sweepWorkflow).toContain('"$SOYUZ_BASE_URL/v1/runs"');
+  expect(sweepWorkflow).toContain('"Idempotency-Key: $idempotency_key"');
+  expect(sweepWorkflow).toContain('"Authorization: Bearer $SOYUZ_SUBMISSION_API_TOKEN"');
+  expect(sweepWorkflow).toContain('taskMode: "patch"');
   expect(sweepWorkflow).toContain('publishMode: "pr"');
+  expect(sweepWorkflow).toContain("maxDiffBytes: 102400");
+  expect(sweepWorkflow).toContain("validationCommands: [$validationCommand]");
+  expect(sweepWorkflow).toContain("goalCheck: { enabled: true, maxRetries: 1 }");
+  expect(sweepWorkflow).toContain(
+    '. + {scouting: {enabled: false}, goalSetting: {enabled: false}}',
+  );
+  expect(sweepWorkflow).toContain(
+    'taskPrompt: ($taskDescription + "\\n\\n" + $taskPrompt)',
+  );
+  expect(sweepWorkflow).toContain("TASK_PROMPT: ${{ inputs.task_prompt }}");
   expect(sweepWorkflow).not.toMatch(/publishMode:\s*["']draft/i);
+});
+
+it("validates the Soyuz URL and returned identifiers before publishing outputs", () => {
+  expect(sweepWorkflow).toContain(
+    "node --experimental-strip-types scripts/validate-soyuz-url.ts",
+  );
+  expect(sweepWorkflow).toContain("scripts/validate-soyuz-run-id.ts");
+  expect(sweepWorkflow).toContain(".data.id | strings");
+  expect(sweepWorkflow).toContain('test("^soyuz-[0-9]+$")');
+  expect(sweepWorkflow).toContain(
+    'test("^(admitting|queued|claimed|running|cancel_requested|cancelled|completed|failed|admission_failed)$")',
+  );
+  expect(sweepWorkflow).toMatch(/http_status.*\^\(200\|202\)\$/s);
+});
+
+it("reports Soyuz acceptance without polling or claiming execution completed", () => {
+  expect(sweepWorkflow).toContain("Soyuz accepted the");
+  expect(sweepWorkflow).toContain("Accepted means Soyuz admitted the task");
+  expect(sweepWorkflow).toContain("Monitor the run in the Soyuz dashboard.");
+  expect(sweepWorkflow).not.toContain("/status");
+  expect(sweepWorkflow).not.toContain("POLLING_BUDGET_SECONDS");
+  expect(sweepWorkflow).not.toContain("kaseki-agent");
+  expect(sweepWorkflow).not.toContain("KASEKI_API_TOKEN");
+  expect(sweepWorkflow).not.toContain("KASEKI_BASE_URL");
+});
+
+it("audits runner egress before a read-only checkout", () => {
+  const hardenRunner = sweepWorkflow.indexOf("step-security/harden-runner@");
+  const checkout = sweepWorkflow.indexOf("actions/checkout@");
+
+  expect(hardenRunner).toBeGreaterThanOrEqual(0);
+  expect(sweepWorkflow).toContain("egress-policy: audit");
+  expect(hardenRunner).toBeLessThan(checkout);
+  expect(sweepWorkflow).toContain("persist-credentials: false");
+  expect(sweepWorkflow).toContain("contents: read");
 });
 
 it("routes workflow and Dependabot configuration changes to the repository owner", () => {
@@ -88,39 +146,6 @@ it("routes workflow and Dependabot configuration changes to the repository owner
   expect(entries).toContainEqual({ pattern: "/.github/dependabot.yml", owners: ["@cyanautomation"] });
 });
 
-it("retries transient status poll failures without swallowing permanent client errors", () => {
-  expect(sweepWorkflow).toMatch(/if http_status="\$\(curl/);
-  expect(sweepWorkflow).toContain("--write-out '%{http_code}'");
-  expect(sweepWorkflow).toMatch(/http_status" != 408/);
-  expect(sweepWorkflow).toMatch(/http_status" != 429/);
-  expect(sweepWorkflow).toContain("retrying status poll");
-});
-
-it("audits Kaseki runner egress before checkout", () => {
-  const hardenRunner = sweepWorkflow.indexOf("step-security/harden-runner@");
-  const checkout = sweepWorkflow.indexOf("actions/checkout@");
-
-  expect(hardenRunner).toBeGreaterThanOrEqual(0);
-  expect(sweepWorkflow).toContain("egress-policy: audit");
-  expect(hardenRunner).toBeLessThan(checkout);
-});
-
-it("publishes a sanitized reason and a link for unsuccessful controller runs", () => {
-  expect(sweepWorkflow).toContain('node scripts/kaseki-run-details.mjs "$response_file"');
-  expect(sweepWorkflow).toContain("failure_detail<<%s\\n");
-  expect(sweepWorkflow).toContain("write_failure_detail_output() {");
-  expect(sweepWorkflow).toContain('while [[ "$detail" == *"$output_delimiter"* ]]');
-  expect(sweepWorkflow).toContain('printf \'| Failure detail | %s |\\n\' "$summary_failure_detail"');
-  expect(sweepWorkflow).toContain('summary_failure_detail="${summary_failure_detail//|/\\\\|}"');
-  expect(sweepWorkflow).toContain('summary_failure_detail="${summary_failure_detail//\\`/\\\\\\`}"');
-  expect(sweepWorkflow).toContain("See the step summary for sanitized controller details.");
-  expect(sweepWorkflow).toContain("${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}");
-  expect(sweepWorkflow).toContain('summary_failure_detail="${FAILURE_DETAIL//');
-  expect(sweepWorkflow).not.toContain('echo "| Failure detail | $FAILURE_DETAIL |"');
-  expect(sweepWorkflow).not.toContain('echo "::error title=Kaseki run failed::Completed with exit code $exit_code. $failure_detail"');
-  expect(sweepWorkflow).not.toContain('echo "::error title=Kaseki run $status::$failure_detail"');
-});
-
 it("runs workflow checks for pull requests, pushes, and merge queue candidates", () => {
   const codeql = readWorkflow("codeql.yml");
   const lint = readWorkflow("workflow-lint.yml");
@@ -136,17 +161,14 @@ it("runs workflow checks for pull requests, pushes, and merge queue candidates",
   expect(dependencyReview).toContain("github.event.merge_group.head_ref");
 });
 
-it("pins CodeQL to the current v4 commit and Kaseki to an in-history action commit", () => {
+it("pins CodeQL to the current v4 commit", () => {
   const codeql = readWorkflow("codeql.yml");
 
   expect(codeql).toContain(
-    "github/codeql-action/init@33d7b85da1a04171e211befe2c739303b9a4c066 # v4",
+    "github/codeql-action/init@1bd86f2fdb4b86187fa4059f16f31a3202acc9ea # v4",
   );
   expect(codeql).toContain(
-    "github/codeql-action/analyze@33d7b85da1a04171e211befe2c739303b9a4c066 # v4",
-  );
-  expect(sweepWorkflow).toContain(
-    "CyanAutomation/kaseki-agent/.github/actions/verify-controller-health@0400e036f8bd03d3c6a8ad1dd68ee74d85ac0aa6",
+    "github/codeql-action/analyze@1bd86f2fdb4b86187fa4059f16f31a3202acc9ea # v4",
   );
 });
 
