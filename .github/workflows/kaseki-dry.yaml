@@ -1,4 +1,4 @@
-name: Kaseki DRY Sweep
+name: Kaseki DRY Sweep via Soyuz
 
 on:
   schedule:
@@ -12,7 +12,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: kaseki-dry-sweep-${{ github.repository }}
+  group: soyuz-dry-sweep-${{ github.repository }}
   cancel-in-progress: false
 
 jobs:
@@ -38,5 +38,3 @@ jobs:
         sensible scope. Make at most one focused refactoring. A no-change result is
         successful. If there is no sufficiently valuable, high-confidence DRY
         improvement, make no changes.
-    secrets:
-      KASEKI_API_TOKEN: ${{ secrets.KASEKI_API_TOKEN }}
