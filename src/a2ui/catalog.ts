@@ -50,6 +50,23 @@ export const dojoNotesCatalog = Catalog.fromJson({
   },
 }, "1.0", DOJO_NOTES_CATALOG_ID);
 
+function componentReferences(singleRefs: string[] = [], listRefs: string[] = []) {
+  return { singleRefs: new Set(singleRefs), listRefs: new Set(listRefs), nestedRefs: {} };
+}
+
+// Core 0.16 uses Zod 4, whose schema internals are not detected by the
+// SDK's dynamic Zod 3 child-reference inference. Declare our small catalog's
+// references explicitly so Core still validates graph reachability.
+Object.defineProperty(dojoNotesCatalog, "componentRefMap", {
+  value: {
+    Column: componentReferences([], ["children"]),
+    Row: componentReferences([], ["children"]),
+    Card: componentReferences(["child"]),
+    Text: componentReferences(),
+    Divider: componentReferences(),
+  },
+});
+
 /**
  * MessageProcessor currently types its catalogs as executable catalogs even
  * though it only needs schemas here. This schema-only catalog has no functions,
