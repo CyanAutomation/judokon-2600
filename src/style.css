@@ -624,6 +624,18 @@ summary:focus-visible,
 .champion-progress-list { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .tactical-insight { border-color: var(--color-accent); }
 .tactical-insight p + p { margin-top: var(--space-2); }
+.dojo-notes-a2ui,
+.dojo-notes-fallback { display: grid; gap: var(--space-2); }
+.dojo-notes-a2ui[hidden],
+.dojo-notes-fallback[hidden] { display: none; }
+.ui-stack--column { display: grid; gap: var(--space-2); min-width: 0; }
+.ui-stack--row { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
+.ui-card { min-width: 0; padding: var(--space-3); border: var(--border); background: var(--color-surface-raised); }
+.ui-text--caption { color: var(--color-muted); font-family: var(--font-mono); font-size: .82rem; }
+.ui-text--body { color: var(--color-subtle); overflow-wrap: anywhere; }
+.dojo-notes-a2ui p + p { margin-top: 0; }
+.ui-divider--horizontal { width: 100%; margin: 0; border: 0; border-top: var(--border); }
+.ui-divider--vertical { align-self: stretch; width: 1px; min-height: 1rem; background: var(--color-border); }
 .champion-progress-panel { margin: 0; border-color: var(--color-accent); background: var(--color-surface-raised); }
 .match-rules { color: var(--color-subtle); font-size: .88rem; }
 .match-rules strong { color: var(--color-accent); letter-spacing: .04em; text-transform: uppercase; }

@@ -4,6 +4,11 @@ import { extractTacticalFeatures } from "../game/tacticalAssessment";
 import { labels } from "./constants";
 import type { StatKey } from "../api/types";
 
+export interface TacticalNote {
+  title: string;
+  message: string;
+}
+
 function overRelianceMessage(
   enabled: boolean | undefined,
   decisiveStat: StatKey | null,
@@ -45,18 +50,35 @@ function momentumResponseMessage(
   return `After a win or loss streak, you switched stats on ${switches} of ${decisions} ${decisions === 1 ? "pick" : "picks"}.`;
 }
 
-/** The same factual messages drive rendering and notification eligibility. */
-export function tacticalMessages(m: Match, state: GameState): string[] {
+/** App-authored titles and factual copy for the optional Dojo notes surface. */
+export function tacticalNotes(m: Match, state: GameState): TacticalNote[] {
   const assessment = state.tacticalAssessment;
   if (!assessment) return [];
 
   const features = extractTacticalFeatures(m.scores, state.history);
   const details = matchSummary(m, state.history);
-  const messages = [
-    overRelianceMessage(assessment.overReliance, details.decisiveStat, features),
-    adaptationMessage(assessment.adaptation, features),
-    missedOpportunityMessage(assessment.missedOpportunity, features),
-    momentumResponseMessage(assessment.momentumResponse, features)
-  ].filter((message): message is string => message !== null);
-  return messages;
+  const notes = [
+    {
+      title: "Repeated stat picks",
+      message: overRelianceMessage(assessment.overReliance, details.decisiveStat, features),
+    },
+    {
+      title: "Adjust after a loss",
+      message: adaptationMessage(assessment.adaptation, features),
+    },
+    {
+      title: "Another stat was effective",
+      message: missedOpportunityMessage(assessment.missedOpportunity, features),
+    },
+    {
+      title: "Respond after a streak",
+      message: momentumResponseMessage(assessment.momentumResponse, features),
+    },
+  ];
+  return notes.filter((note): note is TacticalNote => note.message !== null);
+}
+
+/** The same factual messages drive rendering and notification eligibility. */
+export function tacticalMessages(m: Match, state: GameState): string[] {
+  return tacticalNotes(m, state).map(({ message }) => message);
 }
