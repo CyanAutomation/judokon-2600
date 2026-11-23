@@ -125,6 +125,31 @@ describe("renderApp", () => {
     expect(root.querySelector(".match-breakdown .tactical-issue")?.textContent).toContain("Optional Dojo notes are unavailable.");
     expect(root.querySelector('[aria-label="Match summary"]')).not.toBeNull();
   });
+
+  it("[REQ-UI-033] renders accessible A2UI note cards from locally supplied note data", () => {
+    const root = document.createElement("div");
+    const match = createMockMatch({ phase: "matchOver", winner: "player", scores: { player: 2, opponent: 1 } });
+    const state = createMockGameState({
+      match,
+      result: { ...createMockMatchResult(), match },
+      tacticalAssessment: { adaptation: true },
+      history: [
+        { stat: "power", outcome: "opponent", roundNumber: 1 },
+        { stat: "technique", outcome: "player", roundNumber: 2 },
+      ],
+    });
+
+    renderApp(root, state);
+
+    const notes = root.querySelector('[aria-label="Dojo notes"]');
+    const card = notes?.querySelector<HTMLElement>("article.ui-card");
+    expect(notes?.querySelector("h2")?.textContent).toBe("Dojo notes");
+    expect(card?.getAttribute("aria-labelledby")).toBe("dojo-note-title-0");
+    expect(card?.querySelector(".ui-text--caption")?.textContent).toBe("Adjust after a loss");
+    expect(card?.textContent).toContain("After a loss, you switched stats on 1 of 1 pick.");
+    expect(notes?.querySelector<HTMLElement>(".dojo-notes-fallback")?.hidden).toBe(true);
+    expect(root.querySelector('[aria-label="Match summary"]')).not.toBeNull();
+  });
 });
 
 it("keeps Game settings open across seed dialog renders so focus can return", () => {

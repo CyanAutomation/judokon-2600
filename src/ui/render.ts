@@ -5,6 +5,8 @@ import { footerUtilities, intro, matchSoundToggle, seedDialog } from "./setup-te
 import { game } from "./game-templates";
 import { createHelpers, headerContext, status } from "./helpers";
 import { escapeHtml as esc } from "./utils/escapeHtml";
+import { mountDojoNotesA2uiIn } from "./a2ui/dojoNotes";
+import { tacticalNotes } from "./tacticalMessages";
 
 /**
  * Generate keyboard shortcut hint based on current game state
@@ -58,6 +60,7 @@ export function renderApp(root: HTMLElement, state: GameState): void {
   const settings = generateSettings(state);
   const dialog = !state.match ? seedDialog(state) : "";
   root.innerHTML = `<div class="app-scroll"><header><div class="brand">JU-DO-KON! <span aria-hidden="true">·</span> CIRCUIT 2600</div><p>${headerContext(state, helpers)}</p></header><main id="game" tabindex="-1" class="${mainClass}">${content}</main><footer><div class="footer-toolbar"><span class="footer-hint">${hint}</span>${settings}</div></footer>${dialog}</div>`;
+  if (state.match) mountDojoNotesA2uiIn(root, tacticalNotes(state.match, state));
   if (settingsOpen) {
     const settings = root.querySelector<HTMLDetailsElement>(".footer-settings");
     if (settings) settings.open = true;

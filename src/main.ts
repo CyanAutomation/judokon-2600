@@ -3,6 +3,8 @@ import { createSnackbar } from "./ui/snackbar";
 import type { NoticeDuration } from "./ui/noticeTypes";
 import { layoutSetupActions } from "./ui/layout";
 import { matchBreakdownContent } from "./ui/match-templates";
+import { mountDojoNotesA2uiIn } from "./ui/a2ui/dojoNotes";
+import { tacticalNotes } from "./ui/tacticalMessages";
 import { lengths } from "./ui/constants";
 import { injectSpeedInsights } from "@vercel/speed-insights";
 import { BudokonClient } from "./api/budokon";
@@ -118,7 +120,10 @@ const deps: OrchestratorDeps = {
   clearNotices: () => notifications.clear(),
   renderTactical: () => {
     const region = root.querySelector<HTMLElement>(".post-match-summary");
-    if (region && state.match) region.innerHTML = matchBreakdownContent(state.match, state);
+    if (region && state.match) {
+      region.innerHTML = matchBreakdownContent(state.match, state);
+      mountDojoNotesA2uiIn(region, tacticalNotes(state.match, state));
+    }
   },
   viewTactics: () => {
     const breakdown = root.querySelector<HTMLDetailsElement>(".match-breakdown");

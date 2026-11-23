@@ -5,7 +5,7 @@ import { matchSummary, type Match } from "../game/game";
 import type { GameState } from "../state";
 import { labels, type Helpers } from "./helpers";
 import { escapeHtml as esc } from "./utils/escapeHtml";
-import { tacticalMessages } from "./tacticalMessages";
+import { tacticalNotes } from "./tacticalMessages";
 
 function sectionPanel(section: string, label: string, content: string): string {
   return surface("section", section, label, content);
@@ -57,9 +57,10 @@ export function matchTakeaway(m: Match, state: GameState): string {
 }
 
 function tacticalInsight(m: Match, state: GameState): string {
-  const messages = tacticalMessages(m, state);
-  if (!messages.length) return "";
-  const content = `<h2 id="dojo-notes-title" class="eyebrow" tabindex="-1">Dojo notes</h2>${messages.map(message => `<p>${esc(message)}</p>`).join("")}`;
+  const notes = tacticalNotes(m, state);
+  if (!notes.length) return "";
+  const fallback = notes.map(({ message }) => `<p>${esc(message)}</p>`).join("");
+  const content = `<h2 id="dojo-notes-title" class="eyebrow" tabindex="-1">Dojo notes</h2><div class="dojo-notes-fallback">${fallback}</div><div class="dojo-notes-a2ui" data-a2ui-dojo-notes hidden></div>`;
   return sectionPanel("tactical-insight", "Dojo notes", content);
 }
 
