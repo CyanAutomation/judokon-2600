@@ -38,7 +38,7 @@
   },
   "dependencies": {
     "@a2ui/web_core": "0.16.1",
-    "@vercel/functions": "^3.11.1",
+    "@vercel/functions": "^3.11.3",
     "@vercel/speed-insights": "^2.1.0"
   },
   "overrides": {
