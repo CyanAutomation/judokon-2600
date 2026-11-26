@@ -22,7 +22,7 @@ Inspect the per-page counters in the browser console with:
 window.judokonCacheStats()
 ```
 
-The result includes `requests`, `hits`, `coalesced`, `misses`, `evictions`, and `expirations`. `hits / requests` gives the page-local hit rate; `misses` counts upstream fetch attempts initiated by this cache. These counters reset on reload and are not sent to a telemetry service. Aggregate production hit rates or compare against Budokon request volume before adjusting TTL or capacity.
+The result includes `requests`, `hits`, `coalesced`, `misses`, `evictions`, and `expirations`. `hits / requests` gives the page-local hit rate; `misses` counts upstream fetch attempts initiated by this cache. These counters reset on reload and are not sent to a telemetry service. Aggregate production hit rates or compare against Budokon request volume before adjusting TTL or capacity. `window.judokonApiDiagnostics()` separately reports in-memory upstream attempt outcomes, failed HTTP status counts, and elapsed time without storing request or response content.
 
 The client calls the public Budokon draw endpoint directly with POST requests. The repository cannot configure that service's cache policy. Its public documentation endpoint currently returns `Cache-Control: no-store`; this does not establish the policy of `/v1/draw`. Check with the API owner before adding shared response caching: draw results depend on request parameters and dataset version, and broad caching could compromise replay expectations or return stale data.
 

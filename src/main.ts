@@ -8,6 +8,7 @@ import { tacticalNotes } from "./ui/tacticalMessages";
 import { lengths } from "./ui/constants";
 import { injectSpeedInsights } from "@vercel/speed-insights";
 import { BudokonClient } from "./api/budokon";
+import type { RequestDiagnosticsSnapshot } from "./api/requestDiagnostics";
 import { createBudokonClient } from "budokon-transport";
 import type { StatKey } from "./api/types";
 import { handleClickEvent, handleChangeEvent, handleIntroKeyboard, handleMatchKeyboard } from "./ui/eventHandlers";
@@ -47,10 +48,14 @@ const client = createBudokonClient();
 declare global {
   interface Window {
     judokonCacheStats?: () => ReturnType<BudokonClient["getCacheStats"]>;
+    judokonApiDiagnostics?: () => RequestDiagnosticsSnapshot;
   }
 }
 
 window.judokonCacheStats = () => client.getCacheStats();
+if (import.meta.env.DEV) {
+  window.judokonApiDiagnostics = () => client.getDiagnostics();
+}
 
 // Initialize game state from localStorage and sessionStorage
 const state: GameState = createGameState();
