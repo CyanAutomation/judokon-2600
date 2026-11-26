@@ -3,6 +3,7 @@ import { BudokonCache, type BudokonCacheOptions, type BudokonCacheStats } from "
 import { BudokonRequestBuilder } from "./requestBuilder";
 import { BudokonResponseValidator } from "./responseValidator";
 import { normalizeDrawParameters, type DrawParameters } from "./drawParameters";
+import { RequestDiagnostics, type RequestDiagnosticsSnapshot, type RequestFailureCategory } from "./requestDiagnostics";
 
 type Fetcher = typeof fetch;
 
@@ -10,6 +11,7 @@ export class BudokonClient {
   private readonly cache: BudokonCache;
   private readonly builder: BudokonRequestBuilder;
   private readonly validator: BudokonResponseValidator;
+  private readonly diagnostics = new RequestDiagnostics();
 
   constructor(
     private readonly fetcher: Fetcher = globalThis.fetch.bind(globalThis),
@@ -50,6 +52,10 @@ export class BudokonClient {
     return this.cache.getStats();
   }
 
+  getDiagnostics(): RequestDiagnosticsSnapshot {
+    return this.diagnostics.snapshot();
+  }
+
   /**
    * Check if an error is a timeout/abort error
    */
@@ -61,12 +67,23 @@ export class BudokonClient {
   }
 
   private static isInvalidResponseError(error: unknown): boolean {
-    return error instanceof SyntaxError;
+    return error instanceof SyntaxError ||
+      (error instanceof Error && error.message === "Budokon API returned an invalid response. Try again later.");
+  }
+
+  private static failureCategory(error: unknown, status?: number): RequestFailureCategory {
+    if (BudokonClient.isTimeoutError(error)) return "timeout";
+    if (error instanceof TypeError) return "network";
+    if (BudokonClient.isInvalidResponseError(error)) return "invalid-response";
+    if (status !== undefined && status >= 300) return "http";
+    return "unknown";
   }
 
   private async performDraw(parameters: DrawParameters): Promise<Judoka[]> {
     const { count, weightClass } = parameters;
     const signal = AbortSignal.timeout(this.timeoutMs);
+    const startedAt = this.diagnostics.start();
+    let responseStatus: number | undefined;
 
     try {
       const request = this.builder.buildRequest(parameters);
@@ -75,13 +92,18 @@ export class BudokonClient {
         signal
       });
 
+      responseStatus = response.status;
       if (!response.ok) {
         this.validator.handleHttpError(response.status, weightClass);
       }
 
       const body = await response.json();
-      return this.validator.validateJudokaArray(body, count);
+      const result = this.validator.validateJudokaArray(body, count);
+      this.diagnostics.recordSuccess(startedAt);
+      return result;
     } catch (error) {
+      const category = BudokonClient.failureCategory(error, responseStatus);
+      this.diagnostics.recordFailure(startedAt, category, category === "http" ? responseStatus : undefined);
       if (BudokonClient.isTimeoutError(error)) {
         throw new Error("Budokon API request timed out. Check your connection and try again.");
       }

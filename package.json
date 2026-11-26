@@ -9,11 +9,13 @@
   "scripts": {
     "dev": "vite",
     "dev:sim": "vite --mode simulator",
+    "dev:chaos": "vite --mode chaos",
     "build": "tsc -p tsconfig.api.json && tsc -p tsconfig.app.json && vite build",
     "preview": "vite preview",
     "test": "vitest run",
     "test:e2e": "playwright test",
     "test:e2e:sim": "playwright test --config=playwright.sim.config.ts",
+    "test:e2e:chaos": "playwright test --config=playwright.chaos.config.ts",
     "test:coverage": "vitest run --coverage",
     "fallow:coverage": "npm run test:coverage && npx fallow --coverage coverage/coverage-final.json",
     "test:watch": "vitest",

@@ -17,7 +17,7 @@ npm ci
 npm run dev
 ```
 
-Open [http://localhost:5173](http://localhost:5173) to play locally; `npm run dev` uses the live Budokon API. To draw from the local synthetic catalogue without a network connection, run `npm run dev:sim` instead. The simulator does not provide the separate Vercel tactical-assessment function. To manually test tactical insight, use a configured Vercel Preview; the [deployment guide](docs/tactical-insight-deployment.md) covers the required environment variables and verification. See the [developer guide](docs/index.md) and [simulator guide](docs/budokon-simulator.md) for setup details.
+Open [http://localhost:5173](http://localhost:5173) to play locally; `npm run dev` uses the live Budokon API. To draw from the local synthetic catalogue without a network connection, run `npm run dev:sim`; to exercise a one-shot API fault and retry, run `npm run dev:chaos`. Select other fault profiles with `VITE_BUDOKON_FAULT_PROFILE` as described in the [simulator guide](docs/budokon-simulator.md). The simulator does not provide the separate Vercel tactical-assessment function. To manually test tactical insight, use a configured Vercel Preview; the [deployment guide](docs/tactical-insight-deployment.md) covers the required environment variables and verification. See the [developer guide](docs/index.md) and [simulator guide](docs/budokon-simulator.md) for setup details.
 
 ## Gameplay
 

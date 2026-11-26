@@ -156,6 +156,19 @@ describe("HTTP status handling", () => {
     await expect(client.drawBatch("seed", 2)).rejects.toThrow("Budokon API is temporarily unavailable (HTTP 503)");
   });
 
+  it("explains rate limiting and records the failed HTTP status", async () => {
+    const client = new BudokonClient(vi.fn().mockResolvedValue(new Response("rate limited", { status: 429 })));
+
+    await expect(client.drawBatch("rate-limited", 2)).rejects.toThrow("Too many draw requests");
+    expect(client.getDiagnostics()).toMatchObject({
+      attempts: 1,
+      failures: 1,
+      lastOutcome: "http",
+      failureCounts: { http: 1 },
+      httpFailureStatusCounts: { "429": 1 }
+    });
+  });
+
   it("explains when Budokon rejects access or its endpoint is missing", async () => {
     const denied = new BudokonClient(vi.fn().mockResolvedValue(new Response("nope", { status: 403 })));
     const missing = new BudokonClient(vi.fn().mockResolvedValue(new Response("nope", { status: 404 })));
@@ -185,10 +198,17 @@ it("times out an unresponsive draw request", async () => {
     const fetcher = vi.fn((_url: string, options: RequestInit) => new Promise<Response>((_resolve, reject) => {
       options.signal?.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")));
     })) as unknown as typeof fetch;
-    const request = new BudokonClient(fetcher, 1).drawBatch("seed", 2);
+    const client = new BudokonClient(fetcher, 1);
+    const request = client.drawBatch("seed", 2);
     const expectation = expect(request).rejects.toThrow("Budokon API request timed out");
     await vi.advanceTimersByTimeAsync(1);
     await expectation;
+    expect(client.getDiagnostics()).toMatchObject({
+      attempts: 1,
+      failures: 1,
+      lastOutcome: "timeout",
+      failureCounts: { timeout: 1 }
+    });
   } finally {
     vi.useRealTimers();
   }
@@ -215,6 +235,48 @@ it("uses a timeout signal and explains its TimeoutError", async () => {
 
 it("explains when the Budokon endpoint cannot be reached", async () => {
   const fetcher = vi.fn<typeof fetch>().mockRejectedValue(new TypeError("fetch failed"));
-  await expect(new BudokonClient(fetcher).drawBatch("offline", 2))
+  const client = new BudokonClient(fetcher);
+  await expect(client.drawBatch("offline", 2))
     .rejects.toThrow("Unable to connect to the Budokon API. Check your internet connection and try again.");
+  expect(client.getDiagnostics()).toMatchObject({
+    attempts: 1,
+    failures: 1,
+    lastOutcome: "network",
+    failureCounts: { network: 1 }
+  });
+});
+
+it("maps malformed JSON from a successful HTTP response to the invalid-response error", async () => {
+  const client = new BudokonClient(vi.fn().mockResolvedValue(new Response("{ broken json", { status: 200 })));
+
+  await expect(client.drawBatch("malformed-json", 2))
+    .rejects.toThrow("Budokon API returned an invalid response. Try again later.");
+});
+
+it("allows a failed draw to be retried with the same deterministic request", async () => {
+  const fetcher = vi.fn<typeof fetch>()
+    .mockResolvedValueOnce(new Response("unavailable", { status: 503 }))
+    .mockResolvedValueOnce(new Response(JSON.stringify({ judoka }), { status: 200 }));
+  const client = new BudokonClient(fetcher);
+
+  await expect(client.drawBatch("same-seed", 2)).rejects.toThrow("temporarily unavailable");
+  await expect(client.drawBatch("same-seed", 2)).resolves.toEqual(judoka);
+
+  expect(fetcher).toHaveBeenCalledTimes(2);
+});
+
+it("exposes request outcome and latency diagnostics without response data", async () => {
+  const client = new BudokonClient(vi.fn().mockResolvedValue(new Response("{ malformed", { status: 200 })));
+
+  await expect(client.drawBatch("diagnostics-seed", 2)).rejects.toThrow("invalid response");
+
+  expect(client.getDiagnostics()).toMatchObject({
+    attempts: 1,
+    successes: 0,
+    failures: 1,
+    lastOutcome: "invalid-response",
+    failureCounts: { "invalid-response": 1 },
+    httpFailureStatusCounts: {}
+  });
+  expect(Object.keys(client.getDiagnostics())).not.toContain("body");
 });

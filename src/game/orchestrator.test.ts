@@ -170,6 +170,58 @@ describe("next-round draws", () => {
     expect(render).toHaveBeenCalledTimes(2);
   });
 
+  it("preserves the current match after a failed refill and advances after retry", async () => {
+    const replacements = Array.from({ length: 6 }, (_, index) => judoka(`recovery-${index}`));
+    const client = {
+      drawBatch: vi.fn()
+        .mockRejectedValueOnce(new Error("Budokon API is temporarily unavailable (HTTP 503). Try again shortly."))
+        .mockResolvedValueOnce(replacements)
+    };
+    const match = {
+      player: judoka("current-player"),
+      opponent: judoka("current-opponent"),
+      target: 10,
+      matchNumber: 3,
+      scores: { player: 2, opponent: 1 },
+      mode: "classic" as const,
+      phase: "awaitingNext" as const,
+      winner: null
+    };
+    const state = createGameState();
+    state.activeSeed = "recover-buffer";
+    state.activeWeight = "-73";
+    state.match = match;
+    state.mode = "classic";
+    state.drawBuffer = [];
+    const deps = { client, render: vi.fn() } as unknown as OrchestratorDeps;
+
+    await next(state, match, deps);
+
+    expect(state.match).toBe(match);
+    expect(state.match?.scores).toEqual({ player: 2, opponent: 1 });
+    expect(state.drawBuffer).toEqual([]);
+    expect(state.errorMessage).toContain("temporarily unavailable (HTTP 503)");
+    expect(state.busy).toBe(false);
+
+    await next(state, match, deps);
+
+    expect(client.drawBatch).toHaveBeenCalledTimes(2);
+    expect(state.match).toMatchObject({
+      player: { id: "recovery-0" },
+      opponent: { id: "recovery-1" },
+      matchNumber: 4,
+      phase: "selecting"
+    });
+    expect(state.drawBuffer.map(({ id }) => id)).toEqual([
+      "recovery-2",
+      "recovery-3",
+      "recovery-4",
+      "recovery-5"
+    ]);
+    expect(state.errorMessage).toBe("");
+    expect(state.busy).toBe(false);
+  });
+
   it("keeps the offline next-round message if connectivity returns before the request fails", async () => {
     const pendingDraw = deferred<Judoka[]>();
     const client = { drawBatch: vi.fn(() => pendingDraw.promise) };

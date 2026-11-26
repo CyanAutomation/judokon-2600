@@ -12,18 +12,20 @@ Prerequisites: Node.js >= 26.0.0 < 27.
 npm ci            # install locked dependencies
 npm run dev       # start the Vite development server
 npm run dev:sim   # use the local synthetic Budokon draw simulator
+npm run dev:chaos # use local fixtures with a one-shot Budokon fault
 npm run check     # lint + test + build quality gate
 npm run build     # production build (tsc + vite build)
+npm run test:e2e:chaos # exercise a local failure and recovery in Chromium
 ```
 
-The development server serves the SPA at port 5173. `npm run dev` uses the live Budokon API; `npm run dev:sim` selects the simulator explicitly and serves offline draws from fictional fixtures. Production builds always select the live transport. The [simulator guide](budokon-simulator.md) describes its fixture catalogue, determinism, browser-test reuse, and differences from Budokon. Tests run via Vitest (`npm run test`).
+The development server serves the SPA at port 5173. `npm run dev` uses the live Budokon API; `npm run dev:sim` selects the simulator explicitly and serves offline draws from fictional fixtures; `npm run dev:chaos` injects a one-shot fault before using those fixtures. Production builds always select the live transport. The [simulator guide](budokon-simulator.md) describes fixtures, fault profiles, browser-test reuse, and differences from Budokon. Tests run via Vitest (`npm run test`).
 
 ## Repository layout
 
 | Directory / File | Purpose |
 | --- | --- |
 | `src/api/` | Budokon client, live transport, caching, request/response validation, shared types (`StatKey`, `Judoka`, `Stats`) |
-| `src/dev/budokon-simulator/` | Development-only simulated draw transport, typed fixtures, and unit tests |
+| `src/dev/budokon-simulator/` | Development-only simulated and fault-injected transports, profiles, typed fixtures, and tests |
 | `src/audio.ts` | Sound-effect layer: keyboard tick and outcome beep synthesis via Web Audio API |
 | `src/game/` | Core logic — `game.ts` (match creation, stat resolution, summary ranking), `orchestrator.ts` (draw buffer, round advancement, seed management) |
 | `src/main.ts` | Application bootstrap: state init, audio setup, dependency wiring |

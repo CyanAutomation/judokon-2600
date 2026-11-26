@@ -216,6 +216,93 @@ test("[REQ-UI-030] an offline match draw explains how to reconnect and can be re
   await expect(page.getByRole("heading", { name: "Choose a stat" })).toBeVisible();
 });
 
+test("a temporary Budokon outage lets Quick Start succeed on retry", async ({ page }) => {
+  await mockBudokonDraw(page, {
+    scenarios: [{ kind: "response", status: 503, body: "temporarily unavailable" }]
+  });
+  await page.goto("/");
+
+  const quickStart = page.getByRole("button", { name: "Quick start" });
+  await quickStart.click();
+  await expect(page.locator(".intro-status")).toContainText("temporarily unavailable (HTTP 503)");
+  await expect(quickStart).toBeEnabled();
+
+  await quickStart.click();
+  await expect(page.getByRole("heading", { name: "Choose a stat" })).toBeVisible();
+});
+
+test("a delayed Budokon response keeps setup responsive without duplicating the draw", async ({ page }) => {
+  let drawRequests = 0;
+  page.on("request", request => {
+    if (request.url() === "https://budokon.scheimann.workers.dev/v1/draw" && request.method() === "POST") {
+      drawRequests += 1;
+    }
+  });
+  await mockBudokonDraw(page, { scenarios: [{ kind: "delay", delayMs: 250 }] });
+  await page.goto("/");
+
+  const quickStart = page.getByRole("button", { name: "Quick start" });
+  await quickStart.click();
+  await expect(page.locator(".intro-status")).toContainText("Putting your matchup together");
+  await quickStart.click();
+  await expect(page.getByRole("heading", { name: "Choose a stat" })).toBeVisible();
+
+  expect(drawRequests).toBe(1);
+});
+
+test("a malformed successful Budokon response does not poison a retry", async ({ page }) => {
+  await mockBudokonDraw(page, {
+    scenarios: [{ kind: "response", status: 200, body: "{ malformed response" }]
+  });
+  await page.goto("/");
+
+  const quickStart = page.getByRole("button", { name: "Quick start" });
+  await quickStart.click();
+  await expect(page.locator(".intro-status")).toContainText("Budokon API returned an invalid response");
+
+  await quickStart.click();
+  await expect(page.getByRole("heading", { name: "Choose a stat" })).toBeVisible();
+});
+
+test("a failed buffer refill preserves the match and recovers on the next-round retry", async ({ page }) => {
+  await mockBudokonDraw(page, {
+    scenarios: [
+      null,
+      { kind: "response", status: 503, body: "temporarily unavailable" }
+    ]
+  });
+  await page.goto("/");
+  await page.getByText("Classic Battle", { exact: true }).click();
+  await page.getByText("Absolute", { exact: true }).click();
+  await page.getByText("Long", { exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Choose a stat" })).toBeVisible();
+
+  for (let round = 0; round < 3; round += 1) {
+    await page.locator('[data-stat="power"]').click();
+    await expect(page.locator("#next")).toBeVisible();
+    if (round < 2) {
+      await page.locator("#next").click();
+    }
+  }
+
+  const previousScore = await page.locator(".scoreboard").getAttribute("aria-label");
+  const retryResponse = page.waitForResponse(response =>
+    response.url() === "https://budokon.scheimann.workers.dev/v1/draw" && response.request().method() === "POST"
+  );
+  await page.locator("#next").click();
+  await expect(page.locator("#status")).toContainText("temporarily unavailable (HTTP 503)");
+  await expect(page.locator(".scoreboard")).toHaveAttribute("aria-label", previousScore!);
+  await expect(page.locator("#next")).toBeEnabled();
+
+  const recoveryResponse = page.waitForResponse(response =>
+    response.url() === "https://budokon.scheimann.workers.dev/v1/draw" && response.request().method() === "POST"
+  );
+  await page.locator("#next").click();
+  await Promise.all([retryResponse, recoveryResponse]);
+  await expect(page.locator("[data-game-status]")).not.toContainText("temporarily unavailable");
+  await expect(page.locator(".battle-layout")).toHaveAttribute("data-phase", "selecting");
+});
+
 test("[REQ-PWA-032] Game settings trigger the available install prompt by keyboard", async ({ page }) => {
   await page.goto("/");
   await page.evaluate(() => {

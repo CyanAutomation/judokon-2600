@@ -1,7 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { BudokonClient } from "../../api/budokon";
 import { SIMULATED_JUDOKA } from "./fixtures";
 import { createBudokonSimulatorFetch, SIMULATOR_ALGORITHM, SIMULATOR_DATASET_VERSION } from "./simulator";
+import { createFaultInjectingFetch } from "./faultInjection";
 
 const url = "https://budokon.scheimann.workers.dev/v1/draw";
 const request = (body: unknown, signal?: AbortSignal): RequestInit => ({
@@ -91,6 +92,29 @@ describe("Budokon draw simulator", () => {
     controller.abort();
     await expect(createBudokonSimulatorFetch()(url, request({ count: 1, seed: "aborted" }, controller.signal)))
       .rejects.toMatchObject({ name: "AbortError" });
+  });
+
+  it("times out an injected slow response and succeeds when the same draw is retried", async () => {
+    vi.useFakeTimers();
+    try {
+      const fetcher = createFaultInjectingFetch(createBudokonSimulatorFetch(), [{ kind: "delay", delayMs: 10_000 }]);
+      const client = new BudokonClient(fetcher, 5);
+      const firstRequest = client.drawBatch("timeout-retry", 2);
+      const timeoutExpectation = expect(firstRequest).rejects.toThrow("Budokon API request timed out");
+
+      await vi.advanceTimersByTimeAsync(5);
+      await timeoutExpectation;
+      await expect(client.drawBatch("timeout-retry", 2)).resolves.toHaveLength(2);
+
+      expect(client.getDiagnostics()).toMatchObject({
+        attempts: 2,
+        successes: 1,
+        failures: 1,
+        failureCounts: { timeout: 1 }
+      });
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("reports unsupported paths and methods with HTTP responses", async () => {
