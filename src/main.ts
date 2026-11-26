@@ -53,7 +53,9 @@ declare global {
 }
 
 window.judokonCacheStats = () => client.getCacheStats();
-window.judokonApiDiagnostics = () => client.getDiagnostics();
+if (import.meta.env.DEV) {
+  window.judokonApiDiagnostics = () => client.getDiagnostics();
+}
 
 // Initialize game state from localStorage and sessionStorage
 const state: GameState = createGameState();

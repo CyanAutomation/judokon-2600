@@ -1,6 +1,13 @@
 import type { Judoka } from "./types";
 import { isJudoka } from "./validation";
 
+export class InvalidBudokonResponseError extends Error {
+  constructor() {
+    super("Budokon API returned an invalid response. Try again later.");
+    this.name = "InvalidBudokonResponseError";
+  }
+}
+
 /**
  * Validates responses from the Budokon API
  */
@@ -20,7 +27,7 @@ export class BudokonResponseValidator {
       drawn.length !== expectedCount ||
       !drawn.every(isJudoka)
     ) {
-      throw new Error("Budokon API returned an invalid response. Try again later.");
+      throw new InvalidBudokonResponseError();
     }
 
     return Object.freeze([...drawn]) as Judoka[];

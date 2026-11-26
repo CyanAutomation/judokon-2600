@@ -1,7 +1,7 @@
 import type { Judoka } from "./types";
 import { BudokonCache, type BudokonCacheOptions, type BudokonCacheStats } from "./cache";
 import { BudokonRequestBuilder } from "./requestBuilder";
-import { BudokonResponseValidator } from "./responseValidator";
+import { BudokonResponseValidator, InvalidBudokonResponseError } from "./responseValidator";
 import { normalizeDrawParameters, type DrawParameters } from "./drawParameters";
 import { RequestDiagnostics, type RequestDiagnosticsSnapshot, type RequestFailureCategory } from "./requestDiagnostics";
 
@@ -67,8 +67,7 @@ export class BudokonClient {
   }
 
   private static isInvalidResponseError(error: unknown): boolean {
-    return error instanceof SyntaxError ||
-      (error instanceof Error && error.message === "Budokon API returned an invalid response. Try again later.");
+    return error instanceof SyntaxError || error instanceof InvalidBudokonResponseError;
   }
 
   private static failureCategory(error: unknown, status?: number): RequestFailureCategory {

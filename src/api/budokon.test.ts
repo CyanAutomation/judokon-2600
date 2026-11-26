@@ -253,6 +253,30 @@ it("maps malformed JSON from a successful HTTP response to the invalid-response 
     .rejects.toThrow("Budokon API returned an invalid response. Try again later.");
 });
 
+it("classifies invalid response shapes separately from errors with the same public message", async () => {
+  const invalidShape = new BudokonClient(
+    vi.fn().mockResolvedValue(new Response(JSON.stringify({ judoka: [] }), { status: 200 })),
+  );
+  await expect(invalidShape.drawBatch("invalid-shape", 2)).rejects.toThrow(
+    "Budokon API returned an invalid response. Try again later.",
+  );
+  expect(invalidShape.getDiagnostics()).toMatchObject({
+    lastOutcome: "invalid-response",
+    failureCounts: { "invalid-response": 1 },
+  });
+
+  const externalError = new Error("Budokon API returned an invalid response. Try again later.");
+  const externalFailure = new BudokonClient(
+    vi.fn<typeof fetch>().mockRejectedValue(externalError),
+  );
+  const thrownError = await externalFailure.drawBatch("external-error", 2).catch(error => error);
+  expect(thrownError).toBe(externalError);
+  expect(externalFailure.getDiagnostics()).toMatchObject({
+    lastOutcome: "unknown",
+    failureCounts: { unknown: 1 },
+  });
+});
+
 it("allows a failed draw to be retried with the same deterministic request", async () => {
   const fetcher = vi.fn<typeof fetch>()
     .mockResolvedValueOnce(new Response("unavailable", { status: 503 }))
