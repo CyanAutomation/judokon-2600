@@ -161,15 +161,16 @@ it("runs workflow checks for pull requests, pushes, and merge queue candidates",
   expect(dependencyReview).toContain("github.event.merge_group.head_ref");
 });
 
-it("pins CodeQL to the current v4 commit", () => {
+it("pins both CodeQL steps to the same immutable v4 commit", () => {
   const codeql = readWorkflow("codeql.yml");
+  const codeqlPins = [
+    ...codeql.matchAll(
+      /github\/codeql-action\/(init|analyze)@([a-f0-9]{40}) # v4/g,
+    ),
+  ];
 
-  expect(codeql).toContain(
-    "github/codeql-action/init@1bd86f2fdb4b86187fa4059f16f31a3202acc9ea # v4",
-  );
-  expect(codeql).toContain(
-    "github/codeql-action/analyze@1bd86f2fdb4b86187fa4059f16f31a3202acc9ea # v4",
-  );
+  expect(codeqlPins.map(([, action]) => action)).toEqual(["init", "analyze"]);
+  expect(codeqlPins[1]?.[2]).toBe(codeqlPins[0]?.[2]);
 });
 
 it("sets a seven-day default cooldown for npm and GitHub Actions updates", () => {
